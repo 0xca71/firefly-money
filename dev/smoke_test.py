@@ -260,7 +260,8 @@ async def check(pw, width, height, mobile):
         n = await page.locator('#view .review-row').count()
         await page.locator('#view .review-row .btn').first.click()
         # Wait for the row to go rather than a fixed pause (on the flaky server the refresh after it can need a retry)
-        try: await page.wait_for_function(f"document.querySelectorAll('#view .review-row').length === {n - 1}", timeout=8000)
+        # (a function, not an expression: the Content-Security-Policy refuses expressions, see PAINTED)
+        try: await page.wait_for_function("n => document.querySelectorAll('#view .review-row').length === n", arg=n - 1, timeout=8000)
         except Exception: pass
         if await page.locator('#view .review-row').count() != n - 1: errors.append('ticking off a transaction did not take it out of the review queue')
         # Forecast what-if: adding one puts it in the list of what's coming
