@@ -12,9 +12,23 @@ import { miniLine } from './charts';
    point and type: the last day of each month, plus today. */
 const POINTS = 13;
 export type NetWorthPoint = { date: string, assets: number, debts: number, net: number, by?: Record<string, number> };
-export const nwYears = () => LS.get('nwYears', 1) === 3 ? 3 : 1;
+// The ranges the tile can show, in months. Only those the history reaches are offered (plus the first one past it, so
+// the longest button always covers everything): 6M and 1Y for a new setup, up to 10Y for a long one.
+const RANGES: [number, string, string][] = [[6, '6M', 'six months'], [12, '1Y', 'the year'], [36, '3Y', 'three years'], [60, '5Y', 'five years'], [120, '10Y', 'ten years']];
+export function nwOptions(first = ''): number[] {
+  const span = first ? (new Date().getFullYear() - +first.slice(0, 4)) * 12 + new Date().getMonth() + 1 - +first.slice(5, 7) : 1e9;
+  const i = RANGES.findIndex(r => r[0] >= span);
+  return RANGES.slice(0, i < 0 ? RANGES.length : Math.max(i + 1, 2)).map(r => r[0]);
+}
+const firstOpened = () => (S.lists ? S.lists.accounts : []).filter(a => a.active && a.netWorth && a.openingDate).map(a => a.openingDate.slice(0, 10)).sort()[0] || '';
+// The range in use: the saved one (an old 1 or 3 means years), or the longest one offered if history is shorter
+export const nwMonths = () => {
+  const saved = LS.get('nwMonths', 0) || LS.get('nwYears', 1) * 12, opts = nwOptions(firstOpened());
+  return opts.includes(saved) ? saved : opts.filter(m => m <= saved).pop() || opts[0];
+};
+export const nwWords = () => RANGES.find(r => r[0] === nwMonths())![2];
 async function netWorthHistory(): Promise<NetWorthPoint[]> {
-  return netWorthOn(monthEnds(todayIso(), POINTS, nwYears() * 12 / (POINTS - 1)));
+  return netWorthOn(monthEnds(todayIso(), POINTS, nwMonths() / (POINTS - 1)));
 }
 // Net worth on each of these days, in the same order (a day from today on uses today's balances)
 export async function netWorthOn(days: string[]): Promise<NetWorthPoint[]> {
@@ -34,8 +48,8 @@ export async function netWorthOn(days: string[]): Promise<NetWorthPoint[]> {
     : Promise.all([getAll('/accounts', { type: 'asset', date }), getAll('/accounts', { type: 'liabilities', date })])
       .then(([as, ls]) => ({ date, ...total([...as, ...ls].map(normAccount)) }))));
 }
-// One year or three, for the Overview's net worth tile
-export const nwSeg = () => { const years = nwYears(); return html`<div class="seg mini">${htmlList([1, 3].map(y => html`<button type="button" class="${years === y ? 'on' : ''}" data-onclick="App.nwRange(${y})">${y === 1 ? '1Y' : '3Y'}</button>`))}</div>`; };
+// The range switch for the Overview's net worth tile
+export const nwSeg = () => { const cur = nwMonths(); return html`<div class="seg mini">${htmlList(nwOptions(firstOpened()).map(m => html`<button type="button" class="${cur === m ? 'on' : ''}" data-onclick="App.nwRange(${m})">${RANGES.find(r => r[0] === m)![1]}</button>`))}</div>`; };
 
 /* ---------- Time scrubber: drag along the tile's line and it goes back to that month ----------
    The big number and the line under it show that point, and a tip names the accounts that moved most since.
@@ -125,7 +139,7 @@ document.addEventListener('pointerout', e => {
 addEventListener('scroll', () => { const c = document.querySelector<HTMLElement>('.nw.scrubbing'); if (c && !dragging) reset(c); }, { passive: true });
 // Open the month of a point on the Overview: the whole page as it was then
 function nwOpen(y: number, m: number) { S.all = false; S.y = y; S.m = m; if (location.hash.replace(/^#\/?/, '') === '') App.reload(); else location.hash = '#/'; }
-function nwRange(y: number) { LS.set('nwYears', y === 3 ? 3 : 1); route(); }
+function nwRange(m: number) { LS.set('nwMonths', RANGES.some(r => r[0] === m) ? m : 12); route(); }
 
 // The methods markup handlers call (see events.ts), added to App and to its type
 const methods = {

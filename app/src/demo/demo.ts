@@ -14,7 +14,7 @@ try {
   if (localStorage.getItem('money.demoLook') !== LOOK) {
     const phone = innerWidth < 1000;
     localStorage.setItem('moneyTheme', 'frosted');
-    localStorage.setItem('money.nwYears', '3');
+    localStorage.setItem('money.nwMonths', '36');
     localStorage.setItem('money.dash', JSON.stringify({
       v: 3, units: 4, order: ['insights', 'networth', 'earned', 'spent', 'attention', ...(phone ? ['spending', 'cash'] : ['cash', 'spending']), 'cards', 'flow', 'heatmap', 'loans'],
       shown: ['cash', 'cards', 'flow', 'heatmap', 'loans'], hidden: ['safe', 'budgets', 'bills', 'cashflow'],
