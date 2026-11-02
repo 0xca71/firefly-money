@@ -120,7 +120,7 @@ describe('ingest.js', () => {
     const r = req({ auth: 'Bearer ' + await keyFor(), body: { amount: '-$20', merchant: 'Target', card: 'Whatever', account: 'checking' } });
     await ingest.endpoint(r);
     expect(r.status).toBe(200);
-    expect(posted(r)).toMatchObject({ type: 'deposit', amount: '20.00', source_name: 'Target', destination_id: '1' });
+    expect(posted(r)).toMatchObject({ type: 'deposit', amount: '20.00', source_name: 'Target', destination_id: '1', tags: ['Apple Pay', 'Refund'] });
   });
   it('explains what went wrong', async () => {
     const key = 'Bearer ' + await keyFor();

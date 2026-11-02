@@ -3,7 +3,7 @@ import { getAll } from '../core/api';
 import { App, S, absDiff, arr, fmtDay, money, money0, monthRange, nowMonth, sumDiff, todayIso, txHref, noneHref } from '../core/base';
 import { head, monthNav } from '../core/dom';
 import { nameAvatar, normGroup } from '../core/feed';
-import { addDays } from '../core/helpers';
+import { addDays, daysBetween } from '../core/helpers';
 import { isAsset, isLiab, lists, normAccount } from '../core/lists';
 import { VIEWS } from '../core/router';
 import { billDays } from './bills';
@@ -54,7 +54,7 @@ VIEWS.recap = async (r, paint) => {
   ]);
   // "Usual" is the average of the months before (three unless Customize says otherwise), scaled to the same number of days when the month isn't over.
   // Income isn't compared until the month is over: paydays come in lumps, so half a month says little.
-  const days = +end.slice(8, 10), dim = +cur.end.slice(8, 10), scale = days / dim / k;
+  const days = daysBetween(cur.start, end) + 1, dim = daysBetween(cur.start, cur.end) + 1, scale = days / dim / k;
   const earned = sumDiff(inc), spent = sumDiff(exp), kept = earned - spent, rate = earned ? kept / earned : 0;
   const usualIn = sumDiff(inc3) * scale, usualOut = sumDiff(exp3) * scale;
   const nw = nwStart != null && nwEnd != null ? nwEnd - nwStart : null;
@@ -83,11 +83,12 @@ VIEWS.recap = async (r, paint) => {
   const fresh = arr(payees).filter(x => !seen.has(String(x.id)) && absDiff(x) > 0).sort((a, b) => absDiff(b) - absDiff(a));
   const freshHtml = htmlList(fresh.slice(0, 6).map(x => html`<a class="row" href="#/account/${x.id}"><span class="name" style="display:flex;gap:10px;align-items:center">${nameAvatar(x.name, 'sm')}${x.name}</span><span class="num">${money(absDiff(x))}</span></a>`));
 
-  // What went out each week of the month (the last one runs to the month's end)
-  const wk = [1, 8, 15, 22, 29].filter(d => d <= dim).map((d, i, l) => ({ from: d, to: (l[i + 1] || dim + 1) - 1, v: 0 }));
-  splits.forEach(s => { const d = +String(s.date).slice(8, 10), w = wk.find(x => d >= x.from && d <= x.to); if (w) w.v += s.amount; });
-  const mon = cur.short.replace(/\s.*$/, ''), weeksHtml = splits.length ? barChart(wk.filter(w => cur.start.slice(0, 8) + String(w.from).padStart(2, '0') <= end).map(w => ({ label: mon + ' ' + w.from + '–' + w.to, v: w.v, go: txHref({ type: 'withdrawal' }, { start: cur.start.slice(0, 8) + String(w.from).padStart(2, '0'), end: cur.start.slice(0, 8) + String(w.to).padStart(2, '0') }) })), v => money0(v), 'Spending by week', { w: 380, h: 190 }) : '';
-  const { days: billOn, sum: billSum } = billDays(bills, t);
+  // What went out each week of the month, counted from the day it starts (the last one runs to the month's end)
+  const wk = [0, 7, 14, 21, 28].filter(o => o < dim).map((o, i, l) => ({ from: o, to: (l[i + 1] ?? dim) - 1, v: 0 }));
+  splits.forEach(s => { const o = daysBetween(cur.start, String(s.date).slice(0, 10)), w = wk.find(x => o >= x.from && o <= x.to); if (w) w.v += s.amount; });
+  const dayN = (o: number) => +addDays(cur.start, o).slice(8, 10), mon = (o: number) => fmtDay(addDays(cur.start, o)).replace(/\s*\d+$/, '');
+  const weeksHtml = splits.length ? barChart(wk.filter(w => w.from < days).map(w => ({ label: mon(w.from) + ' ' + dayN(w.from) + '–' + (mon(w.to) === mon(w.from) ? '' : mon(w.to) + ' ') + dayN(w.to), v: w.v, go: txHref({ type: 'withdrawal' }, { start: addDays(cur.start, w.from), end: addDays(cur.start, w.to) }) })), v => money0(v), 'Spending by week', { w: 380, h: 190 }) : '';
+  const { days: billOn, sum: billSum } = billDays(bills, t, cur);
   const billList = Object.values<any>(billOn).flat(), late = billList.filter(x => x.state === 'late');
 
   // A few plain sentences up top

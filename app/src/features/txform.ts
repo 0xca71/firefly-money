@@ -1,7 +1,7 @@
 import { type Html, html, htmlList } from '../core/html';
 import { AuthError, api } from '../core/api';
 import { showLogin } from '../core/auth';
-import { type ApiData, App, S, el, fmtDate, fmtDay, money, num, sameName, todayIso, type AppApi, type Field } from '../core/base';
+import { type ApiData, App, S, el, fmtDate, fmtDay, isoDate, money, num, sameName, todayIso, type AppApi, type Field } from '../core/base';
 import { LS } from '../core/helpers';
 import { BUZZ_SAVE, buzz } from '../core/haptics';
 import { closeDrawer, formError, heroParts, icon, openDrawer, opt, toast, vt, vtName } from '../core/dom';
@@ -271,7 +271,7 @@ function deleteDraft(id: string) { dropDraft(id); toast('Draft deleted'); route(
 export function draftsPanel() {
   const list = drafts().sort((a, b) => b.t - a.t);
   if (!list.length) return '';
-  return html`<section class="panel drafts"><div class="panel-head"><h2>Drafts</h2><span class="neutral">${list.length} to finish</span></div><div class="list">${htmlList(list.map(d => html`<div class="row"><button type="button" class="link name" data-onclick="App.openDraft('${d.id}')" style="text-align:left">${draftLabel(d)}<span class="sub-s" style="display:block">${d.form.date ? fmtDay(d.form.date) + ' · ' : ''}saved ${fmtDay(new Date(d.t).toISOString())}</span></button><span style="display:flex;gap:10px;align-items:center"><span class="num">${draftTotal(d.form) ? money(draftTotal(d.form)) : ''}</span><button type="button" class="link" data-onclick="App.deleteDraft('${d.id}')" aria-label="Delete draft">Delete</button></span></div>`))}</div></section>`;
+  return html`<section class="panel drafts"><div class="panel-head"><h2>Drafts</h2><span class="neutral">${list.length} to finish</span></div><div class="list">${htmlList(list.map(d => html`<div class="row"><button type="button" class="link name" data-onclick="App.openDraft('${d.id}')" style="text-align:left">${draftLabel(d)}<span class="sub-s" style="display:block">${d.form.date ? fmtDay(d.form.date) + ' · ' : ''}saved ${fmtDay(isoDate(new Date(d.t)))}</span></button><span style="display:flex;gap:10px;align-items:center"><span class="num">${draftTotal(d.form) ? money(draftTotal(d.form)) : ''}</span><button type="button" class="link" data-onclick="App.deleteDraft('${d.id}')" aria-label="Delete draft">Delete</button></span></div>`))}</div></section>`;
 }
 
 // The methods markup handlers call (see events.ts), added to App and to its type

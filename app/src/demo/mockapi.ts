@@ -259,7 +259,8 @@ export function createMockApi(now = new Date()) {
     const next = billDue(b, iso(TODAY), iso(TODAY + 400 * DAY));
     return { id, attributes: { name, amount_min: lo.toFixed(2), amount_max: hi.toFixed(2), date: iso(first), repeat_freq: freq, skip: 0,
       active: true, object_group_title: grp, currency_code: 'USD', notes: '', next_expected_match: next[0] ?? null,
-      pay_dates: ranged ? billDue(b, q.start, q.end) : [], paid_dates: paid } };
+      // like Firefly: only the due dates still to pay, none on or before the latest charge linked to the bill in the range
+      pay_dates: ranged ? billDue(b, q.start, q.end).filter(d => !paid.length || d > paid.map(p => p.date.slice(0, 10)).sort().pop()!) : [], paid_dates: paid } };
   };
   const PREFS: Record<string, unknown> = {};       // Firefly user preferences (Money keeps its synced settings in one), kept until the page reloads
 

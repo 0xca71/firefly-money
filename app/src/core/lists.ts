@@ -4,7 +4,7 @@ import { type ApiData, S, money, num, parseAmount } from './base';
 /* ================= Reference lists (cached) ================= */
 export type Account = {
   id: string, name: string, type: string, role: string, active: boolean, balance: number, debt: number, opening: number,
-  liabType: string, interest: string, interestPeriod: string, paymentDate: string, number: string, notes: string, currency: string,
+  liabType: string, direction: string, interest: string, interestPeriod: string, paymentDate: string, number: string, notes: string, currency: string,
   netWorth: boolean, openingDate: string, plan: Plan | null,
 };
 export function normAccount(a: ApiData): Account {
@@ -12,7 +12,7 @@ export function normAccount(a: ApiData): Account {
   return {
     id: String(a.id), name: t.name, type: String(t.type || ''), role: t.account_role || '', active: t.active !== false,
     balance: num(t.current_balance), debt: t.current_debt != null ? Math.abs(num(t.current_debt)) : Math.abs(num(t.current_balance)),
-    opening: num(t.opening_balance), liabType: t.liability_type || '', interest: t.interest || '', interestPeriod: t.interest_period || '',
+    opening: num(t.opening_balance), liabType: t.liability_type || '', direction: t.liability_direction || '', interest: t.interest || '', interestPeriod: t.interest_period || '',
     paymentDate: t.monthly_payment_date || '', number: t.account_number || '', notes: t.notes || '', currency: t.currency_code || '',
     netWorth: t.include_net_worth !== false, openingDate: t.opening_balance_date || '', plan: parsePlan(t.notes),
   };

@@ -135,7 +135,7 @@ function balanceChart(groups: Group[], a: Account, range: string) {
 async function accountForm(id: string | null, kind: string) {
   const L = await lists();
   const a = id ? (L.byId[id] || normAccount((await api('/accounts/' + id)).data)) : null;
-  S.form = { kind: kind || 'asset', id, name: a ? a.name : '' };
+  S.form = { kind: kind || 'asset', id, name: a ? a.name : '', direction: a ? a.direction : '' };
   const k = S.form.kind;
   const kinds = [['asset', 'Bank account'], ['card', 'Credit card'], ['liability', 'Loan or debt'], ['expense', 'Payee'], ['revenue', 'Income source']];
   let f = html`<form id="accForm" data-onsubmit="event.preventDefault();App.saveAccount()">`;
@@ -168,7 +168,7 @@ async function accountForm(id: string | null, kind: string) {
     html`${id ? html`<button class="btn danger" type="button" data-onclick="App.deleteAccount('${id}')">Delete</button>` : ''}<span class="grow"></span><button class="btn" data-onclick="App.closeDrawer()">Cancel</button><button class="btn primary" id="accSave" data-onclick="App.submit('accForm')">${id ? 'Save' : 'Create account'}</button>`);
 }
 async function saveAccount() {
-  const { kind, id, name } = S.form, v = (x: string) => el<Field>(x) ? el<Field>(x).value.trim() : '';
+  const { kind, id, name, direction } = S.form, v = (x: string) => el<Field>(x) ? el<Field>(x).value.trim() : '';
   const b: any = { name: v('a-name'), notes: v('a-notes') };
   if (!b.name) return formError('Give the account a name.');
   const site = v('a-site').toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/^www\./, '').split(/[/?#]/)[0];
@@ -176,7 +176,11 @@ async function saveAccount() {
   if (kind === 'asset') { b.type = 'asset'; b.account_role = v('a-role'); b.account_number = v('a-number'); }
   if (kind === 'card') { b.type = 'asset'; b.account_role = 'ccAsset'; b.credit_card_type = 'monthlyFull'; b.monthly_payment_date = v('a-paydate'); }
   if (kind === 'liability') {
-    b.type = 'liability'; b.liability_type = v('a-ltype'); b.liability_direction = 'credit'; b.interest = v('a-interest') || '0'; b.interest_period = v('a-iperiod');
+    b.type = 'liability'; b.liability_type = v('a-ltype');
+    // Firefly: 'debit' is a debt you owe, 'credit' one owed to you. Money's loans are debts you owe; an edit keeps whatever
+    // the account already has (some were saved as 'credit' before), so saving never flips it.
+    if (!id) b.liability_direction = 'debit'; else if (direction) b.liability_direction = direction;
+    b.interest = v('a-interest') || '0'; b.interest_period = v('a-iperiod');
     const day = parseInt(v('a-pday'), 10);
     if (v('a-pday') && !(day >= 1 && day <= 31)) return formError('The due day must be between 1 and 31.');
     b.notes = withPlan(b.notes, { amount: num(v('a-pamt')), day: day || null, from: v('a-pfrom') });

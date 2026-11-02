@@ -138,7 +138,8 @@ export function parseAmount(text: string): number | null {
     dec = parts.length === 2 && (parts[1].length !== 3 || decimalMark() === mark) ? mark : '';
   }
   const [int, frac = ''] = dec ? [t.slice(0, t.lastIndexOf(dec)), t.slice(t.lastIndexOf(dec) + 1)] : [t, ''];
-  if (/[.,]/.test(frac) || (dec && !/^-?\d{1,3}([.,]\d{3})*$|^-?\d+$/.test(int))) return null;
+  // Whatever is left of the decimal mark is digits, or digits grouped in threes ("1.5.2" is neither)
+  if (/[.,]/.test(frac) || (/[.,]/.test(int) && !/^-?\d{1,3}([.,]\d{3})*$/.test(int))) return null;
   const n = parseFloat(int.replace(/[.,]/g, '') + (frac ? '.' + frac : ''));
   return isNaN(n) ? null : n;
 }

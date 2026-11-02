@@ -13,12 +13,12 @@ export async function loanHistory(loans: Account[]) {
   const out: any = {};
   await Promise.all(loans.map(async l => {
     const groups = (await getAll('/accounts/' + l.id + '/transactions').catch(() => [])).map(normGroup);
-    const pays: { d: string, a: number, from: string }[] = [];
+    const pays: { d: string, a: number, from: string, bill: string }[] = [];
     let borrowed = Math.abs(l.opening), repaid = 0;
     groups.forEach(g => g.splits.forEach(s => {
       if (s.type === 'opening balance') return;
       if (s.source_id === l.id) borrowed += s.amount;
-      else if (s.destination_id === l.id) { repaid += s.amount; pays.push({ d: String(s.date).slice(0, 10), a: s.amount, from: s.source_id }); }
+      else if (s.destination_id === l.id) { repaid += s.amount; pays.push({ d: String(s.date).slice(0, 10), a: s.amount, from: s.source_id, bill: s.bill_id }); }
     }));
     pays.sort((a, b) => a.d.localeCompare(b.d));
     const cutoff = isoDate(new Date(Date.now() - 91 * 864e5));
