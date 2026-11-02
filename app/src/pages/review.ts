@@ -76,7 +76,9 @@ function reviewDone(id: string) {
   LS.set('reviewed', [...new Set([...LS.get('reviewed', []), String(id)])]);
   const row = document.querySelector<HTMLElement>('.review-row[data-gid="' + id + '"]');
   if (row) row.classList.add('gone');
-  setTimeout(() => route({ quiet: true }), 220);
+  // Take the row out once it has faded, then refresh the count. The refresh waits on Firefly, which can be slow
+  // or need a retry, and the faded row shouldn't sit there as an empty gap until it answers.
+  setTimeout(() => { row?.remove(); route({ quiet: true }); }, 220);
 }
 function reviewAll() { LS.set('reviewedAt', new Date().toISOString()); LS.set('reviewed', []); route(); }
 
