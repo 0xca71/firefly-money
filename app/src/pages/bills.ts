@@ -90,9 +90,14 @@ function billsView(v: string) { LS.set('billsView', v); location.hash = hashWith
 /* ---------- Subscriptions that aren't bills yet, and bills whose price went up ---------- */
 // Looks through the last 13 months of spending. The months that have ended are one request that stays saved
 // (see settled() in api.ts), so only this month is fetched again each time.
-async function subsPanel(bills: ApiData[]) {
+// The last 13 months of spending, as two requests: the months that have ended (saved for a day) and this month.
+// The forecast asks for the same two, to see which account pays each bill.
+export async function recentSpending() {
   const t = todayIso(), m0 = t.slice(0, 8) + '01', [y, m] = monthOf(new Date(m0 + 'T12:00:00')), from = monthRange(y, m - 13).start;
-  const gs = (await Promise.all([getAll('/transactions', { start: from, end: addDays(m0, -1), type: 'withdrawal' }), getAll('/transactions', { start: m0, end: t, type: 'withdrawal' })])).flat().map(normGroup);
+  return (await Promise.all([getAll('/transactions', { start: from, end: addDays(m0, -1), type: 'withdrawal' }), getAll('/transactions', { start: m0, end: t, type: 'withdrawal' })])).flat().map(normGroup);
+}
+async function subsPanel(bills: ApiData[]) {
+  const gs = await recentSpending();
   const charges = gs.flatMap(g => g.splits.filter(x => x.type === 'withdrawal').map(x => ({ date: x.date, amount: x.amount, payeeId: x.destination_id, payee: x.destination_name, billId: x.bill_id })));
   const hidden = new Set(LS.get('subsHidden', [])), names = new Set(bills.map(b => String(b.attributes.name).trim().toLowerCase()));
   const found = findRecurring(charges, todayIso()).filter(r => !hidden.has(r.payeeId) && !names.has(r.payee.trim().toLowerCase()));
