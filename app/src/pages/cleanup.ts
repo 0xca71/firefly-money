@@ -33,9 +33,18 @@ export function usedBy(groups: ApiData[]): Used {
   return u;
 }
 let found: Record<Kind, Item[]> = { payees: [], sources: [], categories: [], tags: [], budgets: [] };
+// The page while it looks: reading every transaction takes a while with years of history, so say what it's doing
+const looking = (what: string, pct: number) => html`${head('Clean up', 'Looking for unused items…', '')}<section class="panel" id="cleanLoading" aria-live="polite"><div class="center-empty"><p id="cleanWhat" style="margin:0 0 14px">${what}</p><div class="track" style="max-width:320px;margin:0 auto"><div class="fill good" id="cleanBar" style="width:${pct}%"></div></div><p class="sub-s" style="margin:14px 0 0">Nothing is deleted until you choose it.</p></div></section>`;
+function progress(what: string, pct: number) {
+  const t = document.getElementById('cleanWhat'), b = document.getElementById('cleanBar');
+  if (t && b) { t.textContent = what; b.style.width = pct + '%'; }
+}
 VIEWS.cleanup = async (r, paint) => {
+  paint(looking('Reading your payees, categories, tags and budgets…', 5));
   const L = await lists(true);
+  progress('Reading every transaction…', 15);
   const [txs, recs] = await Promise.all([getAll('/transactions', { type: 'all' }), getAll('/recurrences').catch(() => [])]);
+  progress('Working out what nothing uses…', 35);
   const u = usedBy([...txs, ...recs]);
   const cand: Record<Kind, Item[]> = {
     payees: L.expense.filter(a => !u.accounts.has(a.id)).map(a => ({ id: a.id, name: a.name })),
@@ -48,6 +57,7 @@ VIEWS.cleanup = async (r, paint) => {
   const all = (Object.keys(cand) as Kind[]).flatMap(k => cand[k].map(x => ({ k, x })));
   const keep = new Set<string>();
   for (let i = 0; i < all.length; i += 6) {
+    progress('Double-checking ' + Math.min(i + 6, all.length) + ' of ' + all.length + ' unused items…', 35 + Math.round(60 * i / all.length));
     await Promise.all(all.slice(i, i + 6).map(({ k, x }) => api(ownPath(k, x) + '/transactions', { params: { limit: 1, page: 1 }, fresh: true })
       .then(res => { if (arr(res).length) keep.add(k + ':' + x.id); }).catch(e => { if (e instanceof AuthError) throw e; keep.add(k + ':' + x.id); })));
   }

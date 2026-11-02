@@ -125,9 +125,16 @@ export function renderTxForm() {
     return;
   }
   openDrawer(f.id ? 'Edit transaction' : f.draft ? 'Draft' : f.refundOf ? 'Refund' : 'New transaction', body, foot);
+  if (!wasOpen) { collectTx(); S.formBase = JSON.stringify(S.form); }     // what it looked like when it opened, to tell later whether anything was typed
   if (wasOpen) el('drawerBody').scrollTop = scroll;
   if (f.id && (window.App as Partial<AppApi>).loadTxExtras) App.loadTxExtras(f.id, f.splits.map(s => s.jid).filter(Boolean));
 }
+// Browser back, or a link to another page, closes a form nobody has typed in; a form with changes stays open so nothing typed is lost
+addEventListener('hashchange', () => {
+  if (!S.form || !el('txForm') || !el('drawer').classList.contains('open')) return;
+  collectTx();
+  if (JSON.stringify(S.form) === S.formBase) closeDrawer();
+});
 export function collectTx() {
   const f: TxForm | null = S.form; if (!f || !el('txForm')) return;
   const v = (id: string) => el<Field>(id) ? el<Field>(id).value : undefined;

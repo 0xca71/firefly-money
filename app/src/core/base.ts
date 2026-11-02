@@ -42,7 +42,7 @@ export interface State {
   // Data kept by pages
   billCache?: Record<string, ApiData>, billRises?: Record<string, ApiData>, subs?: ApiData[], budgetCache?: Record<string, ApiData>, budgetLimits?: Record<string, ApiData>,
   piggyCache?: Record<string, ApiData>, recCache?: Record<string, ApiData>, rules?: Record<string, ApiData>, ruleGroups?: ApiData[], rates?: ApiData[],
-  rec?: ApiData, inbox?: ApiData, inboxHist?: { t: number, v: ApiData } | null, loanModel?: ApiData,
+  formBase?: string, rec?: ApiData, inbox?: ApiData, inboxHist?: { t: number, v: ApiData } | null, loanModel?: ApiData,
   dashEdit?: boolean, dashOptsOpen?: string | null, dashMore?: boolean, syncError?: string,
 }
 export const S: State = { y: 0, m: 0, signedIn: false, lists: null, tok: 0, form: null, currency: 'USD',

@@ -73,7 +73,7 @@ VIEWS.settings = async (r, paint) => {
     : syncAt ? 'Last synced ' + fmtDate(isoDate(new Date(syncAt))) + ' at ' + fmtD(new Date(syncAt), { hour: 'numeric', minute: '2-digit' }) + '.' : 'Nothing synced yet.';
   const sync = group('sync', 'Sync', html`
     ${row('Sync between devices', syncStatus, html`<input ${SWITCH} aria-label="Sync this device’s settings"${syncOff ? '' : ' checked'} data-onchange="App.toggleSync(this.checked)">`)}
-    ${syncOff ? '' : row('Sync now', '', html`<button class="btn small" type="button" data-onclick="App.syncNow()">Sync now</button>`)}`,
+    ${syncOff ? '' : row('Update other devices', 'Send this device’s settings and fetch the others’ now', html`<button class="btn small" type="button" data-onclick="App.syncNow()">Sync now</button>`)}`,
     'Your Overview layout, month start, drafts, saved reports, dismissed insights, forecast, loan plan and subscription choices and theme colors are kept in Firefly III, so they follow you to every device.');
 
   const showAll = r.q.rates === 'all';

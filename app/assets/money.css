@@ -1,5 +1,5 @@
   :root {
-    --bg: #f6f5f1; --panel: #ffffff; --line: #e9e7e0; --text: #22221f; --muted: #8c897f;
+    --bg: #f6f5f1; --panel: #ffffff; --line: #e9e7e0; --text: #22221f; --muted: #6a665c;
     --faint: #efede7; --good: #5d7f6c; --spend: #c47a58; --income: #9fb8a8; --warn: #b8893a;
     --radius: 20px; --shadow: 0 18px 50px rgba(34, 34, 31, .12);
   }
@@ -12,8 +12,14 @@
   }
 
   /* ---------- Themes (set on <html data-theme="…">; none = follow the system) ---------- */
+  /* The colours used as text on a light background are darker than the ones used for fills and charts, to reach 4.5:1 (WCAG AA). Dark themes use the fill colours as they are */
+  :root { --spend-t: var(--spend); --good-t: var(--good); --warn-t: var(--warn); }
+  html[data-theme="light"] { --spend-t: #a64d2a; --good-t: #3f6b54; --warn-t: #86600f; }
+  html[data-theme="sunrise"] { --spend-t: #c0301b; --good-t: #0a7650; --warn-t: #8a5800; }
+  html[data-theme="rose"] { --spend-t: #b8335b; --good-t: #1b7552; --warn-t: #855808; }
+  @media (prefers-color-scheme: light) { html:not([data-theme]) { --spend-t: #a64d2a; --good-t: #3f6b54; --warn-t: #86600f; } }
   :root { --accent: var(--text); --on-accent: var(--bg); color-scheme: light dark; --ease-glide: cubic-bezier(.32, .72, 0, 1); }
-  html[data-theme="light"] { --bg: #f6f5f1; --panel: #ffffff; --line: #e9e7e0; --text: #22221f; --muted: #8c897f; --faint: #efede7;
+  html[data-theme="light"] { --bg: #f6f5f1; --panel: #ffffff; --line: #e9e7e0; --text: #22221f; --muted: #6a665c; --faint: #efede7;
     --good: #5d7f6c; --spend: #c47a58; --income: #9fb8a8; --warn: #b8893a; --shadow: 0 18px 50px rgba(34,34,31,.12); color-scheme: light; }
   html[data-theme="dark"] { --bg: #151614; --panel: #1d1e1b; --line: #2b2c28; --text: #ecebe6; --muted: #8f8d85; --faint: #262723;
     --good: #8fb39e; --spend: #d9936f; --income: #4f6b5b; --warn: #d6a95a; --shadow: 0 18px 50px rgba(0,0,0,.5); color-scheme: dark; }
@@ -26,7 +32,7 @@
   html[data-theme="ocean"] { --bg: #041318; --panel: #0a2029; --line: #15343f; --text: #e2f5f8; --muted: #7ea5ae; --faint: #0f2b35;
     --good: #2dd4bf; --spend: #ff8a4c; --income: #3b9eff; --warn: #facc15; --accent: #14b8a6; --on-accent: #032126;
     --hero-grad: linear-gradient(90deg, #5eead4, #3b9eff); --shadow: 0 18px 50px rgba(0,0,0,.55); color-scheme: dark; }
-  html[data-theme="sunrise"] { --bg: #fff7ee; --panel: #ffffff; --line: #f3e2cf; --text: #221a14; --muted: #8e7765; --faint: #fdecd9;
+  html[data-theme="sunrise"] { --bg: #fff7ee; --panel: #ffffff; --line: #f3e2cf; --text: #221a14; --muted: #725d4c; --faint: #fdecd9;
     --good: #0f9d6b; --spend: #e8452c; --income: #2f7ff0; --warn: #d98b00; --accent: #e8452c; --on-accent: #ffffff;
     --hero-grad: linear-gradient(90deg, #e8452c, #f59e0b); --shadow: 0 18px 50px rgba(232,69,44,.12); color-scheme: light; }
   html[data-theme="forest"] { --bg: #0e1612; --panel: #15211b; --line: #233429; --text: #e7f0e9; --muted: #8aa596; --faint: #1b2a22;
@@ -35,7 +41,7 @@
   html[data-theme="nord"] { --bg: #242933; --panel: #2e3440; --line: #3b4252; --text: #eceff4; --muted: #a3acbd; --faint: #353c4a;
     --good: #a3be8c; --spend: #d08770; --income: #88c0d0; --warn: #ebcb8b; --accent: #88c0d0; --on-accent: #242933;
     --hero-grad: linear-gradient(90deg, #88c0d0, #b48ead); --shadow: 0 18px 50px rgba(0,0,0,.45); color-scheme: dark; }
-  html[data-theme="rose"] { --bg: #fdf6f7; --panel: #ffffff; --line: #f1dfe3; --text: #2a1b20; --muted: #95747d; --faint: #f9e8ec;
+  html[data-theme="rose"] { --bg: #fdf6f7; --panel: #ffffff; --line: #f1dfe3; --text: #2a1b20; --muted: #72525b; --faint: #f9e8ec;
     --good: #2f9e72; --spend: #d6456e; --income: #6b7fe0; --warn: #c98a1b; --accent: #d6456e; --on-accent: #ffffff;
     --hero-grad: linear-gradient(90deg, #d6456e, #9b6bdf); --shadow: 0 18px 50px rgba(214,69,110,.12); color-scheme: light; }
   html[data-theme="carbon"] { --bg: #161618; --panel: #1f1f23; --line: #2f2f36; --text: #f3f3f5; --muted: #9b9ba6; --faint: #2a2a30;
@@ -260,12 +266,14 @@
   .stat .sub, .sub-s { font-size: 12.5px; color: var(--muted); }
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 22px; }
   /* two to a row on a phone: an odd one out at the end takes the whole row instead of sitting alone on the left */
-  @media (max-width: 573px) { .kpis > .kpi:last-child:nth-child(odd) { grid-column: 1 / -1; } }
+  /* On phones the KPI cards sit two to a row, compact like the Overview's stat cards, so the page's table or chart stays near the top */
+  @media (max-width: 573px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; } .kpis > .kpi:last-child:nth-child(odd) { grid-column: 1 / -1; }
+    .kpi { padding: 12px 14px; } .kpi .val { font-size: 19px; } .kpi .sub-s { overflow-wrap: anywhere; } }
   .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
   .kpi .val { font-size: 22px; letter-spacing: -.02em; }
   .total { font-size: 28px; font-weight: 300; letter-spacing: -.02em; margin-bottom: 14px; }
-  .up { color: var(--spend); } .down { color: var(--good); }
-  .neg { color: var(--spend); } .pos { color: var(--good); } .neutral { color: var(--muted); }
+  .up { color: var(--spend-t); } .down { color: var(--good-t); }
+  .neg { color: var(--spend-t); } .pos { color: var(--good-t); } .neutral { color: var(--muted); }
 
   .row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
   .row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -290,7 +298,7 @@
   .loading { color: var(--muted); padding: 90px 0; text-align: center; }
   .error { background: var(--faint); border-radius: 14px; padding: 16px 18px; color: var(--text); }
   .chip { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 99px; background: var(--faint); color: var(--muted); margin-right: 4px; white-space: nowrap; }
-  .chip.good { color: var(--good); } .chip.warn { color: var(--warn); } .chip.bad { color: var(--spend); }
+  .chip.good { color: var(--good-t); } .chip.warn { color: var(--warn-t); } .chip.bad { color: var(--spend-t); }
   .saved-reports { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 16px; } .saved-reports .chip { font-size: 13px; padding: 3px 4px 3px 10px; display: inline-flex; gap: 4px; align-items: center; margin: 0; } .saved-reports .chip a { color: inherit; text-decoration: none; } .saved-reports .chip.on { color: var(--text); box-shadow: inset 0 0 0 1px var(--line); } .saved-reports .chip button { border: 0; background: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 4px; } .save-report { display: inline-flex; gap: 6px; } .save-report input { width: 190px; padding: 4px 10px; font-size: 13px; }
   .tagcloud { display: flex; flex-wrap: wrap; gap: 8px; }
   .tagcloud .chip { font-size: 13px; padding: 4px 6px 4px 12px; display: inline-flex; gap: 6px; align-items: center; }
@@ -408,6 +416,9 @@
   .fab { position: fixed; right: 28px; bottom: 28px; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--accent); color: var(--on-accent);
     font-size: 28px; line-height: 1; cursor: pointer; box-shadow: var(--shadow); z-index: 15; }
   .fab:hover { filter: brightness(1.08); }
+  /* Covering some text: slid mostly off the right edge, with a lip left to grab (features/fabdodge.ts). translate is its own property, so the phone's scale pop-in is untouched */
+  .fab { transition: translate .3s var(--ease-glide, ease), opacity .2s; }
+  .fab.peek { translate: 40px 0; opacity: .9; }
   /* ---------- Undo toast ---------- */
   .undo { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--text); color: var(--bg); border-radius: 99px; padding: 8px 8px 8px 18px;
     display: flex; gap: 14px; align-items: center; z-index: 41; font-size: 13.5px; line-height: 1.3; box-shadow: var(--shadow);
@@ -595,7 +606,7 @@
   .pal-l, .pal-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pal-sub { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
   .pal-item .k, .pal-item .num { flex: none; font-size: 12px; color: var(--muted); }
-  .pal-item .num { font-size: 14px; } .pal-item .num.neg { color: var(--text); } .pal-item .num.pos { color: var(--good); }
+  .pal-item .num { font-size: 14px; } .pal-item .num.neg { color: var(--text); } .pal-item .num.pos { color: var(--good-t); }
   .pal-wait { cursor: default; } .pal-wait .spin { margin-right: 8px; }
   details.pal-flash { border-radius: 8px; }
   .pal-flash { animation: palFlash 1.6s ease-out; scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 64px); }
@@ -1281,6 +1292,12 @@
     .stats { gap: 12px; } .stat .val { font-size: 19px; }
     .panel { padding: 20px; }
     .tbl .hide-s { display: none; }
+    /* Names in share lists wrap on a phone instead of being cut short with an ellipsis ("Old Accounts (untracked)") */
+    .part .name, .part .name .sub-s { white-space: normal; overflow-wrap: anywhere; }
+    /* A table has to fit a 320px phone, Edit buttons included: tighter cell padding, and a long name or a wide amount range wraps instead of pushing it out */
+    .tbl:not(.feed) :is(td, th) { padding-left: 12px; padding-right: 12px; }
+    .tbl:not(.feed) td:first-child { min-width: 0; overflow-wrap: break-word; }
+    .tbl:not(.feed) td.amt { white-space: normal; }
     .cat-s { display: inline; }
     .show-s { display: initial; }
     div.show-s { display: block; }
@@ -1306,9 +1323,9 @@
     .drawer header { padding-top: 14px; touch-action: none; }
     .drawer footer { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
     /* More buttons than fit (Delete, Duplicate, Refund…): the ones before the gap go on a row of their own */
-    .drawer footer:has(> .btn + .btn + .grow) { flex-wrap: wrap; }
-    .drawer footer:has(> .btn + .btn + .grow) > .grow { flex: 0 0 100%; margin: -5px 0; }
-    .drawer footer:has(> .btn + .btn + .grow) > .btn { flex: 1 1 0; justify-content: center; text-align: center; padding-left: 8px; padding-right: 8px; }
+    .drawer footer:is(:has(> .btn + .btn + .grow), :has(> .btn + .grow + .btn + .btn)) { flex-wrap: wrap; }
+    .drawer footer:is(:has(> .btn + .btn + .grow), :has(> .btn + .grow + .btn + .btn)) > .grow { flex: 0 0 100%; margin: -5px 0; }
+    .drawer footer:is(:has(> .btn + .btn + .grow), :has(> .btn + .grow + .btn + .btn)) > .btn { flex: 1 1 0; justify-content: center; text-align: center; padding-left: 8px; padding-right: 8px; }
     html.vt-drawer-open::view-transition-new(drawer) { animation-name: vtInSheet; }
     html.vt-drawer-close::view-transition-old(drawer) { animation-name: vtOutSheet; }
     .cards.editing .w { cursor: default; }
@@ -2046,3 +2063,15 @@
        over the border so the field's own focus look is untouched */
     html:is([data-theme="glass"], [data-theme="frosted"]) .edge-f:not(:focus) { outline: 1px solid color-mix(in srgb, var(--edge-c) calc(var(--eg, 0) * 65%), transparent); outline-offset: -1px; }
   }
+
+/* ---------- Touch targets: small controls get a larger invisible hit area on touch screens (about 44px), with no change to how they look ---------- */
+@media (pointer: coarse) {
+  :is(.ask-examples .chip, .seg.mini button, .insight .x, .dbars .db, .part .name a, #view button.link, #view .panel-head a.link) { position: relative; }
+  :is(.ask-examples .chip, .seg.mini button, .insight .x, .dbars .db, .part .name a, #view button.link, #view .panel-head a.link)::after { content: ""; position: absolute; }
+  .ask-examples .chip::after { inset: -7px 0; }
+  .seg.mini button::after { inset: -9px -3px; }
+  .insight .x::after { inset: -10px; }
+  .dbars .db::after { inset: -2px -1px; }     /* a day's bar can't be 44px wide: there are up to 31 side by side */
+  .part .name a::after { inset: -14px -6px; }
+  #view button.link::after, #view .panel-head a.link::after { inset: -12px -6px; }
+}

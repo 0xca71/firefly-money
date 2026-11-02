@@ -98,7 +98,7 @@ async function loanPay(id: string, v: string) {
 }
 function loanFixed(id: string) {
   const p = LS.get('loanPlan', { pays: {}, extra: 0, strategy: 'snowball', fixed: {} }), m = (S.loanModel || []).find((x: LoanModel) => x.id === id);
-  p.fixed = { ...(p.fixed || {}), [id]: !(m && m.fixed) }; LS.set('loanPlan', p); route();
+  p.fixed = { ...p.fixed, [id]: !(m && m.fixed) }; LS.set('loanPlan', p); route();
 }
 function loanSet(k: string, v: string) { const p = LS.get('loanPlan', { pays: {}, extra: 0, strategy: 'snowball' }); p[k] = k === 'extra' ? Math.max(0, num(v)) : v; LS.set('loanPlan', p); route(); }
 function loanReset() { LS.set('loanPlan', { pays: {}, extra: 0, strategy: 'snowball', fixed: (LS.get('loanPlan', { fixed: {} }).fixed) || {} }); route(); }
