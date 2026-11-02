@@ -32,6 +32,7 @@ const NOTES: Record<string, Notes> = {
     ['sliders', 'Customize every page', 'Reports, Budgets, Categories, Transactions and more have their own Customize sheet with extra charts to pick from.'],
     ['globe', 'Your number and date format', 'Pick how amounts and dates are written in Settings → Appearance, or let your browser decide.'],
     ['print', 'Print in your theme', 'Print and Save as PDF keep your theme’s colours and background.'],
+    ['lens', 'More trustworthy numbers', 'A full audit fixed Forecast, Bills, Loans, Budgets and Recap totals, and tightened layouts down to small phones.'],
   ] },
   '2.1.0': { lead: 'Split transactions stay whole, the desktop comes alive under your mouse, and Settings is easier to find your way around.', items: [
     ['split', 'Split transactions stay whole', 'Categorizing, reconciling or bulk editing one part of a split no longer deletes the other parts. Thanks to GeorgeBark for the report.'],
