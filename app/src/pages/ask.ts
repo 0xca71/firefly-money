@@ -6,7 +6,7 @@ import { normGroup } from '../core/feed';
 import { addDays, daysBetween } from '../core/helpers';
 import { type Lists, isAsset, isLiab, lists } from '../core/lists';
 import { VIEWS } from '../core/router';
-import { forecastModel } from './forecast';
+import { fcHorizon, forecastModel, horizonText, shortText } from './forecast';
 import { compareRange, monthSpan } from './reports';
 import { insight } from '../features/refunds';
 
@@ -123,9 +123,9 @@ async function answer(q: Question, L: Lists): Promise<Answer> {
       how: 'Every withdrawal from ' + fmtDate(r.start) + ' to ' + fmtDate(r.end) + ', largest first.' };
   }
   if (q.intent === 'bills' || q.intent === 'safe') {
-    const m = await forecastModel('', 60);
-    if (q.intent === 'safe') return { title: m.short ? html`Careful: ${m.name} is projected to go <strong>${money0(m.short)} below zero</strong> on ${fmtDay(m.minDate)}.` : html`About <strong>${money0(m.safe)}</strong> is safe to spend from ${m.name}${m.nextPay ? ' until ' + fmtDay(m.nextPay.date) : ''}.`,
-      how: 'Balance now (' + money0(m.start) + ') through the lowest point in the next 60 days (' + money0(m.min) + '), minus your ' + money0(m.buffer) + ' cushion. Bills, recurring payments, card payoffs and loans are counted.',
+    const m = await forecastModel('', fcHorizon());
+    if (q.intent === 'safe') return { title: m.short ? html`Careful: ${m.name} is projected to go <strong>${shortText(m)}</strong>.` : html`About <strong>${money0(m.safe)}</strong> is safe to spend from ${m.name}${m.nextPay ? ' until ' + fmtDay(m.nextPay.date) : ''}.`,
+      how: 'Balance now (' + money0(m.start) + ') through the lowest point in the next ' + horizonText(m.horizon) + ' (' + money0(m.min) + '), minus your ' + money0(m.buffer) + ' cushion. Bills, recurring payments, card payoffs and loans are counted.',
       more: { label: 'Open the forecast', href: '#/forecast' } };
     const until = m.nextPay ? m.nextPay.date : addDays(todayIso(), 14), due = m.ev.filter(e => !e.off && e.amount < 0 && e.date < until);
     const total = due.reduce((s, e) => s + e.amount, 0);

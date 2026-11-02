@@ -5,6 +5,13 @@ import { LS, addDays, budgetAlert, daysBetween } from '../core/helpers';
 import { type Account, ordinal } from '../core/lists';
 import { insight, refundsIn } from './refunds';
 
+// A card's next payment day on or after today: its day this month, or next month's, each clamped to the month's length
+export function cardDue(now: Date, day: number) {
+  const on = (k: number) => new Date(now.getFullYear(), now.getMonth() + k, Math.min(day, new Date(now.getFullYear(), now.getMonth() + k + 1, 0).getDate()), 12);
+  const due = on(0);
+  return due < new Date(now.getFullYear(), now.getMonth(), now.getDate()) ? on(1) : due;
+}
+
 /* =====================================================================
    Insight cards: short, auto-generated observations on the Overview.
    Compares this month against the same point last month (3-month average as a note).
@@ -88,8 +95,7 @@ async function insightCards({ cur: period, future, budgets, limits, cards, trend
     cards.forEach(a => {
       const owed = Math.max(0, -a.balance), day = +String(a.paymentDate || '').slice(8, 10);
       if (!owed || !day) return;
-      let due = new Date(now.getFullYear(), now.getMonth(), Math.min(day, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()), 12);
-      if (due < new Date(now.getFullYear(), now.getMonth(), now.getDate())) due = new Date(now.getFullYear(), now.getMonth() + 1, day, 12);
+      const due = cardDue(now, day);
       const days = Math.round((+due - +new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12)) / 864e5);
       if (days > 7) return;
       add('card:' + a.id, 'warn', 'card', a.name + ' payment due ' + (days === 0 ? 'today' : days === 1 ? 'tomorrow' : 'in ' + days + ' days'),

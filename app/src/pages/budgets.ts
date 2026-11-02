@@ -3,7 +3,7 @@ import { AuthError, api, getAll } from '../core/api';
 import { busy, showLogin } from '../core/auth';
 import { App, S, arr, el, fmtDay, money, money0, monthRange, num, sumDiff, todayIso, type ApiData, type Period, viewPeriod } from '../core/base';
 import { addDays, budgetAlert, daysBetween } from '../core/helpers';
-import { closeDrawer, formError, head, monthNav, openDrawer, opt, toast } from '../core/dom';
+import { closeDrawer, confirmBox, formError, head, monthNav, openDrawer, opt, toast } from '../core/dom';
 import { invalidate, lists, type Lists } from '../core/lists';
 import { VIEWS, hashWith, route } from '../core/router';
 import { budgetsLessRefunds, insight, refundsIn } from '../features/refunds';
@@ -32,17 +32,36 @@ export function budgetPace(spent: number, amount: number, start: string, end: st
   return { at, tone: 'ok', text: used <= at ? 'On pace' : 'A little ahead of pace' };
 }
 // This period's amount for each budget, by budget id
-export type BudgetLimit = { id: string, amount: number };
+// A budget can have several amounts that overlap the period (an auto-budget that resets every week has one per week),
+// so a budget's amount is the sum of them, each counted for the part of it that falls inside the period. `parts` are
+// the amounts as Firefly has them; `id` is the one amount to edit, when the budget has exactly one.
+export type LimitPart = { id: string, amount: number, start: string, end: string };
+export type BudgetLimit = { id: string, amount: number, parts: LimitPart[] };
+export function limitTotal(parts: LimitPart[], per: { start: string, end: string }) {
+  let sum = 0;
+  parts.forEach(p => {
+    const from = p.start && p.start > per.start ? p.start : per.start, to = p.end && p.end < per.end ? p.end : per.end;
+    if (to < from) return;
+    const whole = p.start && p.end && p.end >= p.start ? daysBetween(p.start, p.end) + 1 : 0;
+    sum += whole ? p.amount * (daysBetween(from, to) + 1) / whole : p.amount;
+  });
+  return Math.round(sum * 100) / 100;
+}
 export async function budgetLimits(cur: Period, L: Lists) {
-  const out: Record<string, BudgetLimit> = {};
-  const take = (bid: string, x: ApiData) => { const at = x.attributes || {}; out[String(bid)] = { id: String(x.id), amount: num(at.amount) }; };
+  const parts: Record<string, LimitPart[]> = {}, out: Record<string, BudgetLimit> = {};
+  const take = (bid: string, x: ApiData) => {
+    const at = x.attributes || {};
+    (parts[String(bid)] = parts[String(bid)] || []).push({ id: String(x.id), amount: num(at.amount), start: String(at.start || '').slice(0, 10), end: String(at.end || '').slice(0, 10) });
+  };
+  const done = () => { Object.entries(parts).forEach(([bid, ps]) => { out[bid] = { id: ps.length === 1 ? ps[0].id : '', amount: limitTotal(ps, cur), parts: ps }; }); return out; };
   try {
     const all = await getAll('/budget-limits', { start: cur.start, end: cur.end });
     all.forEach(x => take(x.attributes.budget_id, x));
   } catch (e) {
+    Object.keys(parts).forEach(k => delete parts[k]);
     await Promise.all(L.budgets.map(b => getAll('/budgets/' + b.id + '/limits', { start: cur.start, end: cur.end }).then(ls => ls.forEach(x => take(b.id, x))).catch(() => {})));
   }
-  return out;
+  return done();
 }
 VIEWS.budgets = async (r, paint) => {
   const L = await lists();
@@ -81,12 +100,19 @@ VIEWS.budgets = async (r, paint) => {
   S.budgetLimits = limits; S.budgetCache = Object.fromEntries(bs.map(b => [b.id, b]));
 };
 async function setLimit(bid: string, input: HTMLInputElement) {
-  const cur = monthRange(S.y, S.m), lim = (S.budgetLimits || {})[bid], val = input.value.trim();
+  const cur = monthRange(S.y, S.m), lim = (S.budgetLimits || {})[bid], val = input.value.trim(), clear = val === '' || num(val) <= 0, parts: LimitPart[] = lim ? lim.parts : [];
+  const body = { amount: String(num(val)), start: cur.start, end: cur.end };
+  // Several amounts (weekly auto-budget, say) can't be edited as one number: the new amount replaces them all, once the person agrees
+  if (parts.length > 1 && !await confirmBox(clear ? 'Remove all ' + parts.length + ' amounts?' : 'Replace ' + parts.length + ' amounts with one?',
+    clear ? 'This budget has ' + parts.length + ' amounts this month. They will all be removed.' : 'This budget has ' + parts.length + ' amounts this month (' + money0(lim.amount) + ' in all). They will be replaced by one amount of ' + money0(num(val)) + '.', clear ? 'Remove' : 'Replace')) { input.value = String(lim.amount); return; }
   input.disabled = true;
   try {
-    if (val === '' || num(val) <= 0) { if (lim) await api('/budgets/' + bid + '/limits/' + lim.id, { method: 'DELETE' }); }
-    else if (lim) await api('/budgets/' + bid + '/limits/' + lim.id, { method: 'PUT', body: { amount: String(num(val)), start: cur.start, end: cur.end } });
-    else await api('/budgets/' + bid + '/limits', { method: 'POST', body: { amount: String(num(val)), start: cur.start, end: cur.end, currency_code: S.currency } });
+    if (clear) await Promise.all(parts.map(p => api('/budgets/' + bid + '/limits/' + p.id, { method: 'DELETE' })));
+    else if (parts.length === 1) await api('/budgets/' + bid + '/limits/' + parts[0].id, { method: 'PUT', body });
+    else {
+      if (parts.length) await Promise.all(parts.map(p => api('/budgets/' + bid + '/limits/' + p.id, { method: 'DELETE' })));
+      await api('/budgets/' + bid + '/limits', { method: 'POST', body: { ...body, currency_code: S.currency } });
+    }
     toast('Budget updated'); route();
   } catch (e) { input.disabled = false; if (e instanceof AuthError) return showLogin(e.message); toast((e as Error).message); }
 }

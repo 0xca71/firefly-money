@@ -3,7 +3,7 @@ import { api, getAll, sleep } from '../core/api';
 import { App, S, absDiff, arr, el, fmtDate, fmtDay, isoDate, money, money0, monthRange, noneHref, nowMonth, num, pad, sumDiff, todayIso, txHref, type ApiData, type Period, viewPeriod, viewYM } from '../core/base';
 import { head, monthNav } from '../core/dom';
 import { normGroup, rankCats, txRows } from '../core/feed';
-import { addDays, budgetAlert } from '../core/helpers';
+import { addDays, budgetAlert, daysBetween } from '../core/helpers';
 import { type Account, isAsset, isCard, isLiab, lists } from '../core/lists';
 import { VIEWS } from '../core/router';
 import { DASH_NAMES, tileOn, tileOpt } from '../features/dashboard';
@@ -11,7 +11,8 @@ import { barChart, paceChart, ring, shareChart, sparkBars, twoLines } from '../f
 import { type NetWorthPoint, nwLine, nwSeg, nwYears } from '../features/networth';
 import { bindSwipe } from '../features/phone';
 import { drafts } from '../features/txform';
-import { billAmount } from './bills';
+import { billAmount, billDueDates, billsFrom } from './bills';
+import { fcHorizon } from './forecast';
 import { type BudgetLimit, budgetLimits } from './budgets';
 import { loanHistory } from './loans';
 import { type Piggy, normPiggy, paceBits } from './piggy';
@@ -27,6 +28,9 @@ VIEWS[''] = async (r, paint) => {
   const nMonths = tileOpt('cashflow', 'months');
   const [ny, nm] = nowMonth(), months = [...Array(nMonths)].map((_, i) => all ? monthRange(ny, nm - nMonths + 1 + i) : monthRange(vy, vm - nMonths + 1 + i));
   const p = (x: Period) => ({ start: x.start, end: x.end });
+  // While this month is under way, Spent compares it with last month up to the same day (like the insights);
+  // a month that's over is compared with the whole of the one before
+  const t0 = todayIso(), soFar = !all && cur.start <= t0 && t0 <= cur.end ? samePoint(cur, prev, t0) : null;
   const future = !all && (vy > ny || (vy === ny && vm > nm));
   const monthOnly = future || all;   // cards that only make sense for one month (insights, the day heatmap)
   const uncatQ = 'has_no_category:true transaction_type:withdrawal date_after:' + cur.start + ' date_before:' + cur.end;
@@ -40,7 +44,7 @@ VIEWS[''] = async (r, paint) => {
   // as soon as those are in; the slower cards show placeholders and fill in when their data arrives.
   // Refunds come off spending (see refunds.ts): fetched once for the chart's months, and the other ranges use those when they fit
   const span = { start: months[0].start, end: months[months.length - 1].end }, monthsRs = refundsIn(span.start, span.end);
-  const rsFor = (x: Period) => x.start >= span.start && x.end <= span.end ? monthsRs : undefined;
+  const rsFor = (x: { start: string, end: string }) => x.start >= span.start && x.end <= span.end ? monthsRs : undefined;
   const coreP = Promise.all([
     api('/summary/basic', { params: p(cur) }).catch(() => ({})),
     insight('/insight/expense/category', p(cur), rsFor(cur)), all ? [] : insight('/insight/expense/category', p(prev), rsFor(prev)),
@@ -49,10 +53,12 @@ VIEWS[''] = async (r, paint) => {
       .then(([i, e]) => ({ label: mo.short, income: sumDiff(i), spend: sumDiff(e), go: 'month:' + mo.y + ':' + mo.m, start: mo.start, end: mo.end })))),
     api('/transactions', { params: { limit: tileOpt('recent', 'count'), page: 1 } }),
     Promise.all([api('/budgets', { params: p(cur) }), rsFor(cur) || refundsIn(cur.start, cur.end)]).then(([b, rs]) => budgetsLessRefunds(arr(b), rs)), all ? {} : budgetLimits(cur, L),
-    getAll('/bills', { start: todayIso(), end: addDays(todayIso(), 45) }),      // same request as the safe-to-spend card
+    // From the 1st, so bills still unpaid from earlier this month show as overdue; as far ahead as the safe-to-spend card looks, so it's the same request
+    getAll('/bills', { start: billsFrom(t0), end: addDays(t0, Math.max(45, fcHorizon())) }),
     future ? null : api('/search/transactions', { params: { query: uncatQ, search: uncatQ, limit: 1, page: 1 } }).catch(() => null),
     all ? Promise.all([insight('/insight/income/total', p(cur), rsFor(cur)), insight('/insight/expense/total', p(cur), rsFor(cur))])
       .then(([i, e]) => ({ income: sumDiff(i), spend: sumDiff(e) })) : null,
+    soFar ? insight('/insight/expense/total', soFar, rsFor(soFar)).then(sumDiff).catch(() => null) : null,
   ]);
   // Only what the cards on the page need: a card that's off (Customize → Add cards) costs no requests
   const on = (...ks: string[]) => ks.some(tileOn), none = Promise.resolve([] as any);
@@ -67,11 +73,11 @@ VIEWS[''] = async (r, paint) => {
     on('trends') ? Promise.all(months.map(mo => insight('/insight/expense/category', p(mo), monthsRs).catch(() => []))) : none]);
   slowP.catch(() => {});
   if (r.at) { await Promise.all([coreP, slowP]).catch(() => {}); return; }     // loading a month ahead: the data is all it needs
-  const [summary, catNow, catPrev, noCatNow, noCatPrev, trend, recent, budgets, limits, bills, uncat, allTot] = await coreP;
+  const [summary, catNow, catPrev, noCatNow, noCatPrev, trend, recent, budgets, limits, bills, uncat, allTot, prevSoFar] = await coreP;
   const nwKey = Object.keys(summary || {}).find(k => k.startsWith('net-worth-in'));
   const computedNW = own.filter(isAsset).reduce((s, a) => s + a.balance, 0) - loans.reduce((s, l) => s + l.debt, 0);
   const netWorth = nwKey ? num(summary[nwKey].monetary_value) : computedNW;
-  const last = all ? allTot! : trend[trend.length - 1], before = all || trend.length < 2 ? { spend: 0 } : trend[trend.length - 2];
+  const last = all ? allTot! : trend[trend.length - 1], before = all || trend.length < 2 ? { spend: 0 } : soFar ? { spend: prevSoFar || 0 } : trend[trend.length - 2];
 
   // categories
   const cats = new Map<string, CatRow>();
@@ -88,7 +94,7 @@ VIEWS[''] = async (r, paint) => {
     const idle = (k: string, why = future ? 'Fills in once this month starts.' : 'Shows for one month at a time: pick a month at the top.') => quietPanel(k, why);
     const W: [string, unknown][] = [
       ['networth', networthTile(netWorth, slow ? nw : undefined)],
-      ['spent', spentTile(last.spend, future && !last.spend ? 0 : before.spend, prev.short, trend, all)],
+      ['spent', spentTile(last.spend, future && !last.spend ? 0 : before.spend, soFar ? 'the same point in ' + prev.short : prev.short, trend, all)],
       ['earned', earnedTile(last.income, last.spend)],
       ['insights', monthOnly ? idle('insights') : wait('insights') ?? (insights || quietPanel('insights', 'Nothing unusual this month.'))],
       ['safe', future ? idle('safe') : wait('safe') ?? (safe || idle('safe'))],
@@ -149,10 +155,10 @@ function attentionPanel({ uncat, bills, budgets, limits, future }: { uncat: ApiD
   const nd = drafts().length;
   if (nd) items.push(html`<a class="row" href="#/transactions"><span class="name">📝 ${nd} draft${nd === 1 ? '' : 's'} to finish</span><span class="neutral">Open →</span></a>`);
   if (n) items.push(html`<a class="row" href="#/inbox"><span class="name">🏷 ${n} expense${n === 1 ? '' : 's'} without a category</span><span class="neutral">Categorize →</span></a>`);
-  const week = isoDate(new Date(Date.now() + 7 * 864e5));
-  bills.filter(b => b.attributes.active !== false && !(b.attributes.paid_dates || []).length).forEach(b => {
-    const d = String((b.attributes.pay_dates || [])[0] || '').slice(0, 10);
-    if (d && d <= week) items.push(html`<a class="row" href="#/bills"><span class="name">📅 ${b.attributes.name} due ${fmtDay(d)}</span><span class="num">${money(billAmount(b.attributes))}</span></a>`);
+  const t = todayIso(), week = isoDate(new Date(Date.now() + 7 * 864e5));
+  bills.filter(b => b.attributes.active !== false).forEach(b => {
+    const d = billDueDates(b.attributes, { end: week })[0];
+    if (d) items.push(html`<a class="row" href="#/bills"><span class="name">📅 ${b.attributes.name} ${d < t ? html`<span class="up">overdue since ${fmtDay(d)}</span>` : 'due ' + fmtDay(d)}</span><span class="num">${money(billAmount(b.attributes))}</span></a>`);
   });
   if (!future) budgets.forEach(b => {
     const lim = limits[String(b.id)], spent = Math.abs((b.attributes.spent || []).reduce((s: number, x: ApiData) => s + num(x.sum), 0));
@@ -169,6 +175,11 @@ function networthTile(netWorth: number, pts: NetWorthPoint[] | null | undefined)
   const d = pts && pts.length > 1 ? netWorth - pts[0].net : null;
   const line = pts === undefined ? html`<div class="sk" style="height:56px"></div>` : pts && pts.length > 1 ? nwLine(pts, d! >= 0 ? 'var(--good)' : 'var(--spend)') : '';
   return html`<section class="panel stat nw"><div class="panel-head"><a class="eyebrow nw-tl" href="#/timeline" title="Open the timeline">Net worth<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>${nwSeg()}</div><div class="big num go-num${netWorth < 0 ? ' negative' : ''}" data-count="${netWorth}" data-go="#/accounts" title="See your accounts">${money0(netWorth)}</div><div class="sub-s">${d === null ? html`&nbsp;` : html`<span class="${d >= 0 ? 'down' : 'up'}">${d >= 0 ? '▲' : '▼'} ${money0(Math.abs(d))}</span> over ${nwYears() === 3 ? 'three years' : 'the year'}`}</div>${line}</section>`;
+}
+// Last month from its start up to the same day of the month as today (the same number of days in, for a custom month start)
+export function samePoint(cur: { start: string }, prev: { start: string, end: string }, today: string) {
+  const e = addDays(prev.start, daysBetween(cur.start, today));
+  return { start: prev.start, end: e < prev.end ? e : prev.end };
 }
 function spentTile(spend: number, before: number, prevShort: string, trend: CashMonth[], all: boolean) {
   const change = before ? (spend - before) / before * 100 : 0, bars = trend.map(t => t.spend);
@@ -303,11 +314,11 @@ function goalsPanel(piggies: Piggy[], done = true) {
 function billsMini(bills: ApiData[], days = 45, max = 0) {
   // A bill with no due date in the window falls back to Firefly's "next expected" date, which can be months
   // away, so only keep dates that really fall within the days this card is about (45 at most: what's fetched).
-  const end = addDays(todayIso(), Math.min(45, days));
-  const up = bills.filter(b => b.attributes.active !== false).map(b => ({ b, next: (b.attributes.pay_dates || [])[0] || b.attributes.next_expected_match }))
-    .filter(x => x.next && String(x.next).slice(0, 10) <= end).sort((a, b) => String(a.next).localeCompare(String(b.next)));
+  const t = todayIso(), end = addDays(t, Math.min(45, days));
+  const up = bills.filter(b => b.attributes.active !== false).map(b => ({ b, next: billDueDates(b.attributes)[0] || String(b.attributes.next_expected_match || '').slice(0, 10) }))
+    .filter(x => x.next && x.next <= end).sort((a, b) => a.next.localeCompare(b.next));
   const more = max && up.length > max ? up.length - max : 0;      // (the tile shows the first few, All bills the rest)
-  const rows = htmlList(up.slice(0, more ? max - 1 : undefined).map(({ b, next }) => html`<div class="row"><span class="name">${b.attributes.name}<br><span class="sub-s">Due ${fmtDate(next)}</span></span><span class="num">${money(billAmount(b.attributes))}</span></div>`));
+  const rows = htmlList(up.slice(0, more ? max - 1 : undefined).map(({ b, next }) => html`<div class="row"><span class="name">${b.attributes.name}<br><span class="sub-s">${next < t ? html`<span class="up">Overdue since ${fmtDate(next)}</span>` : 'Due ' + fmtDate(next)}</span></span><span class="num">${money(billAmount(b.attributes))}</span></div>`));
   return html`<section class="panel"><div class="panel-head"><h2>Coming up</h2><a class="link" href="#/bills">All bills</a></div><p class="lead">Bills due in the next ${Math.min(45, days)} days</p>${rows ? html`<div class="list">${rows}${more ? html`<a class="row more" href="#/bills"><span class="name">${more + 1} more</span><span class="neutral">→</span></a>` : ''}</div>` : html`<p class="empty">Nothing due soon.</p>`}</section>`;
 }
 

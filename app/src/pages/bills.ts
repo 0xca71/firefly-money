@@ -4,7 +4,7 @@ import { busy } from '../core/auth';
 import { type ApiData, App, el, type Field, fmtDate, fmtDay, leadDays, money, money0, monthOf, monthRange, nowMonth, num, type Period, S, todayIso, viewYM, weekOrder } from '../core/base';
 import { closeDrawer, formError, head, monthNav, openDrawer, opt, toast } from '../core/dom';
 import { normGroup } from '../core/feed';
-import { LS, addDays } from '../core/helpers';
+import { LS, addDays, daysBetween } from '../core/helpers';
 import { invalidate, lists } from '../core/lists';
 import { VIEWS, hashWith, parseHash, route } from '../core/router';
 import { billRises, findRecurring } from '../features/subs';
@@ -12,6 +12,15 @@ import { billRises, findRecurring } from '../features/subs';
 /* ================= Bills ================= */
 const FREQ: Record<string, [string, number]> = { daily: ['day', 30.44], weekly: ['week', 4.35], monthly: ['month', 1], quarterly: ['quarter', 1 / 3], 'half-year': ['6 months', 1 / 6], yearly: ['year', 1 / 12] };
 export const billAmount = (at: ApiData) => at.amount_avg != null ? num(at.amount_avg) : (num(at.amount_min) + num(at.amount_max)) / 2;
+/* A bill's due dates still to pay. Firefly lists them for the range asked for (pay_dates): only the unpaid ones, as it
+   leaves out every date on or before the latest payment in that range. It can also list dates past the end of the
+   range (a yearly bill's next date), so a page about one period keeps only the dates in it. */
+export function billDueDates(at: ApiData, range?: { start?: string, end?: string }) {
+  const due = [...new Set<string>((at.pay_dates || []).map((d: unknown) => String(d).slice(0, 10)))].sort();
+  return due.filter(d => (!range || !range.start || d >= range.start) && (!range || !range.end || d <= range.end));
+}
+// Bills are asked for from the start of this month, so one due earlier in the month and not paid yet is still listed
+export const billsFrom = (today: string) => today.slice(0, 8) + '01';
 VIEWS.bills = async (r, paint) => {
   await lists();
   // Bills are a schedule, so All time shows this month's due and paid status
@@ -23,12 +32,12 @@ VIEWS.bills = async (r, paint) => {
   const grp = (b: ApiData) => b.attributes.object_group_title || '';
   const rows = htmlList(bills.sort((a, b) => grp(a).localeCompare(grp(b)) || String((a.attributes.pay_dates || [])[0] || '9').localeCompare(String((b.attributes.pay_dates || [])[0] || '9'))).map((b, i, all) => {
     const heading = grp(b) && (i === 0 || grp(all[i - 1]) !== grp(b)) ? html`<tr><td colspan="4" class="eyebrow" style="padding-top:18px">${grp(b)}</td></tr>` : '';
-    const at = b.attributes, paid = (at.paid_dates || []).length, due = (at.pay_dates || [])[0];
+    const at = b.attributes, paid = (at.paid_dates || []).length, due = billDueDates(at, cur)[0];
     const f = FREQ[at.repeat_freq] || [at.repeat_freq, 1], every = (at.skip ? 'Every ' + (at.skip + 1) + ' ' + f[0] + 's' : 'Every ' + f[0]);
     const status = at.active === false ? html`<span class="chip">Inactive</span>` : paid ? html`<span class="chip good">Paid this month</span>` :
-      due ? html`<span class="chip warn">Due ${fmtDay(due)}</span>` : html`<span class="chip">Next ${at.next_expected_match ? fmtDate(at.next_expected_match) : '—'}</span>`;
+      due ? due < todayIso() ? html`<span class="chip bad">Overdue since ${fmtDay(due)}</span>` : html`<span class="chip warn">Due ${fmtDay(due)}</span>` : html`<span class="chip">Next ${at.next_expected_match ? fmtDate(at.next_expected_match) : '—'}</span>`;
     const amt = num(at.amount_min) === num(at.amount_max) ? money(num(at.amount_min)) : money0(num(at.amount_min)) + '–' + money0(num(at.amount_max));
-    return html`${heading}<tr${at.active === false ? html` style="opacity:.5"` : ''}><td><a class="desc" href="#/transactions?bill=${b.id}" style="text-decoration:none">${at.name}</a><div class="sub-s">${every}</div><div class="show-s">${status}</div></td><td class="hide-s">${status}</td><td class="amt">${amt}</td><td class="act"><button class="btn small" data-onclick="App.billForm('${b.id}')">Edit</button></td></tr>`;
+    return html`${heading}<tr${at.active === false ? html` style="opacity:.5"` : ''}><td><a class="desc" href="#/transactions?bill=${b.id}" style="text-decoration:none">${at.name}</a><div class="sub-s">${every}${billEnds(at)}</div><div class="show-s">${status}</div></td><td class="hide-s">${status}</td><td class="amt">${amt}</td><td class="act"><button class="btn small" data-onclick="App.billForm('${b.id}')">Edit</button></td></tr>`;
   }));
   S.billCache = Object.fromEntries(bills.map(b => [String(b.id), b.attributes]));
   const cal = (r.q.view || LS.get('billsView', 'list')) === 'calendar' && bills.length;
@@ -46,24 +55,25 @@ VIEWS.bills = async (r, paint) => {
 };
 
 /* ---------- Calendar: the month's bills on the days they're due or were paid ---------- */
-// Firefly gives each bill its due dates in the month (pay_dates) and the charges that paid it (paid_dates).
-// The first due dates count as paid by those charges; the rest are still due, or overdue once the day has passed.
+// Firefly gives each bill the charges that paid it in the month (paid_dates) and its due dates still unpaid (pay_dates,
+// which never include the paid ones). Those are still due, or overdue once the day has passed. Only the month's own dates count.
 type BillState = 'paid' | 'due' | 'late';
 export type BillDay = { id: string, name: string, amt: number, state: BillState, gid?: string };
-export function billDays(bills: ApiData[], t: string) {
+export function billDays(bills: ApiData[], t: string, range: { start: string, end: string }) {
   const days: Record<string, BillDay[]> = {}, sum = { paid: 0, due: 0, late: 0 };
   bills.filter(b => b.attributes.active !== false).forEach(b => {
     const at = b.attributes, amt = billAmount(at), paid = at.paid_dates || [];
     const put = (d: string, x: { state: BillState, gid?: string }) => { (days[d] = days[d] || []).push({ id: String(b.id), name: at.name, amt, ...x }); sum[x.state] += amt; };
-    paid.forEach((p: ApiData) => put(String(p.date).slice(0, 10), { state: 'paid', gid: String(p.transaction_group_id || '') }));
-    (at.pay_dates || []).map((d: string) => String(d).slice(0, 10)).slice(paid.length).forEach((d: string) => put(d, { state: d < t ? 'late' : 'due' }));
+    paid.map((p: ApiData) => ({ d: String(p.date).slice(0, 10), gid: String(p.transaction_group_id || '') })).filter((p: { d: string }) => p.d >= range.start && p.d <= range.end)
+      .forEach((p: { d: string, gid: string }) => put(p.d, { state: 'paid', gid: p.gid }));
+    billDueDates(at, range).forEach(d => put(d, { state: d < t ? 'late' : 'due' }));
   });
   Object.values(days).forEach(list => list.sort((a, b) => a.name.localeCompare(b.name)));
   return { days, sum };
 }
 const CAL_STATE: Record<string, string[]> = { paid: ['good', 'Paid'], due: ['warn', 'Due'], late: ['bad', 'Overdue'] };
 function billCalendar(bills: ApiData[], cur: Period) {
-  const t = todayIso(), { days, sum } = billDays(bills, t);
+  const t = todayIso(), { days, sum } = billDays(bills, t, cur);
   // A paid bill opens the charge that paid it; one still due opens the bill
   const pill = (x: BillDay) => {
     const cls = 'bpill ' + CAL_STATE[x.state][0], tip = x.name + ' · ' + CAL_STATE[x.state][1] + ' · ' + money(x.amt), inner = html`<span class="nm">${x.name}</span><span class="num">${money0(x.amt)}</span>`;
@@ -73,11 +83,12 @@ function billCalendar(bills: ApiData[], cur: Period) {
     const inner = html`<span class="name">${x.name} <span class="chip ${CAL_STATE[x.state][0]}">${CAL_STATE[x.state][1]}</span></span><span class="num">${money(x.amt)}</span>`;
     return x.gid ? html`<button type="button" class="row" data-onclick="App.editTx('${x.gid}')">${inner}</button>` : html`<button type="button" class="row" data-onclick="App.billForm('${x.id}')">${inner}</button>`;
   };
-  const lead = leadDays(new Date(cur.y!, cur.m!, 1)), n = new Date(cur.y!, cur.m! + 1, 0).getDate();
+  // The month's own days, from where it starts (a month can start on any day, see cycleDay) to where it ends
+  const lead = leadDays(new Date(cur.start + 'T12:00:00')), n = daysBetween(cur.start, cur.end) + 1;
   const cells: Html[] = [];
   for (let i = 0; i < lead; i++) cells.push(html`<div class="bcal-day pad"></div>`);
-  for (let d = 1; d <= n; d++) {
-    const iso = cur.start.slice(0, 8) + String(d).padStart(2, '0'), list = days[iso] || [];
+  for (let i = 0; i < n; i++) {
+    const iso = addDays(cur.start, i), list = days[iso] || [], d = +iso.slice(8, 10);
     cells.push(html`<div class="bcal-day${iso === t ? ' today' : ''}${iso < t ? ' past' : ''}"><span class="d">${d}</span>${htmlList(list.map(pill))}</div>`);
   }
   // On a phone the grid is too narrow for names, so the same month shows as a list of days
@@ -138,11 +149,16 @@ async function billRule(name: string, payee: string) {
   if (res && res.data) await api('/rules/' + res.data.id + '/trigger', { method: 'POST', params: { start: addDays(todayIso(), -400), end: todayIso() } }).catch(() => {});
 }
 // pre: values for a new bill (from a repeating charge), with the payee to link it to
+// "Ends Mar 1" / "Ended Mar 1", and the date to renew or cancel by, for a bill with a contract
+export function billEnds(at: ApiData) {
+  const e = at.end_date ? String(at.end_date).slice(0, 10) : '', x = at.extension_date ? String(at.extension_date).slice(0, 10) : '', t = todayIso();
+  return (e ? ' · ' + (e < t ? 'Ended ' : 'Ends ') + fmtDate(e) : '') + (x && (!e || e >= t) && x >= t ? ' · Renew or cancel by ' + fmtDate(x) : '');
+}
 function billForm(id?: string, pre?: ApiData) {
   const at = id ? (S.billCache || {})[id] : pre || null;
   S.form = { id, payee: !id && pre ? pre.payee : '' };
   openDrawer(id ? 'Edit bill' : 'New bill',
-    html`<form id="billForm" data-onsubmit="event.preventDefault();App.saveBill()"><label>Name<input type="text" id="bl-name" value="${at ? at.name : ''}" required></label><div class="grid2"><label>Lowest amount<input type="number" step="0.01" min="0" id="bl-min" value="${at ? num(at.amount_min) : ''}" required></label><label>Highest amount<input type="number" step="0.01" min="0" id="bl-max" value="${at ? num(at.amount_max) : ''}" required></label></div><p class="hint">Use the same number twice for a fixed amount.</p><label>${id ? 'First due date' : 'Next due date'}<input type="date" id="bl-date" value="${at ? String(at.date).slice(0, 10) : todayIso()}" required></label><div class="grid2"><label>Repeats<select id="bl-freq">${htmlList(Object.keys(FREQ).map(k => opt(k, k === 'half-year' ? 'every 6 months' : k, at ? at.repeat_freq : 'monthly')))}</select></label><label>Skip<input type="number" min="0" step="1" id="bl-skip" value="${at ? at.skip || 0 : 0}"></label></div><p class="hint">Skip 1 with “monthly” means every other month.</p><label>Group (optional)<input type="text" id="bl-group" list="dl-groups" value="${at ? at.object_group_title || '' : ''}" placeholder="e.g. Housing, Subscriptions"></label><datalist id="dl-groups">${htmlList([...new Set(Object.values<any>(S.billCache || {}).map(x => x.object_group_title).filter(Boolean))].map(g => html`<option value="${g}">`))}</datalist><label>Notes<textarea id="bl-notes" rows="3">${at ? at.notes || '' : ''}</textarea></label><label class="check"><input type="checkbox" id="bl-active"${!at || at.active !== false ? ' checked' : ''}> Active</label>${S.form.payee ? html`<label class="check"><input type="checkbox" id="bl-rule" checked> Link charges from ${S.form.payee} to this bill, past and future (creates a rule)</label>` : ''}<button type="submit" hidden></button></form>`,
+    html`<form id="billForm" data-onsubmit="event.preventDefault();App.saveBill()"><label>Name<input type="text" id="bl-name" value="${at ? at.name : ''}" required></label><div class="grid2"><label>Lowest amount<input type="number" step="0.01" min="0" id="bl-min" value="${at ? num(at.amount_min) : ''}" required></label><label>Highest amount<input type="number" step="0.01" min="0" id="bl-max" value="${at ? num(at.amount_max) : ''}" required></label></div><p class="hint">Use the same number twice for a fixed amount.</p><label>${id ? 'First due date' : 'Next due date'}<input type="date" id="bl-date" value="${at ? String(at.date).slice(0, 10) : todayIso()}" required></label><div class="grid2"><label>Repeats<select id="bl-freq">${htmlList(Object.keys(FREQ).map(k => opt(k, k === 'half-year' ? 'every 6 months' : k, at ? at.repeat_freq : 'monthly')))}</select></label><label>Skip<input type="number" min="0" step="1" id="bl-skip" value="${at ? at.skip || 0 : 0}"></label></div><p class="hint">Skip 1 with “monthly” means every other month.</p><div class="grid2"><label>Ends on (optional)<input type="date" id="bl-end" value="${at && at.end_date ? String(at.end_date).slice(0, 10) : ''}"></label><label>Renew or cancel by (optional)<input type="date" id="bl-ext" value="${at && at.extension_date ? String(at.extension_date).slice(0, 10) : ''}"></label></div><p class="hint">For a contract or trial: after the end date Firefly stops expecting the bill. The second date is a reminder to renew or cancel.</p><label>Group (optional)<input type="text" id="bl-group" list="dl-groups" value="${at ? at.object_group_title || '' : ''}" placeholder="e.g. Housing, Subscriptions"></label><datalist id="dl-groups">${htmlList([...new Set(Object.values<any>(S.billCache || {}).map(x => x.object_group_title).filter(Boolean))].map(g => html`<option value="${g}">`))}</datalist><label>Notes<textarea id="bl-notes" rows="3">${at ? at.notes || '' : ''}</textarea></label><label class="check"><input type="checkbox" id="bl-active"${!at || at.active !== false ? ' checked' : ''}> Active</label>${S.form.payee ? html`<label class="check"><input type="checkbox" id="bl-rule" checked> Link charges from ${S.form.payee} to this bill, past and future (creates a rule)</label>` : ''}<button type="submit" hidden></button></form>`,
     html`${id ? html`<button class="btn danger" data-onclick="App.deleteThing('bills','${id}','bill')">Delete</button>` : ''}<span class="grow"></span><button class="btn" data-onclick="App.closeDrawer()">Cancel</button><button class="btn primary" id="billSave" data-onclick="App.submit('billForm')">${id ? 'Save' : 'Create bill'}</button>`);
 }
 async function saveBill() {
@@ -151,6 +167,11 @@ async function saveBill() {
   if (!v('bl-name')) return formError('Give the bill a name.');
   if (mx < mn) return formError('The highest amount can’t be below the lowest.');
   const body: any = { name: v('bl-name'), amount_min: String(mn), amount_max: String(mx), date: v('bl-date'), repeat_freq: v('bl-freq'), skip: parseInt(v('bl-skip') || '0', 10), active: el<HTMLInputElement>('bl-active').checked, notes: el<HTMLTextAreaElement>('bl-notes').value, object_group_title: v('bl-group') };
+  // Firefly's bill fields end_date and extension_date; on an edit, an empty box clears the date
+  const endD = v('bl-end'), extD = v('bl-ext');
+  if (endD && extD && extD > endD) return formError('Renew or cancel by a date before the bill ends.');
+  if (id || endD) body.end_date = endD || null;
+  if (id || extD) body.extension_date = extD || null;
   if (!id) body.currency_code = S.currency;
   await busy(el('billSave'), async () => {
     await api(id ? '/bills/' + id : '/bills', { method: id ? 'PUT' : 'POST', body });

@@ -9,7 +9,7 @@
 // njs supports less JavaScript than a browser: no for…of, and no await inside a call's arguments.
 import crypto from 'crypto';
 
-const TAG = 'Apple Pay';
+const TAG = 'Apple Pay', REFUND_TAG = 'Refund';
 const FF = '/__firefly/api/v1';     // the internal location that forwards to Firefly with its token
 
 const env = k => process.env[k] || '';
@@ -190,7 +190,8 @@ async function endpoint(r) {
     const usual = refund ? {} : await lastUse(r, merchant);
     const category = String(b.category || '').trim().slice(0, 100);
     if (category && !/^(skip|none|-)$/i.test(category)) { usual.category_name = category; delete usual.category_id; }
-    const tags = [TAG], notes = ['Logged by the Apple Pay shortcut' + (b.card ? ' (' + String(b.card).slice(0, 100) + ')' : '') + '.'];
+    // A refund is a deposit tagged Refund too (that's what takes it off spending in Money, see features/refunds.ts)
+    const tags = refund ? [TAG, REFUND_TAG] : [TAG], notes = ['Logged by the Apple Pay shortcut' + (b.card ? ' (' + String(b.card).slice(0, 100) + ')' : '') + '.'];
     // Paid in another currency: record what was paid as the foreign amount, and the account's amount from Firefly's
     // exchange rate (the bank's will differ a little), or the same number to fix by hand when there's no rate.
     const cur = parseCurrency(b.amount);

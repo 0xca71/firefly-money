@@ -76,7 +76,7 @@ describe('demo API', () => {
     const api = createMockApi(now);
     const bills = (api('/bills', { start: '2026-10-01', end: '2026-10-31' }) as any).data.map((b: any) => b.attributes);
     expect(bills.map((b: any) => b.name)).toEqual(['StreamFlix', 'Tunes Plus', 'City Power & Light', 'Car insurance']);
-    expect(bills[0].pay_dates).toEqual(['2026-10-11']);
+    expect(bills[0].pay_dates).toEqual([]);      // its only due date this month is paid
     expect(bills[0].paid_dates).toHaveLength(1);
     expect(bills[3].pay_dates).toEqual([]);
     expect(bills[3].next_expected_match).toBe('2026-11-07');

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { billDueDates, billPayers, type FcLoan, loanBills, scheduledPayments } from '../app/src/pages/forecast';
+import { billPayers, type FcLoan, loanBills, scheduledPayments, shortText } from '../app/src/pages/forecast';
+import { billDueDates } from '../app/src/pages/bills';
 
 // A bill as Firefly's API sends it for a date range
 const bill = (id: string, name: string, amount: number, pay: string[], paid: string[] = [], more: Record<string, unknown> = {}) => ({
@@ -52,27 +53,37 @@ describe('forecast: loan payments that are bills too', () => {
 });
 
 describe('forecast: bill due dates after a payment', () => {
-  it('keeps the later dates of a bill paid this month (as Firefly sends it)', () => {
-    // Firefly leaves out the due dates on or before the latest payment itself
+  it('keeps every date Firefly lists for a bill paid this month (it lists only unpaid ones)', () => {
     const rent = bill('30', 'Rent (Raiders Walk)', 1173, ['2026-12-01', '2027-01-01'], ['2026-11-01']);
     expect(billDueDates(rent.attributes)).toEqual(['2026-12-01', '2027-01-01']);
     expect(run([], [rent]).map(e => [e.date, e.amount])).toEqual([['2026-12-01', -1173], ['2027-01-01', -1173]]);
   });
-  it('drops only the paid date when the due dates include it (older Firefly, the demo)', () => {
-    expect(billDueDates(bill('30', 'Rent', 1173, monthly('01'), ['2026-11-01']).attributes)).toEqual(['2026-12-01', '2027-01-01']);
-    expect(billDueDates(bill('30', 'Rent', 1173, monthly('01'), ['2026-11-03']).attributes)).toEqual(['2026-12-01', '2027-01-01']);   // paid a little late
+  it('does not drop a date because of a payment made a few days before it', () => {
+    expect(billDueDates(bill('30', 'Rent', 1173, ['2026-12-01', '2027-01-01'], ['2026-11-28']).attributes)).toEqual(['2026-12-01', '2027-01-01']);
   });
-  it('counts a payment a few days early for the next due date, once', () => {
-    expect(billDueDates(bill('30', 'Rent', 1173, ['2026-12-01', '2027-01-01'], ['2026-11-28']).attributes)).toEqual(['2027-01-01']);
-    expect(billDueDates(bill('30', 'Rent', 1173, ['2026-12-01', '2027-01-01'], ['2026-11-10']).attributes)).toEqual(['2026-12-01', '2027-01-01']);
-  });
-  it('keeps every date when nothing is paid, and skips inactive bills', () => {
+  it('skips only inactive bills', () => {
     expect(billDueDates(bill('30', 'Rent', 1173, monthly('01')).attributes)).toEqual(monthly('01'));
     expect(run([], [bill('30', 'Rent', 1173, monthly('01'), [], { active: false })])).toEqual([]);
   });
-  it('uses a short early window for weekly bills', () => {
-    const weekly = bill('31', 'Cleaner', 40, ['2026-11-06', '2026-11-13'], ['2026-11-01'], { repeat_freq: 'weekly' });
-    expect(billDueDates(weekly.attributes)).toEqual(['2026-11-06', '2026-11-13']);
+});
+
+describe('forecast: overdue bills', () => {
+  it('counts an unpaid bill from earlier this month once, today', () => {
+    const ev = run([], [bill('30', 'Rent', 1173, ['2026-10-30', ...monthly('01').slice(1)])]);
+    expect(ev.map(e => [e.date, e.label])).toEqual([['2026-11-01', 'Rent (overdue)'], ['2026-12-01', 'Rent'], ['2027-01-01', 'Rent']]);
+  });
+  it('counts an overdue loan bill once, as the loan payment', () => {
+    const l = loan('10', 'India Qardan', { plan: { amount: 1050, day: 3 }, last: { d: '2026-09-03', a: 1050, from: '1' }, pays: [{ d: '2026-09-03', a: 1050, bill: '20' }] });
+    const ev = run([l], [bill('20', 'India Qardan', 1050, ['2026-10-03', ...monthly('03')])]);
+    expect(ev.filter(e => e.date === '2026-11-01').map(e => e.label)).toEqual(['Payment to India Qardan (overdue)']);
+    expect(ev.filter(e => e.kind === 'Bill')).toEqual([]);
+  });
+});
+
+describe('forecast: warning text', () => {
+  it('gives the first day below zero and the lowest point when they differ', () => {
+    expect(shortText({ firstNeg: '2026-11-03', min: -1858, minDate: '2027-01-10' })).toMatch(/^below zero on .*3.*lowest .*1,858.* on .*10/);
+    expect(shortText({ firstNeg: '2026-11-03', min: -741, minDate: '2026-11-03' })).not.toContain('lowest');
   });
 });
 
