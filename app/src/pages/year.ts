@@ -17,6 +17,8 @@ import { netOn } from './recap';
    nothing, and how far your net worth moved. Tap the right side (or swipe left) for the next card, the left side for
    the one before; hold to pause. #/year shows this year so far, #/year?y=2025 another. */
 export type YearSplit = { date: string, amount: number, payee: string, description: string };
+// Taking cash out of an account is money set aside to spend, not something bought: Firefly pays it to the "(cash)" account
+export const isCashOut = (s: { destination_type?: string, destination_name?: string }) => /cash/i.test(s.destination_type || '') || /^\(?cash\)?$/i.test((s.destination_name || '').trim());
 const WEEKDAYS = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
 // The numbers the story tells that come from the purchases themselves (start and end: the days the year covers)
 export function yearStats(splits: YearSplit[], start: string, end: string) {
@@ -61,8 +63,10 @@ VIEWS.year = async (r, paint) => {
     netOn(addDays(start, -1)).catch(() => null), netOn(end).catch(() => null),
   ]);
   const earned = sumDiff(inc), spent = sumDiff(exp), kept = earned - spent;
-  const splits: YearSplit[] = spends.map(normGroup).flatMap(g => g.splits.filter(s => s.type === 'withdrawal')
-    .map(s => ({ date: s.date, amount: s.amount, payee: s.destination_name || s.description, description: s.description })));
+  // Purchases only: cash taken out still counts in what you spent, but isn't a purchase, a place or a day you bought something
+  const out = spends.map(normGroup).flatMap(g => g.splits.filter(s => s.type === 'withdrawal'));
+  const cashOut = out.filter(isCashOut).reduce((a, s) => a + s.amount, 0);
+  const splits: YearSplit[] = out.filter(s => !isCashOut(s)).map(s => ({ date: s.date, amount: s.amount, payee: s.destination_name || s.description, description: s.description }));
   const st = yearStats(splits, start, end);
   const catRows = arr(cats).map(x => ({ name: x.name as string, v: absDiff(x) })).concat(sumDiff(noCat) ? [{ name: 'Uncategorized', v: sumDiff(noCat) }] : [])
     .filter(x => x.v > 0).sort((a, b) => b.v - a.v);
@@ -74,7 +78,7 @@ VIEWS.year = async (r, paint) => {
   if (!splits.length && !earned) {
     cards.push(card(html`${line(0, html`<h2 class="st-h">Nothing here yet</h2>`)}${line(1, html`<p class="st-p">There are no transactions in ${y}. Try another year.</p>`)}${line(2, nav)}`));
   } else {
-    if (earned || spent) cards.push(card(html`${line(0, html`<div class="st-kick">In and out</div>`)}${earned ? line(1, html`<p class="st-p">You earned</p><div class="st-num">${count(earned)}</div>`) : ''}${line(2, html`<p class="st-p">and spent</p><div class="st-num">${count(spent)}</div>`)}${earned ? line(3, html`<p class="st-p">${kept >= 0 ? html`You kept <strong>${count(kept / earned * 100, 'pct')}</strong> of it: ${money0(kept)}.` : html`That’s ${money0(-kept)} more than came in.`}</p>`) : ''}`));
+    if (earned || spent) cards.push(card(html`${line(0, html`<div class="st-kick">In and out</div>`)}${earned ? line(1, html`<p class="st-p">You earned</p><div class="st-num">${count(earned)}</div>`) : ''}${line(2, html`<p class="st-p">and spent</p><div class="st-num">${count(spent)}</div>`)}${earned ? line(3, html`<p class="st-p">${kept >= 0 ? html`You kept <strong>${count(kept / earned * 100, 'pct')}</strong> of it: ${money0(kept)}.` : html`That’s ${money0(-kept)} more than came in.`}</p>`) : ''}${cashOut > 0 ? line(4, html`<p class="st-p" style="font-size:.8em;opacity:.7">Includes ${money0(cashOut)} taken out as cash.</p>`) : ''}`));
     if (earned > 0 && spent > 0) {
       const day = workHours() / 5, share = Math.min(1, spent / earned), hrs = share * day;
       const worked = workHours() * st.days / 7, paid = share * worked;
@@ -91,7 +95,7 @@ VIEWS.year = async (r, paint) => {
       const name = (i: number) => fmtD(new Date(y, i, 1), { month: 'long' }), max = hi.v;
       cards.push(card(html`${line(0, html`<div class="st-kick">Month by month</div>`)}${line(1, html`<h2 class="st-h">${name(hi.i)}</h2><p class="st-p">was your biggest month: ${money0(hi.v)}</p>`)}${line(2, html`<div class="st-months">${htmlList([...Array(12)].map((_, i) => { const v = perMonth[i] || 0; return html`<div class="${i === hi.i ? 'hi' : ''}${i >= perMonth.length ? ' fut' : ''}" style="--v:${(v / max * 100).toFixed(1)}%;--j:${i}"><i></i><span>${name(i)[0]}</span></div>`; }))}</div>`)}${lo && lo.i !== hi.i ? line(3, html`<p class="st-p">The calmest was ${name(lo.i)}, at ${money0(lo.v)}.</p>`) : ''}`));
     }
-    if (st.biggest) cards.push(card(html`${line(0, html`<div class="st-kick">Biggest purchase</div>`)}${line(1, html`<div class="st-num">${count(st.biggest.amount)}</div><h2 class="st-h">${st.biggest.description}</h2><p class="st-p">${st.biggest.payee !== st.biggest.description ? st.biggest.payee + ', ' : ''}${fmtDate(st.biggest.date)}</p>`)}${line(2, html`<p class="st-p">One of ${fmtNum(st.count)} purchases, ${money(spent / Math.max(1, st.count))} on average.</p>`)}`));
+    if (st.biggest) cards.push(card(html`${line(0, html`<div class="st-kick">Biggest purchase</div>`)}${line(1, html`<div class="st-num">${count(st.biggest.amount)}</div><h2 class="st-h">${st.biggest.description}</h2><p class="st-p">${st.biggest.payee !== st.biggest.description ? st.biggest.payee + ', ' : ''}${fmtDate(st.biggest.date)}</p>`)}${line(2, html`<p class="st-p">One of ${fmtNum(st.count)} purchases, ${money((spent - cashOut) / Math.max(1, st.count))} on average.</p>`)}`));
     if (st.count) cards.push(card(html`${line(0, html`<div class="st-kick">Days off</div>`)}${line(1, html`<div class="st-num">${count(st.free, 'int')}</div><p class="st-p">days you didn’t buy a thing</p>`)}${st.streak >= 2 ? line(2, html`<p class="st-p">Your longest run was <strong>${st.streak} days</strong>, up to ${fmtDay(st.streakEnd)}.</p>`) : ''}${st.weekday ? line(3, html`<p class="st-p">You spend the most on <strong>${st.weekday}</strong>.</p>`) : ''}`));
     if (nwStart != null && nwEnd != null && (nwStart || nwEnd)) {
       const d = nwEnd - nwStart;
