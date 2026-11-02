@@ -1,11 +1,11 @@
 import { Html, html, htmlList } from '../core/html';
 import { getAll } from '../core/api';
 import { App, S, absDiff, arr, fmtDay, money, money0, monthRange, nowMonth, sumDiff, todayIso, txHref, noneHref } from '../core/base';
-import { head, monthNav } from '../core/dom';
+import { closeDrawer, head, monthNav, openDrawer } from '../core/dom';
 import { nameAvatar, normGroup } from '../core/feed';
-import { addDays, daysBetween } from '../core/helpers';
+import { LS, addDays, daysBetween } from '../core/helpers';
 import { isAsset, isLiab, lists, normAccount } from '../core/lists';
-import { VIEWS } from '../core/router';
+import { VIEWS, route } from '../core/router';
 import { billDays } from './bills';
 import { insight, refundsIn } from '../features/refunds';
 import { barChart, shareChart } from '../features/charts';
@@ -29,7 +29,18 @@ export async function netOn(date: string) {
 // Open the recap of the month before the one picked (from the Overview in the first days of a month)
 function recapLast() { S.all = false; const [y, m] = nowMonth(), d = new Date(y, m - 1, 1); S.y = d.getFullYear(); S.m = d.getMonth(); location.hash = '#/recap'; }
 // The methods markup handlers call (see events.ts), added to App and to its type
-const methods = { recapLast };
+// Income sources picked for the first card ("Money in" counts every deposit; picking only your pay shows what it really is). Saved on this device; none picked = every deposit.
+const pickedSources = (): string[] => (LS.get('recapSources', []) as unknown[]).map(String);
+async function recapSources() {
+  const L = await lists(), on = new Set(pickedSources());
+  openDrawer('Income to count', html`<form id="srcForm" data-onsubmit="event.preventDefault();App.recapSourcesSave(this)"><p class="sub-s" style="margin:0 0 12px">Pick the sources that are your pay. The first card on Recap then counts only those; Kept and everything else still use all deposits. Pick none to count every deposit.</p>${htmlList(L.revenue.map(a => html`<label class="check"><input type="checkbox" name="src" value="${a.id}"${on.has(a.id) ? ' checked' : ''}> ${a.name}</label>`))}${L.revenue.length ? '' : html`<p class="empty">No income sources yet.</p>`}</form>`,
+    html`<span class="grow"></span><button type="button" class="btn" data-onclick="App.closeDrawer()">Cancel</button><button type="button" class="btn primary" data-onclick="App.submit('srcForm')">Save</button>`);
+}
+function recapSourcesSave(f: HTMLFormElement) {
+  LS.set('recapSources', [...f.querySelectorAll<HTMLInputElement>('input[name=src]:checked')].map(b => b.value));
+  closeDrawer(); route();
+}
+const methods = { recapLast, recapSources, recapSourcesSave };
 Object.assign(App, methods);
 type Methods = typeof methods;
 declare module '../core/base' { interface AppApi extends Methods {} }
@@ -48,6 +59,7 @@ VIEWS.recap = async (r, paint) => {
   // rent paid on the 1st would look like overspending otherwise. A finished month is set against the whole earlier months.
   const days = daysBetween(cur.start, end) + 1, dim = daysBetween(cur.start, cur.end) + 1;
   const wins = soFar ? Array.from({ length: k }, (_, i) => { const m = monthRange(cur.y, cur.m - 1 - i), e = addDays(m.start, days - 1); return { start: m.start, end: e < m.end ? e : m.end }; }) : [before];
+  const picked = new Set(pickedSources());
   const [inc, exp, inc3, cats, noCat, payees, payees12, spends, bills, nwStart, nwEnd, ...hist] = await Promise.all([
     g('/insight/income/total', p), g('/insight/expense/total', p), g('/insight/income/total', before),
     g('/insight/expense/category', p), g('/insight/expense/no-category', p),
@@ -57,6 +69,8 @@ VIEWS.recap = async (r, paint) => {
     netOn(addDays(cur.start, -1)).catch(() => null), netOn(end).catch(() => null),
     ...wins.flatMap(w => [g('/insight/expense/category', w), g('/insight/expense/no-category', w)]),
   ]);
+  const [pay, pay3] = picked.size ? await Promise.all([g('/insight/income/revenue', p), g('/insight/income/revenue', before)]) : [[], []];
+  const fromPicked = (res: any) => arr(res).filter(x => picked.has(String(x.id))).reduce((a, x) => a + absDiff(x), 0);
   // "Usual" is the average of the months before (three unless Customize says otherwise); months with no spending don't pull it down.
   // Income isn't compared until the month is over: paydays come in lumps, so half a month says little.
   const past = wins.map((_, i) => ({ cats: arr(hist[2 * i]), none: sumDiff(hist[2 * i + 1]) })).map(h => ({ ...h, total: h.cats.reduce((a, x) => a + absDiff(x), 0) + h.none }));
@@ -108,5 +122,7 @@ VIEWS.recap = async (r, paint) => {
   if (late.length) notes.push(html`<span class="up">${late.length} bill${late.length === 1 ? ' is' : 's are'} overdue.</span>`);
 
   const kpi = (label: string, v: unknown, sub: unknown, cls = '') => html`<div class="kpi"><div class="eyebrow">${label}</div><div class="val num ${cls}">${v}</div><div class="sub-s">${sub}</div></div>`;
-  paint(html`${head(cur.label + ' recap', soFar ? 'So far, up to ' + fmtDay(end) : 'The month in review', html`${monthNav()}${customizeButton('recap')}`)}${notes.length && pageCard('recap', 'notes') ? html`<section class="panel recap-notes"><ul>${htmlList(notes.map(n => html`<li>${n}</li>`))}</ul></section>` : ''}${pageCard('recap', 'kpis') ? html`<div class="kpis">${kpi('Money in', money0(earned), soFar ? (sumDiff(inc3) ? 'usually ' + money0(sumDiff(inc3) / k) + ' a month, all deposits' : '') : delta(earned, usualIn, 'down'), 'pos')}${kpi('Spent', money0(spent), delta(spent, usualOut), 'neg')}${kpi('Kept', money0(kept), earned ? Math.round(rate * 100) + '% of income' : '', kept < 0 ? 'neg' : '')}${nw != null ? kpi('Net worth', (nw > 0 ? '+' : '') + money0(nw), 'change over the month', nw < 0 ? 'neg' : 'pos') : ''}</div>` : ''}<div class="flow" data-min="380">${pageCard('recap', 'cats') ? html`<section class="panel"><div class="panel-head"><h2>Where it went</h2><a class="link" href="#/categories">Categories</a></div><p class="lead">Each category against ${k === 1 ? 'last month' : 'a usual month'}${soFar ? ' up to the same day' : ''}</p>${catHtml || html`<p class="empty">Nothing spent yet.</p>`}</section>` : ''}${pageCard('recap', 'weeks') ? html`<section class="panel chart"><h2>Week by week</h2><p class="lead">What you spent each week</p>${weeksHtml || html`<p class="empty">No purchases.</p>`}</section>` : ''}${pageCard('recap', 'buys') ? html`<section class="panel"><h2>Biggest purchases</h2><p class="lead">${splits.length} purchase${splits.length === 1 ? '' : 's'} in all</p>${topHtml ? html`<div class="list">${topHtml}</div>` : html`<p class="empty">No purchases.</p>`}</section>` : ''}${pageCard('recap', 'fresh') ? html`<section class="panel"><h2>New payees</h2><p class="lead">Paid this month and not in the year before</p>${freshHtml ? html`<div class="list">${freshHtml}</div>` : html`<p class="empty">No new payees. Same places as always.</p>`}</section>` : ''}${pageCard('recap', 'bills') ? html`<section class="panel"><div class="panel-head"><h2>Bills</h2><a class="link" href="#/bills?view=calendar">Calendar</a></div>${billList.length ? html`<p class="lead">${billList.filter(x => x.state === 'paid').length} of ${billList.length} paid</p><div class="list"><div class="row"><span class="name">Paid</span><span class="num pos">${money0(billSum.paid)}</span></div><div class="row"><span class="name">Still due</span><span class="num">${money0(billSum.due)}</span></div>${late.length ? html`<div class="row"><span class="name">Overdue: ${late.map(x => x.name).join(', ')}</span><span class="num neg">${money0(billSum.late)}</span></div>` : ''}</div>` : html`<p class="empty">No bills due this month.</p>`}</section>` : ''}</div>`);
+  paint(html`${head(cur.label + ' recap', soFar ? 'So far, up to ' + fmtDay(end) : 'The month in review', html`${monthNav()}${customizeButton('recap')}`)}${notes.length && pageCard('recap', 'notes') ? html`<section class="panel recap-notes"><ul>${htmlList(notes.map(n => html`<li>${n}</li>`))}</ul></section>` : ''}${pageCard('recap', 'kpis') ? html`<div class="kpis">${(picked.size
+    ? kpi('Your pay', money0(fromPicked(pay)), html`${soFar ? (fromPicked(pay3) ? 'usually ' + money0(fromPicked(pay3) / k) + ' a month · ' : '') : html`${delta(fromPicked(pay), fromPicked(pay3) / k, 'down')} · `}<button type="button" class="link" data-onclick="App.recapSources()">${picked.size} source${picked.size === 1 ? '' : 's'}</button>`, 'pos')
+    : kpi('Money in', money0(earned), html`${soFar ? (sumDiff(inc3) ? 'usually ' + money0(sumDiff(inc3) / k) + ' a month, all deposits · ' : '') : html`${delta(earned, usualIn, 'down')} · `}<button type="button" class="link" data-onclick="App.recapSources()">Count only my pay</button>`, 'pos'))}${kpi('Spent', money0(spent), delta(spent, usualOut), 'neg')}${kpi('Kept', money0(kept), earned ? Math.round(rate * 100) + '% of income' : '', kept < 0 ? 'neg' : '')}${nw != null ? kpi('Net worth', (nw > 0 ? '+' : '') + money0(nw), 'change over the month', nw < 0 ? 'neg' : 'pos') : ''}</div>` : ''}<div class="flow" data-min="380">${pageCard('recap', 'cats') ? html`<section class="panel"><div class="panel-head"><h2>Where it went</h2><a class="link" href="#/categories">Categories</a></div><p class="lead">Each category against ${k === 1 ? 'last month' : 'a usual month'}${soFar ? ' up to the same day' : ''}</p>${catHtml || html`<p class="empty">Nothing spent yet.</p>`}</section>` : ''}${pageCard('recap', 'weeks') ? html`<section class="panel chart"><h2>Week by week</h2><p class="lead">What you spent each week</p>${weeksHtml || html`<p class="empty">No purchases.</p>`}</section>` : ''}${pageCard('recap', 'buys') ? html`<section class="panel"><h2>Biggest purchases</h2><p class="lead">${splits.length} purchase${splits.length === 1 ? '' : 's'} in all</p>${topHtml ? html`<div class="list">${topHtml}</div>` : html`<p class="empty">No purchases.</p>`}</section>` : ''}${pageCard('recap', 'fresh') ? html`<section class="panel"><h2>New payees</h2><p class="lead">Paid this month and not in the year before</p>${freshHtml ? html`<div class="list">${freshHtml}</div>` : html`<p class="empty">No new payees. Same places as always.</p>`}</section>` : ''}${pageCard('recap', 'bills') ? html`<section class="panel"><div class="panel-head"><h2>Bills</h2><a class="link" href="#/bills?view=calendar">Calendar</a></div>${billList.length ? html`<p class="lead">${billList.filter(x => x.state === 'paid').length} of ${billList.length} paid</p><div class="list"><div class="row"><span class="name">Paid</span><span class="num pos">${money0(billSum.paid)}</span></div><div class="row"><span class="name">Still due</span><span class="num">${money0(billSum.due)}</span></div>${late.length ? html`<div class="row"><span class="name">Overdue: ${late.map(x => x.name).join(', ')}</span><span class="num neg">${money0(billSum.late)}</span></div>` : ''}</div>` : html`<p class="empty">No bills due this month.</p>`}</section>` : ''}</div>`);
 };

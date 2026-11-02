@@ -314,7 +314,7 @@ async def screenshots(pw, out):
     async def shot(route, name, w=1440, h=900, mobile=False, theme='frosted', action=None, full=False, scale=None):
         ctx = await br.new_context(viewport={'width': w, 'height': h}, is_mobile=mobile, has_touch=mobile, device_scale_factor=scale or (2 if mobile else 1))
         await ctx.add_cookies([{'name': 'money_session', 'value': 'demo', 'url': BASE.split('#')[0].rstrip('/') + '/api/'}])
-        await ctx.add_init_script(f"localStorage.setItem('money.dash', '{shot_dash(mobile)}'); localStorage.setItem('money.nwYears', '3'); localStorage.setItem('money.syncOff', 'true'); window.MONEY_NO_WHATSNEW = true")
+        await ctx.add_init_script(f"localStorage.setItem('money.dash', '{shot_dash(mobile)}'); localStorage.setItem('money.nwMonths', '36'); localStorage.setItem('money.syncOff', 'true'); window.MONEY_NO_WHATSNEW = true")
         if theme: await ctx.add_init_script(f"localStorage.setItem('moneyTheme','{theme}')")
         pg = await ctx.new_page(); await pg.goto(BASE + '#/' + route)
         await pg.wait_for_function(PAINTED); await pg.wait_for_function("() => !document.querySelector('#view .sk, #view [aria-busy]')"); await pg.wait_for_timeout(2800)
