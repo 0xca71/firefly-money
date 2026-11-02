@@ -1294,10 +1294,10 @@
     .tbl .hide-s { display: none; }
     /* Names in share lists wrap on a phone instead of being cut short with an ellipsis ("Old Accounts (untracked)") */
     .part .name, .part .name .sub-s { white-space: normal; overflow-wrap: anywhere; }
-    /* A table has to fit a 320px phone, Edit buttons included: tighter cell padding, and a long name or a wide amount range wraps instead of pushing it out */
-    .tbl:not(.feed) :is(td, th) { padding-left: 12px; padding-right: 12px; }
-    .tbl:not(.feed) td:first-child { min-width: 0; overflow-wrap: break-word; }
-    .tbl:not(.feed) td.amt { white-space: normal; }
+    /* The bills table has to fit a 320px phone, Edit buttons included: tighter cell padding, and a long name wraps */
+    .tbl.bills-tbl :is(td, th) { padding-left: 10px; padding-right: 10px; }
+    .tbl.bills-tbl td:first-child { min-width: 0; overflow-wrap: break-word; }
+    .tbl.bills-tbl td.amt { white-space: normal; }
     .cat-s { display: inline; }
     .show-s { display: initial; }
     div.show-s { display: block; }
