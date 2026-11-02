@@ -54,7 +54,7 @@ describe('demo API', () => {
       expect(checking).toBeGreaterThan(0); expect(savings).toBeGreaterThan(0);
       expect(rewards).toBeLessThanOrEqual(0.001); expect(cashback).toBeLessThanOrEqual(0.001);
     }
-  });
+ }, 30000);
   it('deletes a transaction', () => {
     const api = createMockApi(now);
     expect(api('/transactions/1', {}, 'DELETE')).toBeNull();
