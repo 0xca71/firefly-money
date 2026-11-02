@@ -15,7 +15,8 @@ import { insight } from '../features/refunds';
    worked out and links to the transactions behind it. Anything else becomes a transaction search. */
 type Range = { start: string, end: string, label: string };
 export type Target = { kind: 'category' | 'payee' | 'tag' | 'budget', id: string, name: string };
-export type Question = { intent: string, range: Range, target: Target | null, words: string };
+export type Question = { intent: string, range: Range, target: Target | null, words: string, unmatched?: string };
+type Pool = Pick<Lists, 'categories' | 'expense' | 'tags' | 'budgets'>;
 const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 
 // The period a question is about; this month when it doesn't say
@@ -39,16 +40,33 @@ export function questionRange(q: string, today: string): Range {
   return mr(y, m, 'this month');
 }
 // The category, payee, tag or budget a question names: the longest name found in it
-export function questionTarget(q: string, L: Pick<Lists, 'categories' | 'expense' | 'tags' | 'budgets'>): Target | null {
-  const s = ' ' + q.toLowerCase().replace(/[?.!,]/g, ' ') + ' ';
-  const pool: Target[] = [
-    ...L.categories.map(c => ({ kind: 'category' as const, id: c.id, name: c.name })), ...L.budgets.map(b => ({ kind: 'budget' as const, id: b.id, name: b.name })),
-    ...L.tags.map(t => ({ kind: 'tag' as const, id: t.id, name: t.name })), ...L.expense.map(a => ({ kind: 'payee' as const, id: a.id, name: a.name })),
-  ].filter(t => t.name && t.name.length >= 3);
+const targetPool = (L: Pool): Target[] => [
+  ...L.categories.map(c => ({ kind: 'category' as const, id: c.id, name: c.name })), ...L.budgets.map(b => ({ kind: 'budget' as const, id: b.id, name: b.name })),
+  ...L.tags.map(t => ({ kind: 'tag' as const, id: t.id, name: t.name })), ...L.expense.map(a => ({ kind: 'payee' as const, id: a.id, name: a.name })),
+].filter(t => t.name && t.name.length >= 3);
+export function questionTarget(q: string, L: Pool): Target | null {
+  const s = ' ' + q.toLowerCase().replace(/[?.!,]/g, ' ') + ' ', pool = targetPool(L);
   const hits = pool.filter(t => s.includes(' ' + t.name.toLowerCase() + ' ') || s.includes(' ' + t.name.toLowerCase() + 's '));
   return hits.sort((a, b) => b.name.length - a.name.length)[0] || null;
 }
-export function parseQuestion(q: string, L: Pick<Lists, 'categories' | 'expense' | 'tags' | 'budgets'>, today: string): Question {
+// What a "spent on …" question is about when it names something: "groceries" in "how much did I spend on groceries this year"
+const TIME_WORDS = '(?:this|last|past|in|so far|over|during|since|today|yesterday|for the|ytd|january|february|march|april|may|june|july|august|september|october|november|december)';
+const VAGUE = /^(?:the|my|a|an|all|stuff|things?|everything|anything|money|it|me|something|what|that|this)$/;
+export function spendSubject(q: string): string {
+  const m = new RegExp('\\b(?:on|for|at|towards?)\\s+(.+?)(?=\\s+' + TIME_WORDS + '\\b|$)').exec(q.toLowerCase().replace(/[?!.,]/g, ' ').replace(/\s+/g, ' ').trim());
+  const subject = m ? m[1].replace(/^(?:the|my|a|an)\s+/, '').trim() : '';
+  return subject && !VAGUE.test(subject) ? subject : '';
+}
+const stem = (w: string) => w.replace(/(?:ies|es|s)$/, '');
+// The nearest category, payee, tag or budget to a name Money couldn't match: one that contains it (or it contains), then a close spelling
+export function closestTarget(name: string, L: Pool): Target | null {
+  const want = stem(name.toLowerCase()), pool = targetPool(L);
+  const dist = (a: string, b: string) => { const d = Array.from({ length: b.length + 1 }, (_, j) => j); for (let i = 1; i <= a.length; i++) { let prev = d[0]; d[0] = i; for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = t; } } return d[b.length]; };
+  const score = (t: Target) => { const n = stem(t.name.toLowerCase()); if (n.includes(want) || want.includes(n)) return 0; const e = dist(want, n); return e <= Math.max(1, Math.floor(Math.min(want.length, n.length) / 4)) ? e : 99; };
+  const best = pool.map(t => ({ t, s: score(t) })).filter(x => x.s < 99).sort((a, b) => a.s - b.s)[0];
+  return best ? best.t : null;
+}
+export function parseQuestion(q: string, L: Pool, today: string): Question {
   const s = q.toLowerCase(), range = questionRange(q, today), target = questionTarget(q, L);
   const words = s.replace(/[?!.]/g, '').trim();
   let intent = 'search';
@@ -60,7 +78,10 @@ export function parseQuestion(q: string, L: Pick<Lists, 'categories' | 'expense'
   else if (/\bwhere\b.*\b(money|spend|spent)\b|\btop (categories|payees)\b|\bwhat did i spend (on|most)\b/.test(s)) intent = 'where';
   else if (/\b(earn|earned|income|made|paid me|salary)\b/.test(s)) intent = 'income';
   else if (/spen[dt]|spending|cost|pay(ed)? for|paid/.test(s)) intent = target ? 'spentOn' : 'spent';
-  return { intent, range, target, words };
+  // A question about something Money has no match for isn't the same as one about all spending
+  const unmatched = intent === 'spent' ? spendSubject(s) : '';
+  if (unmatched) intent = 'unmatched';
+  return { intent, range, target, words, unmatched: unmatched || undefined };
 }
 
 type Answer = { title: Html | string, lines?: Html[], how: string, more?: { label: string, href: string } };
@@ -83,6 +104,14 @@ async function answer(q: Question, L: Lists): Promise<Answer> {
       lines: b != null ? [row('Last month', money(b) + ' (' + pctText(v, b) + ')')] : [],
       how: 'Expenses in the ' + t.kind + ' “' + t.name + '” from ' + fmtDate(r.start) + ' to ' + fmtDate(r.end) + ', summed by Firefly.',
       more: { label: 'See the transactions', href: linkFor(t) } };
+  }
+  if (q.intent === 'unmatched') {
+    // Don't answer with all spending: say what couldn't be matched, and offer the nearest name and a search
+    const near = closestTarget(q.unmatched || '', L), what = q.unmatched || q.words;
+    return { title: html`I couldn’t find a category, payee, tag or budget called “${what}”, so I can’t say how much you spent on it ${r.label}.`,
+      lines: near ? [row(html`Closest match: ${near.name} <span class="sub-s">${near.kind}</span>`, 'See transactions', linkFor(near))] : [],
+      how: 'Money matches the names you use in Firefly. It would not guess, so this is not your total spending.' + (near ? ' Ask again with “' + near.name + '”, or search the transactions below.' : ' Search the transactions for the word instead.'),
+      more: { label: 'Search transactions for “' + what + '”', href: '#/transactions?search=' + encodeURIComponent(what) } };
   }
   if (q.intent === 'spent' || q.intent === 'income') {
     const kind = q.intent === 'income' ? 'income' : 'expense', res = await insight('/insight/' + kind + '/total', p), v = sumDiff(res);
@@ -141,8 +170,12 @@ async function answer(q: Question, L: Lists): Promise<Answer> {
   }
   return { title: html`I couldn’t read that as a question I know, so here’s a search for it.`, how: 'Try one of the examples below.', more: { label: 'Search transactions for “' + q.words + '”', href: '#/transactions?search=' + encodeURIComponent(q.words) } };
 }
-const EXAMPLES = ['Why did I spend more this month?', 'Which bills are due before payday?', 'How much can I spend?', 'Where did my money go last month?',
-  'How much did I spend on groceries this year?', 'What was my biggest expense last month?', 'How much did I earn this year?', 'What is my net worth?'];
+// Only suggest what the user's own data can answer: the spending-on question names a category they really have
+export function examples(L: Pick<Lists, 'categories'>) {
+  const cat = L.categories.find(c => c.name && c.name.length >= 3);
+  return ['Why did I spend more this month?', 'Which bills are due before payday?', 'How much can I spend?', 'Where did my money go last month?',
+    ...(cat ? ['How much did I spend on ' + cat.name + ' this year?'] : []), 'What was my biggest expense last month?', 'How much did I earn this year?', 'What is my net worth?'];
+}
 VIEWS.ask = async (r, paint) => {
   const L = await lists(), text = (r.q.q || '').trim();
   let out: Html | string = '';
@@ -153,7 +186,7 @@ VIEWS.ask = async (r, paint) => {
       out = html`<section class="panel ask-answer"><div class="eyebrow">${text}</div><p class="ask-title">${a.title}</p>${a.lines && a.lines.length ? html`<div class="list">${htmlList(a.lines)}</div>` : ''}<p class="sub-s" style="margin-top:12px"><strong>How this was worked out:</strong> ${a.how}</p>${a.more ? html`<a class="btn small" href="${a.more.href}" style="margin-top:6px">${a.more.label} →</a>` : ''}</section>`;
     } catch (e) { out = html`<section class="panel"><p class="form-err">${(e as Error).message}</p></section>`; }
   }
-  paint(html`${head('Ask', 'Plain questions, answered from your Firefly data')}<form class="ask" data-onsubmit="event.preventDefault();App.ask(this.q.value)">${icon('spark')}<input type="text" id="askQ" name="q" value="${text}" placeholder="Ask about your money, e.g. why did I spend more this month?" autocomplete="off" enterkeyhint="go"></form>${out}<div class="ask-examples">${htmlList(EXAMPLES.map(x => html`<button type="button" class="chip" data-onclick="App.ask(this.textContent)">${x}</button>`))}</div>`);
+  paint(html`${head('Ask', 'Plain questions, answered from your Firefly data')}<form class="ask" data-onsubmit="event.preventDefault();App.ask(this.q.value)">${icon('spark')}<input type="text" id="askQ" name="q" value="${text}" placeholder="Ask about your money, e.g. why did I spend more this month?" autocomplete="off" enterkeyhint="go"></form>${out}<div class="ask-examples">${htmlList(examples(L).map(x => html`<button type="button" class="chip" data-onclick="App.ask(this.textContent)">${x}</button>`))}</div>`);
 };
 function ask(q: string) { const t = String(q || '').trim(); if (t) location.hash = '#/ask?q=' + encodeURIComponent(t); }
 
