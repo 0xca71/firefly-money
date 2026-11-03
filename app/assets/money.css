@@ -1298,6 +1298,9 @@
     .tbl.bills-tbl :is(td, th) { padding-left: 10px; padding-right: 10px; }
     .tbl.bills-tbl td:first-child { min-width: 0; overflow-wrap: break-word; }
     .tbl.bills-tbl td.amt { white-space: normal; }
+    /* Pay now stacks over Edit so both fit beside the amount; same width, so their edges line up */
+    .tbl.bills-tbl td.act .btn:is(.primary) { display: block; width: 100%; margin-bottom: 6px; }
+    .tbl.bills-tbl td.act .btn:not(.primary):not(:first-child) { display: block; width: 100%; }
     .cat-s { display: inline; }
     .show-s { display: initial; }
     div.show-s { display: block; }

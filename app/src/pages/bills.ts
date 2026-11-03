@@ -6,6 +6,7 @@ import { closeDrawer, formError, head, monthNav, openDrawer, opt, toast } from '
 import { normGroup } from '../core/feed';
 import { LS, addDays, daysBetween } from '../core/helpers';
 import { invalidate, lists } from '../core/lists';
+import { newTx } from '../features/txform';
 import { VIEWS, hashWith, parseHash, route } from '../core/router';
 import { billRises, findRecurring } from '../features/subs';
 
@@ -56,7 +57,7 @@ VIEWS.bills = async (r, paint) => {
     const status = at.active === false ? html`<span class="chip">Inactive</span>` : paid ? html`<span class="chip good">Paid this month</span>` :
       due ? due < todayIso() ? html`<span class="chip bad">Overdue since ${fmtDay(due)}</span>` : html`<span class="chip warn">Due ${fmtDay(due)}</span>` : (next => html`<span class="chip">${next ? 'Next ' + fmtDate(next) : at.end_date && String(at.end_date).slice(0, 10) < todayIso() ? 'Ended' : 'Next —'}</span>`)(nextBillDate(at, cur.start > todayIso() ? cur.start : todayIso()));
     const amt = num(at.amount_min) === num(at.amount_max) ? money(num(at.amount_min)) : money0(num(at.amount_min)) + '–' + money0(num(at.amount_max));
-    return html`${heading}<tr${at.active === false ? html` style="opacity:.5"` : ''}><td><a class="desc" href="#/transactions?bill=${b.id}" style="text-decoration:none">${at.name}</a><div class="sub-s">${every}${billEnds(at)}</div><div class="show-s">${status}</div></td><td class="hide-s">${status}</td><td class="amt">${amt}</td><td class="act"><button class="btn small" data-onclick="App.billForm('${b.id}')">Edit</button></td></tr>`;
+    return html`${heading}<tr${at.active === false ? html` style="opacity:.5"` : ''}><td><a class="desc" href="#/transactions?bill=${b.id}" style="text-decoration:none">${at.name}</a><div class="sub-s">${every}${billEnds(at)}</div><div class="show-s">${status}</div></td><td class="hide-s">${status}</td><td class="amt">${amt}</td><td class="act">${at.active !== false && !paid ? html`<button class="btn small primary" data-onclick="App.billPay('${b.id}')">Pay now</button> ` : ''}<button class="btn small" data-onclick="App.billForm('${b.id}')">Edit</button></td></tr>`;
   }));
   S.billCache = Object.fromEntries(bills.map(b => [String(b.id), b.attributes]));
   const cal = (r.q.view || LS.get('billsView', 'list')) === 'calendar' && bills.length;
@@ -200,9 +201,24 @@ async function saveBill() {
   });
 }
 
+/* Pay now: opens the new-transaction form filled in from the bill (name, amount, today, the bill link) and, from the bill's latest charge, the
+   account, category and budget it was paid with. Nothing is saved until the form is confirmed. */
+async function billPay(id: string) {
+  const at = S.billCache && S.billCache[id]; if (!at) return;
+  await lists();
+  let last: ApiData | null = null;
+  try { const gs = await api('/bills/' + id + '/transactions?limit=1'); const t = gs.data && gs.data[0] && (gs.data[0].attributes.transactions || [])[0]; if (t && t.type === 'withdrawal') last = t; } catch { /* the form still opens without them */ }
+  const fixed = num(at.amount_min) === num(at.amount_max), L = S.lists!;
+  const amount = fixed || !last ? billAmount(at) : num(last.amount);
+  const own = last && L.own.some(a => String(a.id) === String(last!.source_id)) ? String(last.source_id) : '';
+  newTx({ type: 'withdrawal', description: at.name, amount: String(Math.round(amount * 100) / 100), counter: last && last.destination_name || at.name, bill: id,
+    category: last && last.category_name || '', budget: last && last.budget_id ? String(last.budget_id) : '', ...(own ? { account: own } : {}) });
+}
+
 // The methods markup handlers call (see events.ts), added to App and to its type
 const methods = {
   billForm,
+  billPay,
   saveBill,
   subAdd,
   subIgnore,
