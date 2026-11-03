@@ -22,6 +22,7 @@ import './features/subs';
 import './features/pace';
 import './features/grid';
 import './features/flow';
+import './features/chartfit';
 import './features/tilepreview';
 import './features/magnet';
 import './features/edge';

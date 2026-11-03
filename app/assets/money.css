@@ -2075,3 +2075,28 @@
   .part .name a::after { inset: -14px -6px; }
   #view button.link::after, #view .panel-head a.link::after { inset: -12px -6px; }
 }
+
+  /* ---------- Charts keep their true text and line size in any card (features/chartfit.ts sets --sx and --sy on the svg:
+     how much the drawing is magnified across and down). A card taller than the drawing stretches it to fill, centred ---------- */
+  svg[style*="--sx"] text { font-size: calc(11px / var(--sy, 1)); transform-box: fill-box; transform-origin: 0 50%; transform: scaleX(calc(var(--sy, 1) / var(--sx, 1))); }
+  svg[style*="--sx"] text[text-anchor="middle"] { transform-origin: 50% 50%; }
+  svg[style*="--sx"] text[text-anchor="end"] { transform-origin: 100% 50%; }
+  svg[style*="--sx"] text.bv { font-size: calc(11.5px / var(--sy, 1)); }
+  .chart svg[style*="--sx"] text { font-size: calc(12px / var(--sy, 1)); }
+  svg[style*="--sx"] path:is(.draw, [fill="none"][stroke]) { stroke-width: calc(2.4px / sqrt(var(--sx, 1) * var(--sy, 1))); }
+  svg[style*="--sx"] .dot, svg[style*="--sx"] .pace-dot { r: calc(4.5px / var(--sy, 1)); transform-box: fill-box; transform-origin: 50% 50%; transform: scaleX(calc(var(--sy, 1) / var(--sx, 1))); }
+  .chart .pt:hover .dot { r: calc(6.5px / var(--sy, 1)); }
+  .panel:has(> svg:is(.lines, .barchart, .flowchart)) { display: flex; flex-direction: column; }
+  .panel > svg:is(.lines, .barchart, .flowchart) { flex: 1 1 auto; min-height: 0; margin-block: auto; }
+
+  /* ---------- Rings and donuts use the room their card has, and sit in the middle of it ---------- */
+  .donut { width: min(240px, 72%); }
+  @container (min-width: 520px) {
+    .panel:not(.cards .panel) > .share { grid-template-columns: clamp(150px, 34%, 300px) minmax(0, 560px); }
+  }
+  .panel:has(> .share):not(.cards .panel) { display: flex; flex-direction: column; }
+  .panel:has(> .share):not(.cards .panel) > .share { flex: 1; align-content: center; }
+  .panel:has(> .share):not(.cards .panel) > .share:not(:has(.parts)) { align-content: center; }
+  .cards.bento .bring .ring { width: min(100%, clamp(54px, 46cqi, 170px)); }
+  .cards.bento .bring .name { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .cards.bento .w[data-w="budgets"] .brings { grid-template-columns: repeat(auto-fit, minmax(clamp(84px, 34cqi, 170px), 1fr)); flex: 1; align-content: space-evenly; margin-block: 0; }
