@@ -35,7 +35,7 @@ export interface State {
   swr?: boolean, swrOff?: number, lastRefresh?: number, refreshing?: Promise<void> | null, recalcing?: boolean,
   // Transaction lists
   feed?: Feed | null, txMeta: Record<string, TxMeta>, txPage?: Group[], sel?: Set<string>, pendingDel: Set<string>, catRank?: string[],
-  undoCommit?: (() => void) | null, undoT?: ReturnType<typeof setTimeout>, chartData?: { label: string, income: number, spend: number, go?: string }[],
+  undoCommit?: ((leaving?: boolean) => void) | null, undoT?: ReturnType<typeof setTimeout>, chartData?: { label: string, income: number, spend: number, go?: string }[],
   // The drawer
   drawerHero?: { id: string, av: Html, name: string | undefined, date: string, kicker: string, amount: string } | null, drawerReturn?: HTMLElement | null, drawerTok?: number,
   extrasCtx?: { gid: string, jids: string[] }, linkTypes?: ApiData[] | null,

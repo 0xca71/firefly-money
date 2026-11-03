@@ -18,7 +18,14 @@ export async function signIn(password: string, remember: boolean) {
   if (!r.ok) throw new Error('Couldn’t sign in (' + r.status + ').');
   S.signedIn = true; setRemembered(!!remember);
 }
-export function signOut() { signingOut = fetch(SESSION, { method: 'DELETE', headers: { 'X-Money': '1' } }).catch(() => {}); }
+// Ends the session on the server. Resolves false when that didn't happen (offline, server down): the cookie is
+// then still good, so the caller must not pretend you're signed out.
+export function signOut(): Promise<boolean> {
+  const p = fetch(SESSION, { method: 'DELETE', cache: 'no-store', headers: { 'X-Money': '1' } }).then(r => r.ok, () => false);
+  signingOut = p;
+  return p;
+}
+export const SIGN_OUT_FAILED = 'Couldn’t sign out of the server. Try again when online.';
 // Up to v1.1 the page kept the password itself (localStorage with "Keep me signed in", else sessionStorage).
 // Trade it for a session once and delete it, so updating doesn't sign anyone out. When offline, try again next time.
 export async function migrateSavedPassword() {

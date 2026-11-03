@@ -815,8 +815,13 @@
   .tbl.feed tr:hover .chip.ghost, .tbl.feed tr.kfocus .chip.ghost { opacity: 1; }
   @media (hover: none) { .chip.ghost { display: none; } }
   .tbl.feed tr[data-gid] { scroll-margin: 48px 0 90px; }
-  .tbl.feed tr.kfocus td { background: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
+  .tbl.feed tr.kfocus td, .tbl.feed tr.click:focus-visible td { background: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
   .tbl.feed tr.kfocus td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  .tbl tr.click:focus { outline: none; }
+  .tbl.feed tr.click:focus-visible td, .tbl tr.click:focus-visible td { box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent); }
+  .tbl.feed tr.click:focus-visible td:first-child, .tbl tr.click:focus-visible td:first-child { box-shadow: inset 3px 0 0 var(--accent), inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent); }
+  .tbl.feed tr.click:focus-visible td:last-child, .tbl tr.click:focus-visible td:last-child { box-shadow: inset -2px 0 0 var(--accent), inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent); }
+  .cap-note { margin: 14px 0 0; text-align: center; }
   .tbl.feed tr.saving { opacity: .55; }
   .tbl.feed tr.saving .amt, .tbl.feed tr.saving .inl { background: linear-gradient(90deg, transparent, var(--faint), transparent); background-size: 200% 100%; animation: shimmer 1s infinite linear; }
   .tbl.feed tr.saved td { animation: savedFlash .9s ease; }

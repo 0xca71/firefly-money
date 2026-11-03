@@ -18,7 +18,7 @@ function nlAccount(tok: string) {
   const hits = pool.filter(a => a.name.toLowerCase().split(/[\s\-–]+/).some(x => x.startsWith(w) && (!GENERIC.has(w) || x === w)));
   return hits.length === 1 ? hits[0] : hits.find(a => a.name.toLowerCase().startsWith(w)) || null;
 }
-function nlParse(text: string, submit?: boolean) {
+export function nlParse(text: string, submit?: boolean) {
   const f = S.form; if (!f || f.id) return;
   collectTx();
   if (!f.nlBase) { const s0 = f.splits[0]; f.nlBase = { type: f.type, date: f.date, main: f.main, src: f.src, dst: f.dst, split: { amount: s0.amount, description: s0.description, counter: s0.counter, category: s0.category, tags: s0.tags } }; }

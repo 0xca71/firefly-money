@@ -27,6 +27,7 @@ export type ApiOpts = {
   params?: Record<string, string | number | boolean | null | undefined>,
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE', body?: unknown, raw?: BodyInit, contentType?: string,
   as?: 'blob' | 'text', fresh?: boolean, keepCache?: boolean,
+  keepalive?: boolean,      // let the request finish even if the page is closing (a delete committed on the way out)
 };
 // Numbers for months that have ended (a balance on Sep 30, September's spending) only change when someone edits
 // old transactions. So when the app opens or refreshes, those saved answers are kept for a day instead of being
@@ -134,6 +135,7 @@ async function apiRaw(u: URL, opt: ApiOpts): Promise<ApiData> {
     method: opt.method || 'GET', cache: 'no-store',
     headers: { Accept: opt.as ? '*/*' : 'application/vnd.api+json', 'Content-Type': opt.raw ? (opt.contentType || 'application/octet-stream') : 'application/json', 'X-Money': '1' },
     body: opt.raw ? opt.raw : opt.body ? JSON.stringify(opt.body) : undefined,
+    ...(opt.keepalive ? { keepalive: true } : {}),
   }, opt.as === 'blob');
   if (r.status === 401 && r.headers.get('X-Dash-Auth')) throw new AuthError('Please sign in again.');
   ffSeenResponse(r);
@@ -157,9 +159,14 @@ export async function eachLimited<T>(items: T[], n: number, fn: (item: T, i: num
   let i = 0;
   await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const k = i++; await fn(items[k], k); } }));
 }
+// getAll stops after this many pages (100 rows each). When a list is longer, CAP.at is set so the page that
+// asked can say it shows only the latest ones (Firefly lists newest first).
+export const MAX_PAGES = 60, CAP = { at: 0 };
+export const capNote = (n = MAX_PAGES * 100) => 'Showing the latest ' + n.toLocaleString('en-US') + '.';
 export async function getAll(path: string, params: ApiOpts['params'] = {}): Promise<ApiData[]> {
   const first = await api(path, { params: { ...params, page: 1, limit: 100 } });
-  const pages = Math.min(60, (first && first.meta && first.meta.pagination && first.meta.pagination.total_pages) || 1);
+  const total = (first && first.meta && first.meta.pagination && first.meta.pagination.total_pages) || 1, pages = Math.min(MAX_PAGES, total);
+  if (total > MAX_PAGES) CAP.at = Date.now();
   const out = [...arr(first)];
   for (let p = 2; p <= pages; p += 6) {      // remaining pages, six at a time
     const batch = await Promise.all(Array.from({ length: Math.min(6, pages - p + 1) }, (_, i) => api(path, { params: { ...params, page: p + i, limit: 100 } })));
