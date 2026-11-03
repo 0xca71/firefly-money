@@ -2,7 +2,7 @@ import { html, htmlList } from '../core/html';
 import { AuthError, api } from '../core/api';
 import { busy, showLogin } from '../core/auth';
 import { App, S, absDiff, arr, el, money, money0, monthRange, type ApiData, type Period, viewPeriod, viewYM, txHref } from '../core/base';
-import { closeDrawer, confirmBox, formError, head, ICON_X, monthNav, openDrawer, toast } from '../core/dom';
+import { closeDrawer, confirmBox, formError, head, ICON_X, monthNav, openDrawer, toast, emptyState } from '../core/dom';
 import { invalidate, lists } from '../core/lists';
 import { VIEWS, route } from '../core/router';
 import { insight } from '../features/refunds';
@@ -37,7 +37,7 @@ VIEWS.categories = async (r, paint) => {
   }));
   const tags = htmlList(L.tags.map(t => html`<span class="chip"><a href="#/transactions?tag=${t.id}">${t.name}</a><button title="Delete tag" data-onclick="App.deleteTag('${t.id}')">${ICON_X}</button></span>`));
   paint(html`${head('Categories & tags', '', html`${monthNav()}${customizeButton('categories')}<button class="btn primary" data-onclick="App.categoryForm()">+ New category</button>`)}${chart}<section class="panel flush" style="margin-bottom:28px">${rows ? html`<table class="tbl"><thead><tr><th>Category</th><th class="r">Spent ${all ? 'all time' : 'in ' + cur.short}</th>${!cmp ? '' : html`<th class="r hide-s">vs ${prev.short}</th>`}${earned ? html`<th class="r hide-s">Earned</th>` : ''}<th></th></tr></thead><tbody>${rows}</tbody></table>`
-      : html`<div class="center-empty">${cats.length ? 'Nothing spent or earned in any category.' : 'No categories yet.'}</div>`}</section>${pageCard('categories', 'tags') ? html`<section class="panel"><div class="panel-head"><div><h2>Tags</h2><p class="lead">Click a tag to see its transactions</p></div></div><form data-onsubmit="event.preventDefault();App.addTag(this.t)" style="display:flex;gap:10px;margin-bottom:18px;max-width:420px"><input type="text" name="t" placeholder="New tag name" style="flex:1" required><button class="btn">Add tag</button></form>${tags ? html`<div class="tagcloud">${tags}</div>` : html`<p class="empty">No tags yet.</p>`}</section>` : ''}`);
+      : (cats.length ? html`<div class="center-empty">Nothing spent or earned in any category.</div>` : emptyState('categories', 'No categories yet', 'Categories show where your money goes. Create a few, or let rules fill them in as transactions arrive.', html`<button class="btn primary" data-onclick="App.categoryForm()">+ New category</button>`))}</section>${pageCard('categories', 'tags') ? html`<section class="panel"><div class="panel-head"><div><h2>Tags</h2><p class="lead">Click a tag to see its transactions</p></div></div><form data-onsubmit="event.preventDefault();App.addTag(this.t)" style="display:flex;gap:10px;margin-bottom:18px;max-width:420px"><input type="text" name="t" placeholder="New tag name" style="flex:1" required><button class="btn">Add tag</button></form>${tags ? html`<div class="tagcloud">${tags}</div>` : html`<p class="empty">No tags yet.</p>`}</section>` : ''}`);
 };
 async function categoryForm(id?: string) {
   const L = await lists(), c = id ? L.categories.find(x => x.id === id) : null;

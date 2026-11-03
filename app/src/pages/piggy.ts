@@ -2,7 +2,7 @@ import { html, htmlList } from '../core/html';
 import { api, getAll } from '../core/api';
 import { busy } from '../core/auth';
 import { App, S, el, fmtDate, money, money0, num, todayIso, type ApiData, type Field } from '../core/base';
-import { closeDrawer, formError, head, openDrawer, opt, toast } from '../core/dom';
+import { closeDrawer, formError, head, openDrawer, opt, toast, emptyState } from '../core/dom';
 import { isAsset, isCard, lists } from '../core/lists';
 import { VIEWS, route } from '../core/router';
 import { goalPace } from '../features/pace';
@@ -47,7 +47,7 @@ VIEWS.piggy = async (r, paint) => {
   }));
   paint(html`${head('Piggy banks', piggies.length ? money0(saved) + ' saved toward ' + money0(goal) + ' in goals' : 'Set money aside for goals', html`${customizeButton('piggy')}<button class="btn primary" data-onclick="App.piggyForm()">+ New piggy bank</button>`)}${cards ?
     html`<div class="flow" data-min="320">${pageCard('piggy', 'chart') ? html`<section class="panel full"><h2>All goals at a glance</h2><p class="lead">${money0(saved)} of ${money0(goal)} saved · ${goal ? Math.round(saved / goal * 100) : 0}% of the way</p><div class="parts goal-parts">${htmlList(shown.map((p, i) => html`<div class="part"><i style="background:${SERIES[i % SERIES.length]}"></i><span class="name">${p.name}<span class="sub-s">${money0(p.current)} of ${money0(p.target)}</span></span><span class="track"><span class="fill" style="width:${pctOf(p).toFixed(1)}%;background:${SERIES[i % SERIES.length]}"></span></span><span class="num">${pctOf(p).toFixed(0)}%</span></div>`))}</div></section>` : ''}${cards}</div>` :
-    piggies.length ? html`<section class="panel"><div class="center-empty">Every goal is reached. Turn on Goals already reached under Customize to see them.</div></section>` : html`<section class="panel"><div class="center-empty">No piggy banks yet.<br>Use one to set money aside in an account for a goal — a trip, tuition, an emergency fund.</div></section>`}`);
+    piggies.length ? html`<section class="panel"><div class="center-empty">Every goal is reached. Turn on Goals already reached under Customize to see them.</div></section>` : html`<section class="panel">${emptyState('goals', 'No piggy banks yet', 'Set money aside for a goal, like a trip, tuition or an emergency fund, and track how close you are.', html`<button class="btn primary" data-onclick="App.piggyForm()">+ New piggy bank</button>`)}</section>`}`);
 };
 function piggyForm(id?: string) {
   const L = S.lists!, p: Piggy | null = id ? S.piggyCache![id] : null;

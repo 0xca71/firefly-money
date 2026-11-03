@@ -159,6 +159,20 @@ export function monthNav() {
 export function head(title: string | Html, sub: string | Html, actions?: string | Html) {
   return html`<div class="head"><div><h1>${title}</h1>${sub ? html`<p class="sub">${sub}</p>` : ''}</div><div class="actions">${actions || ''}</div></div>`;
 }
+/* ---------- Empty states: a drawn icon, what the page is for, and the one thing to do next ---------- */
+const EMPTY_ICONS: Record<string, string> = {
+  recurring: '<path d="M4 11a8 8 0 0 1 14-4.5L20 9"/><path d="M20 4v5h-5"/><path d="M20 13a8 8 0 0 1-14 4.5L4 15"/><path d="M4 20v-5h5"/>',
+  bills: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  budgets: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
+  categories: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/>',
+  goals: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+  rules: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  list: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h4"/>',
+};
+export function emptyState(kind: keyof typeof EMPTY_ICONS | string, title: string, text: string, actions?: string | Html) {
+  const d = EMPTY_ICONS[kind] || EMPTY_ICONS.list;
+  return html`<div class="empty-state"><div class="es-ic" aria-hidden="true">${raw(`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`)}</div><h3>${title}</h3><p>${text}</p>${actions ? html`<div class="es-act">${actions}</div>` : ''}</div>`;
+}
 export const opt = (v: string | number, label: string | number, sel: unknown) => html`<option value="${v}"${String(v) === String(sel) ? ' selected' : ''}>${label}</option>`;
 
 // The methods markup handlers call (see events.ts), added to App and to its type

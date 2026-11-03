@@ -2,7 +2,7 @@ import { Html, html, htmlList } from '../core/html';
 import { api, getAll } from '../core/api';
 import { busy } from '../core/auth';
 import { type ApiData, App, el, type Field, fmtDate, fmtDay, isoDate, leadDays, money, money0, monthOf, monthRange, nowMonth, num, type Period, S, todayIso, viewYM, weekOrder } from '../core/base';
-import { closeDrawer, formError, head, monthNav, openDrawer, opt, toast } from '../core/dom';
+import { closeDrawer, formError, head, monthNav, openDrawer, opt, toast, emptyState } from '../core/dom';
 import { normGroup } from '../core/feed';
 import { LS, addDays, daysBetween } from '../core/helpers';
 import { invalidate, lists } from '../core/lists';
@@ -63,7 +63,7 @@ VIEWS.bills = async (r, paint) => {
   const cal = (r.q.view || LS.get('billsView', 'list')) === 'calendar' && bills.length;
   const viewBtn = (k: string, l: string) => html`<button type="button" class="${(cal ? 'calendar' : 'list') === k ? 'on' : ''}" data-onclick="App.billsView('${k}')">${l}</button>`;
   paint(html`${head('Bills', 'About ' + money0(monthly) + ' a month across ' + active.length + ' active bill' + (active.length === 1 ? '' : 's'), html`${monthNav()}<button class="btn primary" data-onclick="App.billForm()">+ New bill</button>`)}${bills.length ? html`<div class="seg" style="margin:-8px 0 20px">${viewBtn('list', 'List')}${viewBtn('calendar', 'Calendar')}</div>` : ''}${cal ? billCalendar(bills, cur) : html`<section class="panel flush">${rows ? html`<table class="tbl bills-tbl"><thead><tr><th>Bill</th><th class="hide-s">${cur.label}</th><th class="r">Amount</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
-      : html`<div class="center-empty">No bills yet. Add rent, subscriptions or insurance to see what’s coming.</div>`}</section>`}<div id="subsBox"></div><p class="sub-s" style="margin-top:14px">Firefly marks a bill paid when a transaction is linked to it — pick the bill in the transaction form, or let your rules do it.</p>`);
+      : emptyState('bills', 'No bills yet', 'Add rent, subscriptions or insurance and Money shows what is due next and keeps your safe-to-spend honest.', html`<button class="btn primary" data-onclick="App.billForm()">+ New bill</button>`)}</section>`}<div id="subsBox"></div><p class="sub-s" style="margin-top:14px">Firefly marks a bill paid when a transaction is linked to it — pick the bill in the transaction form, or let your rules do it.</p>`);
   const tok = S.tok;
   // The page may still be animating in when the answer arrives, so wait a moment for the box to exist
   const put = (markup: Html | string, n = 0) => {

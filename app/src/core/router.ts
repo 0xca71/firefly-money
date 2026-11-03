@@ -7,10 +7,25 @@ import { lists } from './lists';
 import { labelHtml, monthLabel, morph, morphOk, sameLayout, slideLabel, snapshot } from './morph';
 
 /* ================= Router ================= */
+// The placeholder shows the shape of the page that's coming (KPI row, chart, list rows, table), so nothing jumps when it arrives
+const SKELETONS: Record<string, string> = {
+  '': 'dash', reports: 'dash', recap: 'dash', year: 'dash', timeline: 'dash', forecast: 'dash',
+  transactions: 'feed', account: 'feed', review: 'feed', inbox: 'feed', map: 'chart',
+  budgets: 'table', categories: 'table', bills: 'table', accounts: 'table', rules: 'table', recurring: 'table', loans: 'table', piggy: 'cards',
+};
 function skeleton() {
-  const bar = (w: string, h: number) => html`<div class="sk" style="width:${w};height:${h}px"></div>`;
+  const bar = (w: string, h: number, extra = '') => html`<div class="sk" style="width:${w};height:${h}px${extra}"></div>`;
+  const rows = (n: number) => htmlList(Array.from({ length: n }, () => html`<div class="sk-row">${bar('34px', 34, ';border-radius:50%')}<div class="sk-grow">${bar('55%', 12)}<div style="height:8px"></div>${bar('30%', 10)}</div>${bar('64px', 12)}</div>`));
+  const kpis = (n: number) => html`<div class="kpis sk-kpis">${htmlList(Array.from({ length: n }, () => html`<div class="kpi">${bar('48%', 10)}<div style="height:12px"></div>${bar('72%', 22)}</div>`))}</div>`;
   const card = (n: number) => html`<section class="panel">${bar('40%', 14)}<div style="height:18px"></div>${htmlList(Array.from({ length: n }, () => html`${bar('100%', 12)}<div style="height:16px"></div>`))}</section>`;
-  return html`<div class="head"><div>${bar('200px', 26)}</div></div><div class="cards">${card(5)}${card(3)}${card(4)}</div>`;
+  const chart = html`<section class="panel">${bar('34%', 14)}<div style="height:16px"></div>${bar('100%', 180, ';border-radius:14px')}</section>`;
+  const kind = SKELETONS[parseHash().name] || 'cards';
+  const head = html`<div class="head"><div>${bar('200px', 26)}<div style="height:8px"></div>${bar('280px', 12)}</div></div>`;
+  if (kind === 'dash') return html`${head}${kpis(4)}<div class="cards">${chart}${card(4)}</div>`;
+  if (kind === 'feed') return html`${head}${kpis(3)}<section class="panel flush sk-list">${rows(7)}</section>`;
+  if (kind === 'table') return html`${head}${kpis(3)}<section class="panel flush sk-list">${rows(6)}</section>`;
+  if (kind === 'chart') return html`${head}${chart}`;
+  return html`${head}<div class="cards">${card(5)}${card(3)}${card(4)}</div>`;
 }
 export function parseHash() {
   const h = location.hash.replace(/^#\/?/, '');
