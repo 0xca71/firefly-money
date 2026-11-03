@@ -279,6 +279,9 @@
   .row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .list .row { padding: 10px 0; border-top: 1px solid var(--line); }
   .list .row:first-child { border-top: none; padding-top: 0; }
+  .w[data-w="bills"] .list .row:not(.more) { align-items: center; }
+  .bill-end { display: flex; align-items: center; gap: 10px; flex: none; }
+  .bill-end .btn { flex: none; white-space: nowrap; }
   .list a.row { text-decoration: none; }
   .list a.row:hover .name { text-decoration: underline; text-underline-offset: 3px; }
   .track { position: relative; height: 6px; background: var(--faint); border-radius: 99px; margin: 7px 0 4px; }
@@ -1713,10 +1716,12 @@
     .w[data-w="bills"] .list .row:not(.more) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
     .w[data-w="bills"] .list .row .name { white-space: normal; }
     .w[data-w="bills"] .list .row .num { text-align: left; font-weight: 600; }
+    .w[data-w="bills"] .list .row .bill-end { justify-content: space-between; }
     .brings { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 6px; }
     .bring .ring { width: 54px; } .bring .ring .mid strong { font-size: 12px; }
   }
   @container (max-width: 240px) { .w[data-w="bills"] .lead { display: none; } }
+  @container (max-width: 380px) { .w[data-w="bills"] .list .row:not(.more) .name { white-space: normal; overflow-wrap: anywhere; } .bill-end { gap: 8px; } .bill-end .btn { padding-inline: 11px; } }
   .cards.bento .w[data-w="budgets"] > .panel { display: flex; flex-direction: column; }
   .cards.bento .w[data-w="budgets"] .brings { margin-block: auto; padding-top: 10px; }
   /* a half-width tile's controls, small enough to share the row with its name */
