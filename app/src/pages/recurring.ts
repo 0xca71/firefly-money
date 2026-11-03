@@ -2,7 +2,7 @@ import { html, htmlList } from '../core/html';
 import { api, getAll } from '../core/api';
 import { busy, withAuth } from '../core/auth';
 import { App, S, el, fmtDate, fmtDay, money, num, sameName, todayIso, type ApiData, type Field } from '../core/base';
-import { closeDrawer, confirmBox, formError, head, openDrawer, opt, toast } from '../core/dom';
+import { closeDrawer, confirmBox, formError, head, openDrawer, opt, toast, emptyState } from '../core/dom';
 import { invalidate, isLiab, lists } from '../core/lists';
 import { VIEWS, route } from '../core/router';
 import { accountOptions } from '../features/txform';
@@ -21,7 +21,7 @@ VIEWS.recurring = async (r, paint) => {
     return html`<tr class="click" data-onclick="App.recurForm('${x.id}')"${at.active === false ? html` style="opacity:.5"` : ''}><td><div class="desc">${at.title}${at.active === false ? html` <span class="chip">Inactive</span>` : ''}</div><div class="sub-s">${rep.description || ''}${ends ? ' · ' + ends : ''}</div></td><td class="fromto hide-s">${t.source_name || ''} → ${t.destination_name || ''}</td><td class="hide-s">${next.length ? htmlList(next.map((d: string) => html`<span class="chip">${fmtDay(d)}</span>`)) : html`<span class="neutral">—</span>`}</td><td class="amt ${sign}">${money(num(t.amount))}</td></tr>`;
   }));
   paint(html`${head('Recurring', 'Transactions Firefly creates for you automatically on a schedule', html`<button class="btn primary" data-onclick="App.recurForm()">+ New recurring</button>`)}<section class="panel flush">${rows ? html`<table class="tbl"><thead><tr><th>Name</th><th class="hide-s">From → To</th><th class="hide-s">Next</th><th class="r">Amount</th></tr></thead><tbody>${rows}</tbody></table>`
-      : html`<div class="center-empty">Nothing recurring yet. Add rent, a salary or a subscription and Firefly will create it for you each time.</div>`}</section><p class="sub-s" style="margin-top:14px">Firefly creates these transactions on its daily cron job, so make sure the cron is set up in your Firefly install.</p>`);
+      : emptyState('recurring', 'Nothing recurring yet', 'Add rent, a salary or a subscription and Firefly will create each one for you on schedule.', html`<button class="btn primary" data-onclick="App.recurForm()">+ New recurring</button><a class="btn" href="#/bills">Find them in my history</a>`)}</section><p class="sub-s" style="margin-top:14px">Firefly creates these transactions on its daily cron job, so make sure the cron is set up in your Firefly install.</p>`);
 };
 function recurForm(id?: string, forceType?: string) {
   const L = S.lists!, at = id ? S.recCache![id] : null, rep = at ? (at.repetitions || [])[0] || {} : {};

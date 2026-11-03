@@ -67,4 +67,12 @@ addEventListener('DOMContentLoaded', () => {
   a.rel = 'noopener';
   a.textContent = 'Demo · made-up data · Get Money ↗';
   document.body.append(a);
+  // On a wide screen, centre it on the page, not on the window (the sidebar takes the left edge)
+  const place = () => {
+    const m = document.querySelector('main');
+    a.style.left = innerWidth > 900 && m && m.offsetParent ? Math.round(m.getBoundingClientRect().left + m.getBoundingClientRect().width / 2) + 'px' : '';
+  };
+  place(); addEventListener('resize', place); addEventListener('hashchange', () => setTimeout(place, 50));
+  new MutationObserver(place).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  setInterval(place, 1000);
 });
