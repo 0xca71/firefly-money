@@ -65,8 +65,8 @@ export function createMockApi(now = new Date()) {
     ['Pharmacy Plus', 'Health', null, 23, 1], ['Big Box Store', 'Shopping', null, 55, 1],
     ['Mobile Co', 'Utilities', null, 65, 1], ['FiberNet', 'Utilities', null, 70, 1], ['FitLife Gym', 'Health', null, 45, 1],
     ['Pizza Place', 'Dining', 'Food', 32, 2], ['Home Goods', 'Shopping', null, 140, 0.6],
-    ['Cinema Club', 'Entertainment', 'Fun', 19, 1], ['Ticket Hub', 'Entertainment', 'Fun', 85, 0.4], ['Pet Supply Co', 'Pets', null, 36, 0.8],
-    ['Hardware Hub', 'Home', null, 52, 0.7], ['Salon & Spa', 'Personal care', 'Fun', 46, 0.6], ['Gift Shop', 'Gifts', null, 48, 0.4], ['Ride Share', 'Transport', null, 19, 1.5],
+    ['Cinema Club', 'Entertainment', null, 19, 1], ['Ticket Hub', 'Entertainment', null, 85, 0.4], ['Pet Supply Co', 'Pets', null, 36, 0.8],
+    ['Hardware Hub', 'Home', null, 52, 0.7], ['Salon & Spa', 'Personal care', null, 46, 0.6], ['Gift Shop', 'Gifts', null, 48, 0.4], ['Ride Share', 'Transport', null, 19, 1.5],
   ];
   const PID: Record<string, string> = {};
   PAYEES.forEach((p, i) => { PID[p[0]] = String(100 + i); acc(100 + i, p[0], 'expense'); });
