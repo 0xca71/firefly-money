@@ -48,6 +48,8 @@ export function createMockApi(now = new Date()) {
   acc(4, 'Cashback Card', 'asset', 0, 'ccAsset', { monthly_payment_date: '2026-01-31' });
   acc(5, 'Car loan', 'liability', 0, null, { liability_type: 'loan', current_debt: '0', interest: '5.9', interest_period: 'yearly' });
   acc(6, 'Acme Corp', 'revenue');
+  acc(7, 'Emergency Fund', 'asset', 0, 'savingAsset'); acc(8, 'Brokerage', 'asset', 0, 'savingAsset');   // saved into, and invested, over the later years
+  acc(9, 'Travel Card', 'asset', 0, 'ccAsset', { monthly_payment_date: '2026-01-20' });   // a third card, opened a few years ago
   acc(130, 'Online transfer', 'expense'); acc(131, 'Transfer from Everyday', 'revenue');   // see the pair below
   acc(140, 'Old Gym Membership', 'expense'); acc(141, 'Garage sale', 'revenue');   // nothing uses these (for Clean up)
   acc(142, 'Online Store', 'revenue');   // pays back part of the airline tickets below
@@ -55,6 +57,7 @@ export function createMockApi(now = new Date()) {
   acc(144, 'Island Air', 'expense'); acc(145, 'Seaside Resort', 'expense');   // a trip every summer, paid from savings
   acc(146, 'Riverside Motors', 'expense'); acc(147, 'Riverside Auto Finance', 'expense');   // the car (and the loan's interest)
   acc(148, 'Savings interest', 'revenue');
+  acc(149, 'Market gains', 'revenue'); acc(150, 'Market losses', 'expense'); acc(151, 'Design client', 'revenue');   // the brokerage's ups and downs, and some freelance work
   const PAYEES: [string, string, string | null, number, number][] = [  // name, category, budget, typical amount, per-month count
     ['Green Grocer', 'Groceries', 'Food', 64, 5], ['Corner Market', 'Groceries', 'Food', 48, 4], ['SQ *BEAN THERE COFFEE', 'Dining', 'Food', 7, 6],
     ['Burrito Bar', 'Dining', 'Food', 14, 3], ['Taco Stand', 'Dining', 'Food', 22, 2], ['Fuel Stop', 'Gas', null, 42, 3], ['Online Store', 'Shopping', null, 38, 3],
@@ -62,6 +65,8 @@ export function createMockApi(now = new Date()) {
     ['Pharmacy Plus', 'Health', null, 23, 1], ['Big Box Store', 'Shopping', null, 55, 1],
     ['Mobile Co', 'Utilities', null, 65, 1], ['FiberNet', 'Utilities', null, 70, 1], ['FitLife Gym', 'Health', null, 45, 1],
     ['Pizza Place', 'Dining', 'Food', 32, 2], ['Home Goods', 'Shopping', null, 140, 0.6],
+    ['Cinema Club', 'Entertainment', 'Fun', 19, 1], ['Ticket Hub', 'Entertainment', 'Fun', 85, 0.4], ['Pet Supply Co', 'Pets', null, 36, 0.8],
+    ['Hardware Hub', 'Home', null, 52, 0.7], ['Salon & Spa', 'Personal care', 'Fun', 46, 0.6], ['Gift Shop', 'Gifts', null, 48, 0.4], ['Ride Share', 'Transport', null, 19, 1.5],
   ];
   const PID: Record<string, string> = {};
   PAYEES.forEach((p, i) => { PID[p[0]] = String(100 + i); acc(100 + i, p[0], 'expense'); });
@@ -90,7 +95,7 @@ export function createMockApi(now = new Date()) {
   let TX: MockGroup[] = [];
   // Every balance is worked out from the history, so it adds up whatever day it is: checking and savings start with
   // these amounts, and the cards and the car loan start at nothing
-  const BAL: Record<string, number> = { '1': 2000, '2': 6000, '3': 0, '4': 0, '5': 0 };
+  const BAL: Record<string, number> = { '1': 2000, '2': 6000, '3': 0, '4': 0, '5': 0, '7': 0, '8': 0, '9': 0 };
   const addTx = (d: number, type: string, amt: number, description: string, src: string, dst: string, cat: string | null = null, bud: string | null = null) => {
     const gid = String(TX.length + 1), s = ACC_BY[src].attributes, t = ACC_BY[dst].attributes;
     if (src in BAL) BAL[src] -= amt;
@@ -119,7 +124,7 @@ export function createMockApi(now = new Date()) {
   const rent = (d: number) => Math.round(2150 / stepped(d, 7, RENT_UPS) / 5) * 5;
   // Subscriptions went up in steps, and some didn't exist yet: [years ago from, price]
   const SUBS: Record<string, [number, number][]> = { StreamFlix: [[5, 9.99], [2.5, 12.99], [1, 15.49]], 'Tunes Plus': [[6, 9.99], [3, 10.99], [1.5, 11.99]] };
-  const STARTS: Record<string, number> = { 'Taco Stand': 2.5, 'SQ *BEAN THERE COFFEE': 7 };   // opened this many years ago
+  const STARTS: Record<string, number> = { 'Taco Stand': 2.5, 'SQ *BEAN THERE COFFEE': 7, 'Cinema Club': 4, 'Ticket Hub': 4, 'Pet Supply Co': 3, 'Hardware Hub': 5, 'Salon & Spa': 4, 'Gift Shop': 5, 'Ride Share': 4 };   // opened this many years ago
   // More shopping before the holidays, more driving and eating out in summer, bigger power bills in winter and August
   const season = (cat: string, m: number) => cat === 'Shopping' ? [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.4, 2.2][m]
     : cat === 'Gas' ? (m >= 5 && m <= 7 ? 1.25 : 1) : cat === 'Dining' ? (m >= 5 && m <= 7 ? 1.15 : m === 11 ? 1.3 : 1)
@@ -138,7 +143,7 @@ export function createMockApi(now = new Date()) {
   for (let d = utc(sy, sm, 1); d <= TODAY; d += DAY) {
     const [y, m, day] = ymd(d), thisMonth = y === ty && m === tm, p = prices(d), last = d === utc(y, m + 1, 0);
     if (day === 1) {
-      owed['3'] = -BAL['3']; owed['4'] = -BAL['4'];
+      owed['3'] = -BAL['3']; owed['4'] = -BAL['4']; owed['9'] = -BAL['9'];
       for (const c of CATS) mood[c] = uniform(0.85, 1.2);     // some months are just pricier than others
     }
     if (day === 1 || day === 15) addTx(d, 'deposit', pay(d), 'ACME CORP PAYROLL', '6', '1', 'Salary');
@@ -161,12 +166,12 @@ export function createMockApi(now = new Date()) {
         continue;
       }
       // Early in the month the days so far get more of it, so this month's charts are never empty (on the 1st, about a week's worth)
-      const odds = per / 30 * (thisMonth ? Math.max(1, 8 / td) : season(cat, m));
+      const odds = per / 30 * (thisMonth ? Math.max(1, 10 / td) : season(cat, m));
       for (let n = Math.floor(odds) + (random() < odds % 1 ? 1 : 0); n > 0; n--) {
         let mult = thisMonth ? 1 : mood[cat];
         if (cat === 'Dining' && thisMonth) mult = 1.9;        // dining spike this month
         if (cat === 'Groceries' && thisMonth) mult = 0.45;    // groceries down
-        const src = choice(['1', '3', '3', '4']);
+        const src = choice(['1', '3', '3', '4', ...(ago(d) < 4 ? ['9', '9'] : [])]);
         const title = name === name.toUpperCase() ? name.toLowerCase().replace(/(^|[^a-z])([a-z])/g, (_, a, b) => a + b.toUpperCase()) : name;
         addTx(d, 'withdrawal', r2(amt * p * mult * uniform(0.7, 1.3)), title, src, PID[name], cat, bud);
       }
@@ -185,6 +190,14 @@ export function createMockApi(now = new Date()) {
       addTx(d, 'withdrawal', r2(due * RATE), 'Car loan interest', '5', '147', 'Car');
       addTx(d, 'transfer', r2(Math.min(PMT, due * (1 + RATE))), 'Car loan payment', '1', '5');
     }
+    if (ago(d) < 3 && m % 3 === 0 && day === 17 && BAL['2'] > 3000) addTx(d, 'transfer', Math.round(600 * p / 50) * 50, 'Emergency fund', '2', '7');
+    if (ago(d) < 6 && day === 18 && BAL['2'] > 3000) addTx(d, 'transfer', Math.round(400 * p / 50) * 50, 'Brokerage deposit', '2', '8');
+    if (ago(d) < 5 && day === 25 && random() < 0.4) addTx(d, 'deposit', Math.round(uniform(300, 900) * p / 10) * 10, 'Logo design project', '151', '1', 'Salary');
+    if (ago(d) < 6 && last && d < TODAY && BAL['8'] > 0) {      // the market: up more often than down
+      const g = r2(BAL['8'] * uniform(-0.03, 0.04));
+      if (g > 0) addTx(d, 'deposit', g, 'Market gains', '149', '8', 'Interest'); else if (g < 0) addTx(d, 'withdrawal', -g, 'Market losses', '8', '150');
+    }
+    if (day === 20 && ago(d) < 4) payCard(d, '9', 'Travel Card');
     if (day === 3) payCard(d, '3', 'Rewards Card');
     if (last) payCard(d, '4', 'Cashback Card');
     if (last && d < TODAY) addTx(d, 'deposit', r2(BAL['2'] * APY(d) / 1200), 'Interest', '148', '2', 'Interest');
