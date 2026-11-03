@@ -4,23 +4,25 @@
    When built with GOATCOUNTER set, it also counts visits to each page for GoatCounter (no cookies, no personal data). */
 import { NotFound, createMockApi } from './mockapi';
 
-// The demo opens in Frosted glass, with the Overview arranged like the README's screenshots (this runs before boot.js
-// reads the theme): four small tiles a row even on a big screen, net worth over three years. A phone puts Where it
-// went first in its row so Cash and Credit cards pair up. It's set up once per LOOK version, so a visitor who was here
-// before gets a new look once too; after that, anything they change is kept (Customize → Reset gives the usual defaults).
-const LOOK = '2';
+// The demo opens in the Glass theme, with the Overview arranged like the README's screenshots (this runs before boot.js
+// reads the theme): a wide net worth over three years with Earned and Spent beside it, Where it went next to Cash flow,
+// then Money flow with Cash and Credit cards. The demo starts fresh on every page load, for every visitor
+// and device: whatever was saved before (theme, layout, Customize picks, What's new, edits' leftovers) is wiped first,
+// and the data is made up in memory, so a reload or a new visit always shows the same starting point.
 window.MONEY_DEMO = true;
+try { localStorage.clear(); sessionStorage.clear(); } catch (e) { /* storage blocked */ }
+try { indexedDB.databases?.().then(dbs => dbs.forEach(d => d.name && indexedDB.deleteDatabase(d.name))).catch(() => {}); } catch (e) { /* no IndexedDB */ }
+try { caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(() => {}); } catch (e) { /* no Cache Storage */ }
+try { navigator.serviceWorker?.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {}); } catch (e) { /* no service workers */ }
 try {
-  if (localStorage.getItem('money.demoLook') !== LOOK) {
-    const phone = innerWidth < 1000;
-    localStorage.setItem('moneyTheme', 'frosted');
+  {
+    localStorage.setItem('moneyTheme', 'glass');
     localStorage.setItem('money.nwMonths', '36');
     localStorage.setItem('money.dash', JSON.stringify({
-      v: 3, units: 4, order: ['insights', 'networth', 'earned', 'spent', 'attention', ...(phone ? ['spending', 'cash'] : ['cash', 'spending']), 'cards', 'flow', 'heatmap', 'loans'],
-      shown: ['cash', 'cards', 'flow', 'heatmap', 'loans'], hidden: ['safe', 'budgets', 'bills', 'cashflow'],
-      size: { networth: 's', attention: 's', cash: 's', cards: 's', heatmap: 's', loans: 's', spending: 'm', flow: 'm' },
+      v: 3, units: 4, order: ['networth', 'earned', 'spent', 'spending', 'cashflow', 'flow', 'cash', 'cards'],
+      shown: ['cashflow', 'flow', 'cash', 'cards'], hidden: ['insights', 'attention', 'safe', 'bills', 'budgets', 'heatmap', 'loans'],
+      size: { networth: 'm', spending: 'm', cashflow: 'm', flow: 'm', cash: 's', cards: 's' },
     }));
-    localStorage.setItem('money.demoLook', LOOK);
   }
 } catch (e) { /* storage blocked */ }
 
