@@ -60,6 +60,7 @@ export async function api(path: string, opt: ApiOpts = {}): Promise<ApiData> {
 // answers 502/503/504, or Firefly says 429. So at most NET_MAX requests are sent at a time, and reads that
 // fail like that (or lose the connection) are retried a few times before the error is shown. A 429 (too many
 // requests, from Firefly or this server's rate limit) means nothing was done, so writes are retried after one too.
+export const READ_MS = 25000;
 const NET_MAX = 6, NET_RETRY = [400, 1200, 3000], NET_BUSY = new Set([429, 502, 503, 504]);
 let netActive = 0;
 const netQueue: (() => void)[] = [];
@@ -109,7 +110,18 @@ async function netFetch(u: URL, init: RequestInit, blob: boolean): Promise<{ r: 
   const read = init.method === 'GET';
   for (let attempt = 0; ; attempt++) {
     let res: { r: Response, body: string | Blob } | null = null, r: Response | null = null, wait = NET_RETRY[attempt];
-    try { res = await netSlot(async () => { const x = await fetch(u, init); return { r: x, body: await (blob && x.ok ? x.blob() : x.text()) }; }); r = res.r; }
+    // A read that never answers (a connection the phone dropped while the app was in the background, a proxy that
+    // hangs) would hold its slot, and every other request waiting behind it, until the page is reloaded: so a read
+    // gives up after READ_MS and is tried again like any other lost connection. (Writes are never repeated.)
+    try {
+      res = await netSlot(async () => {
+        const ac = read && typeof AbortController !== 'undefined' ? new AbortController() : null, timer = ac ? setTimeout(() => ac.abort(), READ_MS) : 0;
+        try { const x = await fetch(u, ac ? { ...init, signal: ac.signal } : init); return { r: x, body: await (blob && x.ok ? x.blob() : x.text()) }; }
+        catch (e) { if (ac && ac.signal.aborted) throw new TypeError('Failed to fetch'); throw e; }
+        finally { clearTimeout(timer); }
+      });
+      r = res.r;
+    }
     catch (e) { if (!read || wait === undefined || !navigator.onLine) throw unreachable(e); }
     if (r && !((read && NET_BUSY.has(r.status) || r.status === 429) && wait !== undefined && navigator.onLine)) return res!;
     const ra = r ? +(r.headers.get('Retry-After') as string) : 0;

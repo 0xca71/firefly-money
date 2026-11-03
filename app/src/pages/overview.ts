@@ -62,7 +62,7 @@ VIEWS[''] = async (r, paint) => {
   ]);
   // Only what the cards on the page need: a card that's off (Customize → Add cards) costs no requests
   const on = (...ks: string[]) => ks.some(tileOn), none = Promise.resolve([] as any);
-  const slowP = Promise.all([on('loans') ? loanHistory(loansShown) : {}, on('safe') ? App.safeCard() : '',
+  const slowP = Promise.all([on('loans') ? loanHistory(loansShown).catch(() => ({})) : {}, on('safe') ? App.safeCard() : '',
     coreP.then(c => App.insightCards({ cur, future: monthOnly, budgets: arr(c[7]), limits: c[8], cards, trend: c[5], max: 3 })).catch(() => ''),
     on('cash', 'cards') ? App.balanceSparks([...cashShown, ...cardsShown]).catch(() => ({})) : {},
     monthOnly || !on('heatmap', 'pace') ? none : getAll('/transactions', { start: cur.start, end: cur.end, type: 'withdrawal' }).catch(() => []),
