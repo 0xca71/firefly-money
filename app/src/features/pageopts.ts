@@ -85,9 +85,11 @@ function sheet(page: string) {
   const charts = P.opts.filter(o => !o.card), cards = P.opts.filter(o => o.card);
   return html`<div class="page-opts">${charts.length ? html`<h3 class="set-h">Charts</h3><div class="panel set-panel">${htmlList(charts.map(o => row(o, ctl(o))))}</div>` : ''}${cards.length ? html`<h3 class="set-h">Cards to show</h3><div class="panel set-panel">${htmlList(cards.map(o => row(o, ctl(o))))}</div>` : ''}<p class="sub-s">Changes show on the page straight away and are saved with your other settings.</p></div>`;
 }
+let before: { page: string, v: Record<string, Val> | undefined } | null = null;   // the page's options when the sheet opened, for Cancel
 function pageCustomize(page: string) {
   const P = PAGE_OPTS[page]; if (!P) return;
-  openDrawer('Customize ' + P.title, sheet(page), html`<button class="btn" type="button" data-onclick="App.pageReset('${page}')">Reset</button><span class="grow"></span><button class="btn primary" type="button" data-onclick="App.closeDrawer()">Done</button>`);
+  if (!before || before.page !== page || !document.getElementById('drawer')?.classList.contains('open')) { const o = saved()[page]; before = { page, v: o && { ...o } }; }
+  openDrawer('Customize ' + P.title, sheet(page), html`<button class="btn" type="button" data-onclick="App.pageReset('${page}')">Reset</button><span class="grow"></span><button class="btn" type="button" data-onclick="App.pageCancel('${page}')">Cancel</button><button class="btn primary" type="button" data-onclick="App.closeDrawer()">Done</button>`);
 }
 // Save one option (a select's value comes as text: matched back to its choice) and redraw the page behind the sheet
 function pageSet(page: string, key: string, raw: string | boolean) {
@@ -104,7 +106,11 @@ function pageReset(page: string) {
 }
 
 // The methods markup handlers call (see events.ts), added to App and to its type
-const methods = { pageCustomize, pageSet, pageReset };
+function pageCancel(page: string) {
+  if (before && before.page === page) { const all = saved(); if (before.v) all[page] = before.v; else delete all[page]; LS.set('pageOpts', all); route({ quiet: true }); }
+  before = null; App.closeDrawer();
+}
+const methods = { pageCustomize, pageSet, pageReset, pageCancel };
 Object.assign(App, methods);
 type Methods = typeof methods;
 declare module '../core/base' { interface AppApi extends Methods {} }
