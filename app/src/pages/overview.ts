@@ -317,8 +317,9 @@ function billsMini(bills: ApiData[], days = 45, max = 0) {
   const t = todayIso(), end = addDays(t, Math.min(45, days));
   const up = bills.filter(b => b.attributes.active !== false).map(b => ({ b, next: billDueDates(b.attributes)[0] || String(b.attributes.next_expected_match || '').slice(0, 10) }))
     .filter(x => x.next && x.next <= end).sort((a, b) => a.next.localeCompare(b.next));
+  S.billCache = { ...S.billCache, ...Object.fromEntries(up.map(x => [String(x.b.id), x.b.attributes])) };      // for Pay now
   const more = max && up.length > max ? up.length - max : 0;      // (the tile shows the first few, All bills the rest)
-  const rows = htmlList(up.slice(0, more ? max - 1 : undefined).map(({ b, next }) => html`<div class="row"><span class="name">${b.attributes.name}<br><span class="sub-s">${next < t ? html`<span class="up">Overdue since ${fmtDate(next)}</span>` : 'Due ' + fmtDate(next)}</span></span><span class="num">${money(billAmount(b.attributes))}</span></div>`));
+  const rows = htmlList(up.slice(0, more ? max - 1 : undefined).map(({ b, next }) => html`<div class="row"><span class="name">${b.attributes.name}<br><span class="sub-s">${next < t ? html`<span class="up">Overdue since ${fmtDate(next)}</span>` : 'Due ' + fmtDate(next)}</span></span><span class="bill-end"><span class="num">${money(billAmount(b.attributes))}</span>${!(b.attributes.paid_dates || []).length ? html`<button class="btn small primary" data-onclick="App.billPay('${b.id}')">Pay now</button>` : ''}</span></div>`));
   return html`<section class="panel"><div class="panel-head"><h2>Coming up</h2><a class="link" href="#/bills">All bills</a></div><p class="lead">Bills due in the next ${Math.min(45, days)} days</p>${rows ? html`<div class="list">${rows}${more ? html`<a class="row more" href="#/bills"><span class="name">${more + 1} more</span><span class="neutral">→</span></a>` : ''}</div>` : html`<p class="empty">Nothing due soon.</p>`}</section>`;
 }
 
