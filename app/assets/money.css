@@ -2163,11 +2163,10 @@ html[data-theme="dark"] { --lift: 0 1px 0 rgba(0,0,0,.4), 0 14px 32px -16px rgba
 /* ================= Page headers: same control height and order everywhere ================= */
 .head .actions { --ctl: 40px; }
 @media (max-width: 600px) { .head .actions { --ctl: 44px; } }
-@media (min-width: 361px) {
-  html .head .actions > :is(.btn, select, .dash-edit), html .head .actions .month :is(.btn, .round) { height: var(--ctl); min-height: var(--ctl); box-sizing: border-box; padding-block: 0; }
-  html .head .actions .month .round { width: var(--ctl); }
-  html .head .actions > .dash-edit.page-cust, html .head .actions:not(:has(.month)) > .dash-edit { width: var(--ctl); }
-}
+@media (max-width: 360px) { .head .actions { --ctl: 36px; } }
+html:not(#_) .head .actions > :is(.btn, select, .dash-edit), html:not(#_) .head .actions .month :is(.btn, .round) { height: var(--ctl); min-height: var(--ctl); box-sizing: border-box; padding-block: 0; }
+html:not(#_) .head .actions .month .round { width: var(--ctl); }
+@media (max-width: 900px) { html:not(#_) .head .actions > .dash-edit { width: var(--ctl); } }     /* round icon button on tablets and phones; a text button above that */
 .head .actions > .btn.primary { order: 99; }
 @media (max-width: 600px) {
   .head { gap: 12px; margin-bottom: 20px; }
@@ -2191,3 +2190,10 @@ html[data-theme="dark"] { --lift: 0 1px 0 rgba(0,0,0,.4), 0 14px 32px -16px rgba
 .st-t span { color: var(--muted); font-size: 13px; line-height: 1.4; }
 .st-list li.done .st-t strong { color: var(--muted); font-weight: 500; text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 50%, transparent); }
 .st-list li .btn { flex: none; }
+
+/* The "Looks like a bill" rows: on a phone the name and its detail wrap over the full width and the buttons sit under them, instead of cutting both short */
+@media (max-width: 600px) {
+  #subsBox .list .row { flex-wrap: wrap; row-gap: 10px; }
+  #subsBox .list .row > .name { flex: 1 1 100%; white-space: normal; overflow: visible; }
+  #subsBox .list .row > .name .sub-s { white-space: normal; overflow: visible; text-overflow: clip; }
+}
