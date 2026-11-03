@@ -20,12 +20,13 @@ export type TxForm = { id: string, type: string, date: string, title: string, ma
   refundOf?: { jid: string, label: string },              // a refund made from this purchase: linked to it when saved
   draft?: string };                                    // the draft this form was opened from (see drafts below)
 export function blankSplit(): SplitForm { return { jid: '', description: '', amount: '', counter: '', category: '', budget: '', bill: '', tags: '', notes: '', fa: '', fc: '', orig: {} }; }
-export function newTx(preset: { type?: string, date?: string, account?: string, description?: string, amount?: string } = {}) {
+export function newTx(preset: { type?: string, date?: string, account?: string, description?: string, amount?: string, counter?: string, category?: string, budget?: string, bill?: string } = {}) {
   const L = S.lists!; S.drawerHero = null;
   const firstAsset = (L.own.find(a => isAsset(a) && !isCard(a)) || L.own[0] || {}).id || '';
   S.form = { id: '', type: preset.type || 'withdrawal', date: preset.date || todayIso(), title: '', main: preset.account || firstAsset, src: preset.account || firstAsset, dst: '', rules: true, splits: [blankSplit()] };
   if (preset.description) S.form.splits[0].description = preset.description;
   if (preset.amount) S.form.splits[0].amount = preset.amount;
+  for (const k of ['counter', 'category', 'budget', 'bill'] as const) if (preset[k]) S.form.splits[0][k] = preset[k]!;
   renderTxForm();
 }
 const EDITABLE = ['withdrawal', 'deposit', 'transfer'];
