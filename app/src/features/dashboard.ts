@@ -233,7 +233,7 @@ function dashboard(W: [string, unknown][]) {
   const offs = keys.filter(k => map[k] && tileOff(L, k));
   const adds = edit && offs.length ? html`<div class="dash-add"><div class="eyebrow">Add cards</div><div class="add-list">${htmlList(offs.map(k => html`<button type="button" class="add-card" data-onclick="App.dashHide('${k}')"><span class="plus-i" aria-hidden="true">+</span><span><strong>${DASH_NAMES[k] || k}</strong><span class="sub-s">${DASH_ABOUT[k] || ''}</span></span><span class="pv">${tilePreview(k)}</span></button>`))}</div></div>` : '';
   return html`<div class="dash-wrap" data-n="${n}" style="--n:${n}">${edit ? html`<div class="dash-bar"><span>${grid ? 'Drag a tile anywhere and drag its corner to resize; tiles snap to the grid and push others down.' :
-      'Drag a tile to move it (on a touch screen, by its ⠿ handle). ' + (units === 2 ? 'Half and Full set how wide it is.' : 'Size sets how wide it is: small, medium or the whole row.')}</span><span class="grow"></span>${grid ? html`<button class="link" data-onclick="App.dashTidy()" title="Close the gaps by moving tiles up">Tidy up</button>` : ''}<button class="link" data-onclick="App.dashReset()">Reset</button><button class="btn small primary" data-onclick="App.dashEdit(false)">Done</button>${wideScreen ? html`<div class="dash-opts"><span>Arrange as</span><div class="seg mini" id="dashCols">${htmlList(DASH_COLS.map(c => html`<button type="button" class="${String(L.cols || '') === String(c) ? 'on' : ''}" data-onclick="App.dashCols('${c}')">${c ? c + ' col' + (c === 1 ? '' : 's') : 'Bento'}</button>`))}</div></div>` : ''}${adds}</div>` : ''}<div class="cards ${grid ? 'grid' : 'bento'}${edit ? ' editing' : ''}" id="dash" data-n="${n}" data-mode="${grid ? 'grid' : 'bento'}" data-units="${units}" style="--units:${units};--cols:${units * BENTO_SUB}"${L.cols ? html` data-cols="${String(L.cols)}"` : ''}>${body}</div></div>`;
+      'Drag a tile to move it (on a touch screen, by its ⠿ handle). ' + (units === 2 ? 'Half and Full set how wide it is.' : 'Size sets how wide it is: small, medium or the whole row.')}</span><span class="grow"></span>${grid ? html`<button class="link" data-onclick="App.dashTidy()" title="Close the gaps by moving tiles up">Tidy up</button>` : ''}<button class="link" data-onclick="App.dashReset()">Reset</button><button class="btn small" data-onclick="App.dashCancel()">Cancel</button><button class="btn small primary" data-onclick="App.dashEdit(false)">Done</button>${wideScreen ? html`<div class="dash-opts"><span>Arrange as</span><div class="seg mini" id="dashCols">${htmlList(DASH_COLS.map(c => html`<button type="button" class="${String(L.cols || '') === String(c) ? 'on' : ''}" data-onclick="App.dashCols('${c}')">${c ? c + ' col' + (c === 1 ? '' : 's') : 'Bento'}</button>`))}</div></div>` : ''}${adds}</div>` : ''}<div class="cards ${grid ? 'grid' : 'bento'}${edit ? ' editing' : ''}" id="dash" data-n="${n}" data-mode="${grid ? 'grid' : 'bento'}" data-units="${units}" style="--units:${units};--cols:${units * BENTO_SUB}"${L.cols ? html` data-cols="${String(L.cols)}"` : ''}>${body}</div></div>`;
 }
 // Keep the change `mut` makes, and while customizing on a phone the tile order on the page (hidden tiles are not on it,
 // so they keep their place in the order)
@@ -254,8 +254,10 @@ function dashAnimate(fn: () => void) {
   vt('dash', fn, () => ws.forEach(w => { vtName(w, 'dw-' + w.dataset.w); w.style.setProperty('view-transition-class', 'dw'); }));
 }
 const dashRedraw = () => { S.pageKey = ''; PAGES.clear(); route(); };
+let dashBefore: string | null = null;      // the layout as it was when Customize opened, for Cancel
 function dashEdit(on: boolean) {
   const d = el('dash');
+  if (on) dashBefore = JSON.stringify(LS.get('dash', {}) || {}); else dashBefore = null;
   if (!on && d && d.classList.contains('grid')) {      // done: close the gaps and keep the tidy layout
     d.querySelectorAll(':scope > .w').forEach((w: any) => { w.dataset.float = '1'; });
     gridLayout(d); gridKeep(d);
@@ -335,6 +337,7 @@ function dashTidy() {
   d.querySelectorAll<HTMLElement>(':scope > .w').forEach(w => { w.dataset.float = '1'; });
   gridMove(d);
 }
+function dashCancel() { if (dashBefore !== null) LS.set('dash', JSON.parse(dashBefore)); dashBefore = null; S.dashEdit = false; dashRedraw(); }
 function dashReset() { LS.set('dash', {}); dashRedraw(); }
 // A window resize that changes how many columns fit redraws the overview with that count's arrangement
 addEventListener('resize', (() => { let t = 0; return () => { clearTimeout(t); t = setTimeout(() => {
@@ -541,7 +544,7 @@ const methods = {
   dashOpt,
   dashWide,
   dashHide,
-  dashReset,
+  dashReset, dashCancel,
   dashCols,
   dashSize,
   dashTidy,

@@ -4,7 +4,13 @@ import { el } from '../core/base';
    It stays put while the page moves (scrolling is untouched). Once everything has been still for a moment, if the button
    is covering some words, numbers or a control, it slides to the edge and leaves a lip showing; the first tap or the
    pointer coming near brings it back, and the next tap adds the transaction. */
-const rect = (r: Range | Element) => r.getBoundingClientRect();
+const PEEK = 40;   // how far .fab.peek slides right (keep in step with money.css)
+// Where the button sits when at rest. Measuring it while slid aside made the answer flip: the shifted box no longer
+// covers the text, so it came back, then covered it again and slid away, over and over, forever
+const rect = (r: Range | Element) => {
+  const b = r.getBoundingClientRect();
+  return r instanceof Element && r.classList.contains('peek') ? new DOMRect(b.left - PEEK, b.top, b.width, b.height) : b;
+};
 // Whether anything readable is under the button: an element in the stack there with text of its own that reaches the button's area
 export function covers(fab: DOMRect, stack: Element[]) {
   const hit = (a: DOMRect, b: DOMRect) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
