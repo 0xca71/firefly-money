@@ -1,8 +1,8 @@
 import { html, htmlList } from './html';
 import { AuthError, PAGES, api, dropSavedCopies } from './api';
-import { migrateSavedPassword, rememberedSignIn, showLogin, signIn, signOut } from './auth';
+import { SIGN_OUT_FAILED, migrateSavedPassword, rememberedSignIn, showLogin, signIn, signOut } from './auth';
 import { App, S, el, nowMonth } from './base';
-import { closeDrawer, vt } from './dom';
+import { closeDrawer, toast, vt } from './dom';
 import { lists } from './lists';
 import { hashWith, route } from './router';
 import { applyCustom } from './themevars';
@@ -70,10 +70,10 @@ window.addEventListener('hashchange', () => { const instant = S.tabNav; S.tabNav
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && el('drawer').classList.contains('open') && !el<HTMLDialogElement>('confirm').open) closeDrawer(); });
 (async function boot() {
   await migrateSavedPassword();
-  S.remember = S.signedIn = rememberedSignIn();
+  S.remember = rememberedSignIn(); S.signedIn = false;      // the saved flag only says how long to stay in: the server says whether you are
   dropSavedCopies();      // left by versions that kept a copy of your data on the device
   try { await api('/about'); S.signedIn = true; showApp(); }
-  catch (e) { if (e instanceof AuthError) showLogin(S.remember ? 'Please sign in again.' : ''); else showApp(); }
+  catch (e) { if (e instanceof AuthError) showLogin(S.remember ? 'Please sign in again.' : ''); else { showApp(); addEventListener('online', () => { api('/about', { fresh: true }).then(() => { S.signedIn = true; }, () => {}); }, { once: true }); } }
 })();
 
 // The methods markup handlers call (see events.ts), added to App and to its type
@@ -91,7 +91,7 @@ const methods = {
   thisMonth: () => { if (S.all) { S.all = false; return route({ nav: true }); } const [y, m] = nowMonth(); S.vtDir = (S.y - y) * 12 + S.m - m > 0 ? 'prev' : 'next'; S.y = y; S.m = m; route(); },
   shiftMonth: (d: number) => { S.vtDir = d > 0 ? 'next' : 'prev'; S.m += d; const x = new Date(S.y, S.m, 1); S.y = x.getFullYear(); S.m = x.getMonth(); route({ nav: true }); },
   setTheme,
-  signOut: () => { signOut(); showLogin(); },
+  signOut: async () => { if (await signOut()) showLogin(); else toast(SIGN_OUT_FAILED); },
   // Small steps that markup handlers used to write inline (see events.js)
   go: (h: string) => { location.hash = h; },
   submit: (id: string) => el<HTMLFormElement>(id).requestSubmit(),

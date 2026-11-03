@@ -1,5 +1,5 @@
 import { type Html, html, htmlList } from './html';
-import { type ApiError, AuthError, CACHE, INFLIGHT, PAGES, dropSavedCopies, netBusy, sleep } from './api';
+import { type ApiError, AuthError, CACHE, CAP, capNote, INFLIGHT, PAGES, dropSavedCopies, netBusy, sleep } from './api';
 import { showLogin } from './auth';
 import { App, S, type State, el, monthOf, nowMonth, setToday, today } from './base';
 import { VT_OK, drawNav, monthNav, toast, vt, vtName } from './dom';
@@ -90,7 +90,7 @@ function keepLabel(v: HTMLElement) {
 const IN_PLACE = new Set(['', 'reports', 'forecast', 'budgets', 'categories', 'bills', 'recap']);
 export async function route(opts: { nav?: boolean, quiet?: boolean, instant?: boolean } = {}) {
   syncToday();
-  const r = parseHash(), tok = ++S.tok, v = el('view'), stepped = S.vtDir;
+  const r = parseHash(), tok = ++S.tok, v = el('view'), stepped = S.vtDir, startedAt = Date.now();
   // The same page with other options (a report's dates, an account's range, the forecast's horizon): its charts change
   // in place like a month change, when the layout stays the same (see paint below)
   const sameRoute = IN_PLACE.has(r.name) && !!S.pageKey && S.pageKey.startsWith(r.name + '/' + r.id + '?');
@@ -165,6 +165,7 @@ export async function route(opts: { nav?: boolean, quiet?: boolean, instant?: bo
   }, pushing ? 350 : month ? 900 : 140);
   const paint: Paint = markup => {
     if (tok !== S.tok) return;
+    if (CAP.at >= startedAt && markup && !String(markup).includes('cap-note')) markup = html`${markup}<p class="sub-s cap-note" role="note">${capNote()}</p>`;
     clearTimeout(S.skelT);
     // rows ticked for bulk edit while a quiet redraw of this page was loading: keep them, the next refresh catches up
     if (opts.quiet && key === S.pageKey && S.sel && S.sel.size) return;

@@ -20,6 +20,13 @@ function kMark(i: number) {
   rows.forEach((r, j) => r.classList.toggle('kfocus', j === S.kIdx));
   rows[S.kIdx].scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
 }
+// A focused row (Tab reaches every row) opens with Enter or Space, like a button
+document.addEventListener('keydown', e => {
+  const tr = e.target instanceof HTMLElement && e.target.matches('tr[data-gid][tabindex]') ? e.target : null;
+  if (!tr || (e.key !== 'Enter' && e.key !== ' ') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (el('drawer').classList.contains('open')) return;
+  e.preventDefault(); e.stopImmediatePropagation(); editTx(tr.dataset.gid!);
+});
 document.addEventListener('keydown', e => {
   if (el('app').hidden || typing(e) || e.metaKey || e.ctrlKey || e.altKey) return;
   if (el('drawer').classList.contains('open') || !el('palette').hidden || el<HTMLDialogElement>('confirm').open || !el('pickpop').hidden) return;

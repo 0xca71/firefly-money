@@ -168,3 +168,26 @@ const methods = {
 Object.assign(App, methods);
 type Methods = typeof methods;
 declare module './base' { interface AppApi extends Methods {} }
+
+/* ---------- Tab stays inside a popup ----------
+   The search, the confirm box and the category/budget picker sit on top of the page: Tab and Shift+Tab go round
+   their own controls instead of walking off into the page behind. (The side sheet does the same, see openDrawer.) */
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+export function popupFocusables(box: Element): HTMLElement[] {
+  return [...box.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(n => !n.closest('[hidden]') && (n.offsetParent !== null || getComputedStyle(n).position === 'fixed'));
+}
+export function trapTab(e: KeyboardEvent, box: Element | null) {
+  if (e.key !== 'Tab' || !box) return false;
+  const items = popupFocusables(box), first = items[0], last = items[items.length - 1], now = document.activeElement;
+  if (!items.length) { e.preventDefault(); return true; }
+  if (!box.contains(now)) { e.preventDefault(); (e.shiftKey ? last : first).focus(); return true; }
+  if (e.shiftKey && now === first) { e.preventDefault(); last.focus(); return true; }
+  if (!e.shiftKey && now === last) { e.preventDefault(); first.focus(); return true; }
+  return false;
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Tab') return;
+  const c = document.getElementById('confirm') as HTMLDialogElement | null, p = document.getElementById('palette'), k = document.getElementById('pickpop');
+  const box = c && c.open ? c : p && !p.hidden ? p.querySelector('.palette-box') : k && !k.hidden ? k : null;
+  trapTab(e, box);
+}, true);

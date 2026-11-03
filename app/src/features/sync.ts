@@ -1,4 +1,5 @@
-import { PAGES, api, type ApiError } from '../core/api';
+import { AuthError, PAGES, api, type ApiError } from '../core/api';
+import { showLogin } from '../core/auth';
 import { App, S } from '../core/base';
 import { LS } from '../core/helpers';
 import { route } from '../core/router';
@@ -28,9 +29,9 @@ async function pushPrefs() {
   try {
     // keepCache: saving a setting doesn't change any numbers, so the saved responses stay good
     try { await api('/preferences/' + PREF, { method: 'PUT', body: { data }, keepCache: true }); }
-    catch (e) { if ((e as ApiError).status === 401) throw e; await api('/preferences', { method: 'POST', body: { name: PREF, data }, keepCache: true }); }
+    catch (e) { if (e instanceof AuthError || (e as ApiError).status === 401) throw e; await api('/preferences', { method: 'POST', body: { name: PREF, data }, keepCache: true }); }
     LS.set('syncAt', t); LS.set('syncDirty', 0); S.syncError = '';
-  } catch (e) { S.syncError = (e as Error).message || 'Firefly didn’t accept the settings.'; }
+  } catch (e) { if (e instanceof AuthError) return void showLogin(e.message); S.syncError = (e as Error).message || 'Firefly didn’t accept the settings.'; }
 }
 // Fetch the saved settings: newer than this device's → use them; this device has unsaved changes → send those
 async function syncPrefs() {
@@ -40,11 +41,22 @@ async function syncPrefs() {
   try {
     const r = await api('/preferences/' + PREF, { fresh: true }), d = r && r.data && r.data.attributes ? r.data.attributes.data : null;
     remote = typeof d === 'string' ? JSON.parse(d) : d;
-  } catch (e) { if ((e as ApiError).status !== 404) { S.syncError = (e as Error).message; return; } }
+  } catch (e) { if (e instanceof AuthError) return void showLogin(e.message); if ((e as ApiError).status !== 404) { S.syncError = (e as Error).message; return; } }
   S.syncError = '';
-  const dirty = LS.get('syncDirty', 0), at = LS.get('syncAt', 0);
-  if (remote && remote.keys && +remote.t > Math.max(at, dirty)) return applyPrefs(remote);
-  if (dirty || (!remote && Object.keys(snapshot()).length)) return pushPrefs();
+  const what = syncDecision(remote, LS.get('syncDirty', 0), LS.get('syncAt', 0), Object.keys(snapshot()).length > 0);
+  if (what === 'apply') return applyPrefs(remote!);
+  if (what === 'push') return pushPrefs();
+}
+// What to do with the saved settings: the remote copy wins when it is newer than both this device's last sync and
+// its unsaved change; this device's own changes (or settings with nothing saved yet) are sent instead.
+export function syncDecision(remote: { t: number, keys?: Record<string, unknown> } | null, dirty: number, at: number, hasLocal: boolean): 'apply' | 'push' | 'none' {
+  if (remote && remote.keys && +remote.t > Math.max(at, dirty)) return 'apply';
+  if (dirty || (!remote && hasLocal)) return 'push';
+  return 'none';
+}
+// Which synced settings differ between this device and the remote copy (a missing remote value counts as unset)
+export function changedKeys(local: (k: string) => unknown, remote: Record<string, unknown>, keys: string[] = SYNCED): string[] {
+  return keys.filter(k => JSON.stringify(remote[k] === undefined ? null : remote[k]) !== JSON.stringify(local(k) ?? null));
 }
 function applyPrefs(remote: { t: number, keys?: Record<string, unknown> }) {
   let changed = false;

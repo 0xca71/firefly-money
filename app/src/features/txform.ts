@@ -1,10 +1,10 @@
 import { type Html, html, htmlList } from '../core/html';
-import { AuthError, api } from '../core/api';
+import { AuthError, api, type ApiError } from '../core/api';
 import { showLogin } from '../core/auth';
-import { type ApiData, App, S, el, fmtDate, fmtDay, isoDate, money, num, sameName, todayIso, type AppApi, type Field } from '../core/base';
+import { type ApiData, App, S, arr, el, fmtDate, fmtDay, isoDate, money, num, sameName, todayIso, type AppApi, type Field } from '../core/base';
 import { LS } from '../core/helpers';
 import { BUZZ_SAVE, buzz } from '../core/haptics';
-import { closeDrawer, formError, heroParts, icon, openDrawer, opt, toast, vt, vtName } from '../core/dom';
+import { closeDrawer, confirmBox, formError, heroParts, icon, openDrawer, opt, toast, vt, vtName } from '../core/dom';
 import { type Group, amtInner, avatarHtml, normGroup, payeeOf, signed } from '../core/feed';
 import { hoursText, lensOn } from '../core/worklens';
 import { type Account, invalidate, isAsset, isCard, isLiab, lists } from '../core/lists';
@@ -18,7 +18,8 @@ export type SplitForm = { jid: string, description: string, amount: string, coun
 export type TxForm = { id: string, type: string, date: string, title: string, main: string, src: string, dst: string, rules: boolean, splits: SplitForm[],
   nlBase?: ApiData, nl?: string, nlChips?: Html | '',   // quick add: what was typed and the chips it was read as
   refundOf?: { jid: string, label: string },              // a refund made from this purchase: linked to it when saved
-  draft?: string };                                    // the draft this form was opened from (see drafts below)
+  draft?: string,
+  maybeSaved?: boolean };                              // a save got no answer: check for a copy in Firefly before saving again                                    // the draft this form was opened from (see drafts below)
 export function blankSplit(): SplitForm { return { jid: '', description: '', amount: '', counter: '', category: '', budget: '', bill: '', tags: '', notes: '', fa: '', fc: '', orig: {} }; }
 export function newTx(preset: { type?: string, date?: string, account?: string, description?: string, amount?: string, counter?: string, category?: string, budget?: string, bill?: string } = {}) {
   const L = S.lists!; S.drawerHero = null;
@@ -185,6 +186,27 @@ function buildTxPayload() {
   if (!edit) body.error_if_duplicate_hash = false;
   return body;
 }
+/* ---------- Saved already? (a reply that never came back) ----------
+   If the connection drops after Firefly saved a new transaction, the form shows an error and pressing Save again
+   would add it twice. So after a save that got no answer, the next Save first asks Firefly whether a transaction
+   with the same description, amount and date was created in the last minute. Nothing is sent or changed by this. */
+export const SAVED_WINDOW_MS = 60000;
+export function looksSaved(groups: ApiData[], body: { transactions?: Record<string, unknown>[] }, now = Date.now()): boolean {
+  const want = body.transactions || [];
+  return groups.some(g => {
+    const a = (g && g.attributes) || {}, at = Date.parse(a.created_at || '');
+    const have: ApiData[] = a.transactions || [];
+    if (!(now - at <= SAVED_WINDOW_MS && at - now < 5000) || have.length !== want.length) return false;
+    return want.every(w => have.some(h => String(h.description || '').trim() === String(w.description || '').trim()
+      && Math.abs(num(h.amount) - num(w.amount)) < 0.005 && String(h.date || '').slice(0, 10) === String(w.date || '').slice(0, 10)));
+  });
+}
+async function alreadySaved(body: ReturnType<typeof buildTxPayload>): Promise<boolean> {
+  const day = String(((body.transactions as Record<string, unknown>[])[0] || {}).date || '').slice(0, 10);
+  if (!day) return false;
+  try { return looksSaved(arr(await api('/transactions', { params: { start: day, end: day, type: 'all', limit: 50 }, fresh: true })), body); }
+  catch (e) { if (e instanceof AuthError) throw e; return false; }      // can't tell: let the save go ahead
+}
 async function saveTx(formEl: HTMLFormElement) {
   collectTx();
   const f: TxForm = S.form;
@@ -198,7 +220,13 @@ async function saveTx(formEl: HTMLFormElement) {
     if (!(num(s.amount) > 0)) return formError('Every part needs an amount above zero.');
   }
   // Optimistic: close right away and show the change; if Firefly refuses, reopen the form with the error.
-  const body = buildTxPayload(), row = f.id && document.querySelector<HTMLElement>('#view tr[data-gid="' + f.id + '"]');
+  const body = buildTxPayload();
+  if (!f.id && f.maybeSaved) {
+    let saved = false;
+    try { saved = await alreadySaved(body); } catch (e) { if (e instanceof AuthError) return showLogin(e.message); }
+    if (saved && !await confirmBox('This looks already saved', 'A transaction with the same description, amount and date was added a moment ago. Save anyway?', 'Save anyway')) return;
+  }
+  const row = f.id && document.querySelector<HTMLElement>('#view tr[data-gid="' + f.id + '"]');
   closeDrawer();
   if (row) {
     row.classList.add('saving');
@@ -217,6 +245,8 @@ async function saveTx(formEl: HTMLFormElement) {
   } catch (e) {
     if (e instanceof AuthError) return showLogin(e.message);
     if (row) row.classList.remove('saving');
+    // no answer came back (dropped connection, timeout, server error): Firefly may have saved it all the same
+    if (!f.id && (!(e as ApiError).status || (e as ApiError).status! >= 500)) f.maybeSaved = true;
     S.drawerHero = null; S.form = f; renderTxForm(); formError((e as Error).message);
   }
 }

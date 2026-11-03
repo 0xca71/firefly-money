@@ -190,16 +190,16 @@ function softDeleteTx(ids: string[]) {
   S.sel = new Set(); if (el('bulkbar')) el('bulkbar').hidden = true;
   const box = el('undo'); clearTimeout(S.undoT);
   let undone = false;
-  const commit = async () => {
+  const commit = async (leaving = false) => {
     box.hidden = true;
     if (undone) return;
     let failed = 0;
-    await eachLimited(ids, 4, async id => { try { await api('/transactions/' + id, { method: 'DELETE' }); } catch (e) { failed++; } S.pendingDel.delete(id); });
+    await eachLimited(ids, 4, async id => { try { await api('/transactions/' + id, { method: 'DELETE', keepalive: leaving }); } catch (e) { failed++; } S.pendingDel.delete(id); });
     if (failed) toast(failed + ' couldn’t be deleted');
     if (['', 'transactions', 'account'].includes(parseHash().name)) route();
   };
   if (S.undoCommit) S.undoCommit();              // finish any earlier pending delete first
-  S.undoCommit = () => { clearTimeout(S.undoT); S.undoCommit = null; commit(); };
+  S.undoCommit = (leaving?: boolean) => { clearTimeout(S.undoT); S.undoCommit = null; commit(leaving === true); };
   box.innerHTML = String(html`<span>${ids.length === 1 ? 'Transaction deleted' : ids.length + ' transactions deleted'}</span><button type="button">Undo</button><span class="bar"></span>`);
   box.hidden = false;
   box.querySelector('button')!.onclick = () => {
@@ -208,7 +208,13 @@ function softDeleteTx(ids: string[]) {
   };
   S.undoT = setTimeout(() => S.undoCommit && S.undoCommit(), 5000);
 }
-window.addEventListener('beforeunload', () => { if (S.undoCommit) S.undoCommit(); });
+// Closing the tab, or an iPhone putting the app away, must not bring the row back: send the deletes now, with
+// keepalive so the browser finishes them after the page is gone. (pagehide and a hidden page cover what
+// beforeunload misses on iOS.)
+const commitOnExit = () => { if (S.undoCommit) S.undoCommit(true); };
+window.addEventListener('beforeunload', commitOnExit);
+window.addEventListener('pagehide', commitOnExit);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') commitOnExit(); });
 
 /* ---------- Rules: instant filter while typing ---------- */
 function liveRuleFilter(q: string) {
