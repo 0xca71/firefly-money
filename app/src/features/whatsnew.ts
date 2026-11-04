@@ -26,6 +26,11 @@ const ICONS: Record<string, Html> = {
 };
 type Notes = { lead: string, items: [string, string, string][] };
 const NOTES: Record<string, Notes> = {
+  '2.2.1': { lead: 'A polish release: easier taps, readable hints, and cards that fill properly.', items: [
+    ['phone', 'Easier to tap', 'Buttons and controls now have full-size tap areas, with clearer hint text and no tiny print.'],
+    ['bento', 'Cards that fill', 'Top payees, Income sources, Savings goals and Safe to spend now fill and centre in their cards.'],
+    ['lens', 'Steadier behind the scenes', 'More reliable automated checks, plus a tooling update.'],
+  ] },
   '2.2.0': { lead: 'Months change in place, every page gets its own Customize options, and Money tells you plainly when Firefly is down.', items: [
     ['pulse', 'Know when Firefly is down', 'A status pill shows whether Firefly is reachable. When Firefly or Money is down, Money says so instead of showing old numbers.'],
     ['calendar', 'Months change in place', 'Cards keep their place and height, numbers roll and charts glide to the new month, with no flash of the old one.'],
