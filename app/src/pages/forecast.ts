@@ -49,7 +49,7 @@ function incomeDates(inc: Income, from: string, to: string) {
 }
 // A planned purchase, raise or subscription on the Forecast page (money.fcWhatIf)
 type WhatIf = { id: string, label: string, amount: number, date: string, repeat: string };
-type FcEvent = { date: string, label: string, kind: string, amount: number, key: string, off?: boolean, after?: number };
+type FcEvent = { date: string, label: string, kind: string, amount: number, key: string, off?: boolean, after?: number, note?: string };
 // How far ahead the forecast looks: the range picked on the Forecast page, which the Overview's card and Ask use too
 export const fcHorizon = () => +LS.get('fcDays', 60) || 60;
 export const horizonText = (h: number) => h === 365 ? 'year' : h === 180 ? '6 months' : h + ' days';
@@ -77,7 +77,7 @@ export async function forecastModel(sel: string, horizon: number, withWhatIfs = 
   const accIds = sel === 'all' ? banks.map(a => a.id) : [sel];
   const start = accIds.reduce((s, id) => s + ((L.byId[id] || {}).balance || 0), 0);
   const ev: FcEvent[] = [];
-  const add = (date: string, label: string, kind: string, amount: number, series: string) => { if (date >= from && date <= to && amount) ev.push({ date, label, kind, amount, key: kind + ':' + series }); };
+  const add = (date: string, label: string, kind: string, amount: number, series: string, note?: string) => { if (date >= from && date <= to && amount) ev.push({ date, label, kind, amount, key: kind + ':' + series, note }); };
   const incomes = detectIncome(depGroups, accIds);
   incomes.forEach(inc => incomeDates(inc, from, to).forEach(d => add(d, inc.name, inc.salary ? 'Payday' : 'Income', inc.amount, inc.name)));
   recs.forEach(r => {
@@ -105,7 +105,7 @@ export async function forecastModel(sel: string, horizon: number, withWhatIfs = 
   // Projected: later card payments and monthly bills with no fixed amount (utilities), from last month and the same month last year
   const proj = (day: number, hist: Hist[], key: string, name: string, src: string, known?: Record<string, number>) => {
     if (!accIds.includes(src)) return;
-    projectMonthly({ key, name, day, hist, known }, from, to).forEach(p => add(p.date, p.name + ' (projected from ' + p.basis + ')', 'Projected', -p.amount, p.key));
+    projectMonthly({ key, name, day, hist, known }, from, to).forEach(p => add(p.date, p.name, 'Projected', -p.amount, p.key, 'from ' + p.basis));
   };
   const recToCards = new Set(recs.map(r => String(((r.attributes.transactions || [])[0] || {}).destination_id)));
   const paysBy: Record<string, { d: string, a: number, from: string }[]> = {};
@@ -293,7 +293,7 @@ VIEWS.forecast = async (r, paint) => {
   const m = await forecastModel(sel, horizon, true);
   if (paint.live && m.sel) { const was = LS.get('fcLog', []), log = logForecast(was, m.sel, todayIso(), m.series.length > 30 ? m.series[30].b : undefined, m.start); if (JSON.stringify(log) !== JSON.stringify(was)) LS.set('fcLog', log); }
   const kinds: Record<string, string> = { Payday: 'good', Income: 'good', Recurring: '', Loan: 'warn', Card: 'warn', Projected: 'warn', Bill: 'bad', 'What if': 'warn' };
-  const rows = htmlList(m.ev.map(e => html`<tr${e.off ? html` style="opacity:.45"` : ''}><td class="sel"><input type="checkbox"${e.off ? '' : ' checked'} title="Include in the forecast" data-onchange="App.fcToggle('${e.key}', this.checked)"></td><td class="date hide-s">${fmtDay(e.date)}</td><td><div class="desc">${e.label}</div><span class="chip ${kinds[e.kind] || ''}">${e.kind}</span><span class="sub-s show-s">${fmtDay(e.date)}</span></td><td class="amt ${e.amount > 0 ? 'pos' : 'neg'}">${e.amount > 0 ? '+' : ''}${money(e.amount)}</td><td class="amt ${e.after! < 0 ? 'neg' : ''}">${e.off ? '—' : money(e.after!)}</td></tr>`));
+  const rows = htmlList(m.ev.map(e => html`<tr${e.off ? html` style="opacity:.45"` : ''}><td class="sel"><input type="checkbox"${e.off ? '' : ' checked'} title="Include in the forecast" data-onchange="App.fcToggle('${e.key}', this.checked)"></td><td class="date hide-s">${fmtDay(e.date)}</td><td><div class="desc">${e.label}</div><span class="chip ${kinds[e.kind] || ''}">${e.kind}</span>${e.note ? html`<span class="sub-s"> ${e.note}</span>` : ''}<span class="sub-s show-s">${fmtDay(e.date)}</span></td><td class="amt ${e.amount > 0 ? 'pos' : 'neg'}">${e.amount > 0 ? '+' : ''}${money(e.amount)}</td><td class="amt ${e.after! < 0 ? 'neg' : ''}">${e.off ? '—' : money(e.after!)}</td></tr>`));
   const headline = m.short
     ? html`<div class="eyebrow">Heads up</div><div class="big num negative" data-count="${-m.short}">${money0(-m.short)}</div><div class="sub-s" style="margin-top:6px">Your balance is projected to go below zero on <strong>${fmtDate(m.firstNeg || m.minDate)}</strong>${m.firstNeg && m.firstNeg !== m.minDate ? html` and reach its lowest, <strong>${money(m.min)}</strong>, on ${fmtDate(m.minDate)}` : html`, to <strong>${money(m.min)}</strong>`}. Move money in or delay a payment before then.</div>`
     : html`<div class="eyebrow">Safe to spend</div><div class="big num" data-count="${m.safe}">${money0(m.safe)}</div><div class="sub-s" style="margin-top:6px">${m.nextPay ? 'Until your next ' + (m.nextPay.kind === 'Payday' ? 'payday' : 'deposit') + ' on ' + fmtDate(m.nextPay.date) + ', while still covering everything below' : 'While still covering everything below'} and keeping a ${money0(m.buffer)} cushion.</div>`;
