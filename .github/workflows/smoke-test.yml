@@ -24,8 +24,9 @@ jobs:
       - run: pip install playwright && python -m playwright install --with-deps chromium
       - name: Start demo server
         run: python3 dev/mock_server.py &
-      - run: sleep 2 && python3 dev/smoke_test.py
+      - name: Smoke test
+        run: curl -sf --retry 30 --retry-delay 1 --retry-connrefused -o /dev/null http://127.0.0.1:8765/ && python3 dev/smoke_test.py
       - name: Start a slow, flaky demo server (1 in 10 reads fails with 502)
         run: LATENCY=0.1 FAIL_RATE=0.1 PORT=8766 python3 dev/mock_server.py &
       - name: Smoke test against the flaky server
-        run: sleep 2 && BASE=http://127.0.0.1:8766/ python3 dev/smoke_test.py
+        run: curl -sf --retry 30 --retry-delay 1 --retry-connrefused -o /dev/null http://127.0.0.1:8766/ && BASE=http://127.0.0.1:8766/ python3 dev/smoke_test.py

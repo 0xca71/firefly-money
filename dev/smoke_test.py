@@ -265,12 +265,20 @@ async def check(pw, width, height, mobile):
         except Exception: pass
         if await page.locator('#view .review-row').count() != n - 1: errors.append('ticking off a transaction did not take it out of the review queue')
         # Forecast what-if: adding one puts it in the list of what's coming
-        await goto(page, 'forecast'); await page.wait_for_selector('form.whatif')
-        await page.fill('form.whatif input[name=label]', 'Smoke test laptop'); await page.fill('form.whatif input[name=amount]', '900')
-        await page.locator('form.whatif button').click()
+        await goto(page, 'forecast')
+        # The page can redraw under the form (a refresh landing late) and wipe what was typed, so the add is retried until
+        # the what-if is stored, and a failure says what the form and the store held
+        stored = "() => (JSON.parse(localStorage.getItem('money.fcWhatIf') || '[]')).some(w => w.label === 'Smoke test laptop')"
+        for _ in range(4):
+            await page.wait_for_selector('form.whatif'); await page.wait_for_function(PAINTED, timeout=15000)
+            await page.fill('form.whatif input[name=label]', 'Smoke test laptop'); await page.fill('form.whatif input[name=amount]', '900')
+            await page.locator('form.whatif button').click()
+            try: await page.wait_for_function(stored, timeout=3000); break
+            except Exception: pass
         # The forecast redraws after the click; wait for the row instead of a fixed pause (slow CI runners missed it)
         try: await page.locator('#view .tbl .desc', has_text='Smoke test laptop').first.wait_for(timeout=10000)
-        except Exception: errors.append('a forecast what-if did not show up')
+        except Exception:
+            errors.append('a forecast what-if did not show up (stored: %s, store: %s)' % (await page.evaluate(stored), await page.evaluate("localStorage.getItem('money.fcWhatIf')")))
         await goto(page, ''); await page.wait_for_selector('#dash [data-w="payees"] .part', timeout=15000)
         await page.evaluate('App.dashEdit(true)'); await page.wait_for_selector('#dashCols')
         # A tile's own settings: fewer recent transactions
