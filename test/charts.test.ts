@@ -61,6 +61,7 @@ describe('bento ring cards', () => {
   it('Top payees and Income sources get the same ring-fills-card rules as Where it went; Goals fills like the lists', () => {
     for (const sel of ['.share { flex: 1;', '.share .parts { align-self: stretch;', '.share { grid-template-columns: minmax(104px, min(46%, 340px))'])
       expect(css).toContain('.cards.bento .w:is([data-w="spending"], [data-w="payees"], [data-w="income"]) ' + sel);
+    expect(css).toContain('.cards.bento .w[data-w="safe"] > .panel { display: flex;');
     expect(css).toMatch(/\.w:is\(\[data-w="spending"\], \[data-w="payees"\], \[data-w="income"\], \[data-w="goals"\], \[data-w="cash"\]/);
   });
 });
