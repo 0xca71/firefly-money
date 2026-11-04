@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import css from '../app/assets/money.css?raw';
+import { readFileSync } from 'node:fs';
+
+const css = readFileSync('app/assets/money.css', 'utf8');
 
 
 describe('UI UX Pro Max audit fixes', () => {
