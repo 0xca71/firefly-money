@@ -20,7 +20,7 @@ INDEX = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.pa
 PORT = int(os.environ.get('PORT', 8765))
 LATENCY = float(os.environ.get('LATENCY', 0))
 FAIL_RATE = float(os.environ.get('FAIL_RATE', 0))   # answer this share of reads with 502, like a busy server (e.g. 0.1)
-_flaky = random.Random()
+_flaky = random.Random(int(os.environ.get('FLAKY_SEED', 7)))   # seeded, so a flaky run can be repeated
 import time
 
 ACC = []
