@@ -1,7 +1,6 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import css from '../app/assets/money.css?raw';
 
-const css = readFileSync('app/assets/money.css', 'utf8');
 
 describe('UI UX Pro Max audit fixes', () => {
   it('gives small buttons, search and Timeline links a 44px tap area on touch screens', () => {
