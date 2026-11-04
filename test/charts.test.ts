@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { barChart, paceChart, shareChart, sparkBars } from '../app/src/features/charts';
 
 const clean = (h: unknown) => { const s = String(h); expect(s).not.toMatch(/NaN|Infinity|undefined/); return s; };
@@ -56,8 +57,8 @@ describe('shareChart', () => {
 });
 
 describe('bento ring cards', () => {
+  const css = readFileSync('app/assets/money.css', 'utf8');
   it('Top payees and Income sources get the same ring-fills-card rules as Where it went; Goals fills like the lists', () => {
-    const css = require('node:fs').readFileSync('app/assets/money.css', 'utf8') as string;
     for (const sel of ['.share { flex: 1;', '.share .parts { align-self: stretch;', '.share { grid-template-columns: minmax(104px, min(46%, 340px))'])
       expect(css).toContain('.cards.bento .w:is([data-w="spending"], [data-w="payees"], [data-w="income"]) ' + sel);
     expect(css).toMatch(/\.w:is\(\[data-w="spending"\], \[data-w="payees"\], \[data-w="income"\], \[data-w="goals"\], \[data-w="cash"\]/);
