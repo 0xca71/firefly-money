@@ -8,6 +8,8 @@ import { isAsset, isCard, isLiab, lists } from '../core/lists';
 import { VIEWS, hashWith, route } from '../core/router';
 import { billAmount, billDueDates, billsFrom, recentSpending } from './bills';
 import { loanHistory } from './loans';
+import { findRecurring } from '../features/subs';
+import { projectMonthly, usualDay, type Hist } from '../features/projections';
 
 /* ================= Safe-to-spend forecast ================= */
 type Income = { name: string, amount: number, p: { kind: 'semimonthly' } | { kind: 'every', n: number } | { kind: 'monthly', day: number }, last: string, salary: boolean };
@@ -59,10 +61,11 @@ export async function forecastModel(sel: string, horizon: number, withWhatIfs = 
   const L = await lists();
   const banks = L.own.filter(a => isAsset(a) && !isCard(a));
   const from = todayIso(), to = addDays(from, horizon);
-  const [deps, recs, bills] = await Promise.all([
+  const [deps, recs, bills, xfers] = await Promise.all([
     getAll('/transactions', { type: 'deposit', start: addDays(from, -120), end: from }),
     getAll('/recurrences').catch(() => []),
     getAll('/bills', { start: billsFrom(from), end: to }).catch(() => []),     // from the 1st, to see bills still unpaid from earlier this month
+    getAll('/transactions', { type: 'transfer', start: addDays(from, -400), end: from }).catch(() => []),     // card payments, for projecting the next ones
   ]);
   const depGroups = deps.map(normGroup);
   // Default account: the one your salary lands in.
@@ -83,7 +86,7 @@ export async function forecastModel(sel: string, horizon: number, withWhatIfs = 
     const sign = accIds.includes(String(t.source_id)) ? -1 : accIds.includes(String(t.destination_id)) ? 1 : 0;
     if (sign) recurDates([...new Set(occ)].sort(), to, at.repeat_until ? String(at.repeat_until).slice(0, 10) : '').forEach(d => add(d, at.title, 'Recurring', sign * num(t.amount), 'rec' + r.id));
   });
-  const loans = L.own.filter(a => isLiab(a) && a.debt > 0), [hist, spending] = await Promise.all([loanHistory(loans), bills.length ? recentSpending().catch(() => []) : []]);
+  const loans = L.own.filter(a => isLiab(a) && a.debt > 0), [hist, spending] = await Promise.all([loanHistory(loans), recentSpending().catch(() => [])]);
   const fcLoans: FcLoan[] = loans.map(l => {
     const h = hist[l.id], p = l.plan, last = h && h.last ? h.last : null;
     // The account the payments come from: the one named in the loan's plan, or the one that paid it last
@@ -98,6 +101,27 @@ export async function forecastModel(sel: string, horizon: number, withWhatIfs = 
     let d;
     if (c.paymentDate) { const day = +String(c.paymentDate).slice(8, 10); d = monthsFrom(from, to).map(([y, m]) => isoDate(new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()), 12))).find(x => x >= from); }
     add(d || firstPay || addDays(from, 7), 'Pay off ' + c.name, 'Card', c.balance, 'card' + c.id);
+  });
+  // Projected: later card payments and monthly bills with no fixed amount (utilities), from last month and the same month last year
+  const proj = (day: number, hist: Hist[], key: string, name: string, src: string, known?: Record<string, number>) => {
+    if (!accIds.includes(src)) return;
+    projectMonthly({ key, name, day, hist, known }, from, to).forEach(p => add(p.date, p.name + ' (projected from ' + p.basis + ')', 'Projected', -p.amount, p.key));
+  };
+  const recToCards = new Set(recs.map(r => String(((r.attributes.transactions || [])[0] || {}).destination_id)));
+  const paysBy: Record<string, { d: string, a: number, from: string }[]> = {};
+  xfers.map(normGroup).forEach(g => g.splits.forEach(x => { if (x.type === 'transfer' && L.byId[x.destination_id] && isCard(L.byId[x.destination_id])) (paysBy[x.destination_id] = paysBy[x.destination_id] || []).push({ d: String(x.date).slice(0, 10), a: x.amount, from: x.source_id }); }));
+  L.own.filter(a => isCard(a) && paysBy[a.id] && !recToCards.has(a.id)).forEach(c => {
+    const pays = paysBy[c.id].sort((a, b) => a.d.localeCompare(b.d)), payoff = ev.find(e => e.key === 'Card:card' + c.id);
+    const day = c.paymentDate ? +String(c.paymentDate).slice(8, 10) : usualDay(pays.map(p => ({ date: p.d, amount: p.a })));
+    // This month's payoff, if still to come, is the card's current balance
+    proj(day, pays.map(p => ({ date: p.d, amount: p.a })), 'card' + c.id, 'Pay off ' + c.name, pays[pays.length - 1].from, payoff ? { [payoff.date.slice(0, 7)]: -payoff.amount } : undefined);
+  });
+  const billNames = new Set(bills.map(b => String(b.attributes.name).trim().toLowerCase())), hidden = new Set(LS.get('subsHidden', []));
+  const charges = spending.flatMap(g => g.splits.filter(x => x.type === 'withdrawal').map(x => ({ date: x.date, amount: x.amount, payeeId: x.destination_id, payee: x.destination_name, billId: x.bill_id, src: x.source_id })));
+  findRecurring(charges, from).filter(r => r.freq === 'monthly' && !r.skip && !hidden.has(r.payeeId) && !billNames.has(r.payee.trim().toLowerCase())).forEach(r => {
+    const cs = charges.filter(c => c.payeeId === r.payeeId).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const hist = cs.map(c => ({ date: String(c.date).slice(0, 10), amount: c.amount }));
+    proj(usualDay(hist), hist, 'pay' + r.payeeId, r.payee, cs[cs.length - 1].src);
   });
   // Your what-ifs: a purchase, a raise, a new subscription... (only on the Forecast page, not in the Overview's card)
   const whatIfs: WhatIf[] = withWhatIfs ? LS.get('fcWhatIf', []) : [];
@@ -210,7 +234,7 @@ export function scheduledPayments(o: { from: string, to: string, accIds: string[
 /* Scenarios around the likely line. Careful: income that isn't a steady paycheck doesn't come, and bills and recurring
    payments run 10% higher. Hopeful: bills and recurring payments come in 10% lower. */
 export function scenarioAmount(e: { kind: string, amount: number }, kind: 'careful' | 'hopeful') {
-  const flexible = e.amount < 0 && (e.kind === 'Bill' || e.kind === 'Recurring');
+  const flexible = e.amount < 0 && (e.kind === 'Bill' || e.kind === 'Recurring' || e.kind === 'Projected');
   if (kind === 'careful') return e.kind === 'Income' ? 0 : flexible ? e.amount * 1.1 : e.amount;
   return flexible ? e.amount * .9 : e.amount;
 }
@@ -268,7 +292,7 @@ VIEWS.forecast = async (r, paint) => {
   const sel = r.q.account || LS.get('fcAccount', ''), horizon = +(r.q.days || fcHorizon());
   const m = await forecastModel(sel, horizon, true);
   if (paint.live && m.sel) { const was = LS.get('fcLog', []), log = logForecast(was, m.sel, todayIso(), m.series.length > 30 ? m.series[30].b : undefined, m.start); if (JSON.stringify(log) !== JSON.stringify(was)) LS.set('fcLog', log); }
-  const kinds: Record<string, string> = { Payday: 'good', Income: 'good', Recurring: '', Loan: 'warn', Card: 'warn', Bill: 'bad', 'What if': 'warn' };
+  const kinds: Record<string, string> = { Payday: 'good', Income: 'good', Recurring: '', Loan: 'warn', Card: 'warn', Projected: 'warn', Bill: 'bad', 'What if': 'warn' };
   const rows = htmlList(m.ev.map(e => html`<tr${e.off ? html` style="opacity:.45"` : ''}><td class="sel"><input type="checkbox"${e.off ? '' : ' checked'} title="Include in the forecast" data-onchange="App.fcToggle('${e.key}', this.checked)"></td><td class="date hide-s">${fmtDay(e.date)}</td><td><div class="desc">${e.label}</div><span class="chip ${kinds[e.kind] || ''}">${e.kind}</span><span class="sub-s show-s">${fmtDay(e.date)}</span></td><td class="amt ${e.amount > 0 ? 'pos' : 'neg'}">${e.amount > 0 ? '+' : ''}${money(e.amount)}</td><td class="amt ${e.after! < 0 ? 'neg' : ''}">${e.off ? '—' : money(e.after!)}</td></tr>`));
   const headline = m.short
     ? html`<div class="eyebrow">Heads up</div><div class="big num negative" data-count="${-m.short}">${money0(-m.short)}</div><div class="sub-s" style="margin-top:6px">Your balance is projected to go below zero on <strong>${fmtDate(m.firstNeg || m.minDate)}</strong>${m.firstNeg && m.firstNeg !== m.minDate ? html` and reach its lowest, <strong>${money(m.min)}</strong>, on ${fmtDate(m.minDate)}` : html`, to <strong>${money(m.min)}</strong>`}. Move money in or delay a payment before then.</div>`
