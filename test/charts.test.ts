@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { barChart, paceChart, shareChart, sparkBars } from '../app/src/features/charts';
 
 const clean = (h: unknown) => { const s = String(h); expect(s).not.toMatch(/NaN|Infinity|undefined/); return s; };
@@ -52,5 +53,15 @@ describe('shareChart', () => {
     expect(clean(shareChart(rows.slice(0, 3), 'mid', 'x', { limit: 2 }))).toContain('>C<');
     expect(String(shareChart(rows, 'mid', 'x', { ring: false }))).not.toContain('class="donut"');
     expect(String(shareChart([{ name: 'A', v: 0 }], 'mid', 'x'))).toBe('');
+  });
+});
+
+describe('bento ring cards', () => {
+  const css = readFileSync('app/assets/money.css', 'utf8');
+  it('Top payees and Income sources get the same ring-fills-card rules as Where it went; Goals fills like the lists', () => {
+    for (const sel of ['.share { flex: 1;', '.share .parts { align-self: stretch;', '.share { grid-template-columns: minmax(104px, min(46%, 340px))'])
+      expect(css).toContain('.cards.bento .w:is([data-w="spending"], [data-w="payees"], [data-w="income"]) ' + sel);
+    expect(css).toContain('.cards.bento .w[data-w="safe"] > .panel { display: flex;');
+    expect(css).toMatch(/\.w:is\(\[data-w="spending"\], \[data-w="payees"\], \[data-w="income"\], \[data-w="goals"\], \[data-w="cash"\]/);
   });
 });

@@ -310,7 +310,7 @@ function goalsPanel(piggies: Piggy[], done = true) {
     const pct = Math.min(100, p.current / p.target * 100), pace = paceBits(p);
     return html`<div class="cat"><div class="row"><span class="name">${p.name} ${pace.chip}</span><span class="num">${money0(p.current)} <span class="neutral">of ${money0(p.target)}</span></span></div><div class="track"><div class="fill good" style="width:${pct.toFixed(1)}%"></div></div><div class="sub" style="display:flex;gap:8px;align-items:baseline"><span>${pct.toFixed(0)}% saved · ${pace.line}</span>${p.left > 0 ? html`<button class="link" style="margin-left:auto;flex:none" data-onclick="App.piggyMoney('${p.id}',1)">+ Add</button>` : ''}</div></div>`;
   }));
-  return html`<section class="panel"><div class="panel-head"><h2>Savings goals</h2><a class="link" href="#/piggy">All goals</a></div><p class="lead">Piggy bank progress</p>${rows}</section>`;
+  return html`<section class="panel"><div class="panel-head"><h2>Savings goals</h2><a class="link" href="#/piggy">All goals</a></div><p class="lead">Piggy bank progress</p><div class="goal-rows">${rows}</div></section>`;
 }
 function billsMini(bills: ApiData[], days = 45, max = 0) {
   // A bill with no due date in the window falls back to Firefly's "next expected" date, which can be months

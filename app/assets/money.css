@@ -1773,6 +1773,10 @@
   .cards.bento .io-r .io-v { display: block; min-width: 0; }
   .cards.bento .io-t { height: clamp(9px, 4cqi, 14px); }
   .cards.bento .w[data-w="safe"] .total { font-size: clamp(28px, 7.5cqi, 46px); }
+  /* a short card in a taller row: its figure and line sit in the middle of what's left under the title, not at the top with space below */
+  .cards.bento .w[data-w="safe"] > .panel { display: flex; flex-direction: column; }
+  .cards.bento .w[data-w="safe"] .total { margin-top: auto; }
+  .cards.bento .w[data-w="safe"] .total ~ .sub-s { margin-bottom: auto !important; }
   .cards.bento .brings { grid-template-columns: repeat(auto-fill, minmax(clamp(84px, 34cqi, 170px), 1fr)); }
   .cards.bento .bring .ring { width: clamp(54px, 28cqi, 120px); }
   .cards.bento .bring .ring .mid strong { font-size: clamp(13.5px, 4.4cqi, 20px); }
@@ -1780,19 +1784,19 @@
   /* a very wide category card: the ring and its list stay together rather than the percentages drifting to the far edge */
   @container (min-width: 760px) { .cards .share { grid-template-columns: minmax(104px, 280px) minmax(0, 460px); justify-content: center; gap: 40px; } }
   /* Bento: what's inside also fills the card's height, since a row is as tall as its tallest card */
-  .cards.bento > .w > .panel:is(.stat, .sankey, .attention), .cards.bento .w:is([data-w="spending"], [data-w="cash"], [data-w="cards"], [data-w="loans"], [data-w="bills"]) > .panel { display: flex; flex-direction: column; }
+  .cards.bento > .w > .panel:is(.stat, .sankey, .attention), .cards.bento .w:is([data-w="spending"], [data-w="payees"], [data-w="income"], [data-w="goals"], [data-w="cash"], [data-w="cards"], [data-w="loans"], [data-w="bills"]) > .panel { display: flex; flex-direction: column; }
   .cards.bento .panel.stat.nw .mini-line { flex: 1 1 0; height: auto; min-height: clamp(64px, 20cqi, 150px); }
   .cards.bento .panel.stat .sbars { flex: 1 1 0; height: auto; min-height: clamp(56px, 26cqi, 130px); }
   .cards.bento .sankey .sk-box { flex: 1; position: relative; min-height: var(--sk-h, 220px); }
   .cards.bento .sankey .sk-box > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .cards.bento .w[data-w="spending"] .share { flex: 1; align-items: center; }
-  .cards.bento .w[data-w="spending"] .share .parts { align-self: stretch; display: flex; flex-direction: column; justify-content: space-evenly; }
+  .cards.bento .w:is([data-w="spending"], [data-w="payees"], [data-w="income"]) .share { flex: 1; align-items: center; }
+  .cards.bento .w:is([data-w="spending"], [data-w="payees"], [data-w="income"]) .share .parts { align-self: stretch; display: flex; flex-direction: column; justify-content: space-evenly; }
   /* room for its most rows (seven), so the card doesn't change height with the month's number of categories */
-  .cards.bento .w[data-w="spending"] .share .parts { min-height: calc(7 * 2.7em + 60px); }
+  .cards.bento .w:is([data-w="spending"], [data-w="payees"], [data-w="income"]) .share .parts { min-height: calc(7 * 2.7em + 60px); }
   /* a list spreads down the card rather than leaving its bottom empty */
-  .cards.bento .w:is([data-w="cash"], [data-w="cards"], [data-w="bills"]) .list, .cards.bento .w[data-w="loans"] .loan-rows { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
+  .cards.bento .w:is([data-w="cash"], [data-w="cards"], [data-w="bills"]) .list, .cards.bento .w[data-w="loans"] .loan-rows, .cards.bento .w[data-w="goals"] .goal-rows { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
   /* the ring grows into a tall card too */
-  .cards.bento .w[data-w="spending"] .share { grid-template-columns: minmax(104px, min(46%, 340px)) minmax(0, 1fr); }
+  .cards.bento .w:is([data-w="spending"], [data-w="payees"], [data-w="income"]) .share { grid-template-columns: minmax(104px, min(46%, 340px)) minmax(0, 1fr); }
   /* the month's days stretch to the card's height */
   .cards.bento .w[data-w="heatmap"] > .panel { display: flex; flex-direction: column; }
   .cards.bento .w[data-w="heatmap"] .hm { flex: 1; grid-template-rows: auto 1fr; }
