@@ -15,7 +15,7 @@ export const usualDay = (hist: Hist[]) => {
 };
 
 export function projectMonthly(s: Series, from: string, to: string): Projected[] {
-  const out: Projected[] = [], tot: Record<string, number> = { ...(s.known || {}) };
+  const out: Projected[] = [], tot: Record<string, number> = Object.assign({}, s.known);
   s.hist.forEach(h => { const k = h.date.slice(0, 7); if (!(s.known && k in s.known)) tot[k] = (tot[k] || 0) + h.amount; });
   if (!s.day) return out;
   const y0 = +from.slice(0, 4), m0 = +from.slice(5, 7) - 1, y1 = +to.slice(0, 4), m1 = +to.slice(5, 7) - 1;
