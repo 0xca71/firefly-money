@@ -56,10 +56,10 @@ describe('shareChart', () => {
 });
 
 describe('bento ring cards', () => {
-  it('Top payees gets the same ring-fills-card rules as Where it went', () => {
+  it('Top payees and Income sources get the same ring-fills-card rules as Where it went; Goals fills like the lists', () => {
     const css = require('node:fs').readFileSync('app/assets/money.css', 'utf8') as string;
     for (const sel of ['.share { flex: 1;', '.share .parts { align-self: stretch;', '.share { grid-template-columns: minmax(104px, min(46%, 340px))'])
-      expect(css).toContain('.cards.bento .w:is([data-w="spending"], [data-w="payees"]) ' + sel);
-    expect(css).toMatch(/\.w:is\(\[data-w="spending"\], \[data-w="payees"\], \[data-w="cash"\]/);
+      expect(css).toContain('.cards.bento .w:is([data-w="spending"], [data-w="payees"], [data-w="income"]) ' + sel);
+    expect(css).toMatch(/\.w:is\(\[data-w="spending"\], \[data-w="payees"\], \[data-w="income"\], \[data-w="goals"\], \[data-w="cash"\]/);
   });
 });
