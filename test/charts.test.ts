@@ -54,3 +54,12 @@ describe('shareChart', () => {
     expect(String(shareChart([{ name: 'A', v: 0 }], 'mid', 'x'))).toBe('');
   });
 });
+
+describe('bento ring cards', () => {
+  it('Top payees gets the same ring-fills-card rules as Where it went', () => {
+    const css = require('node:fs').readFileSync('app/assets/money.css', 'utf8') as string;
+    for (const sel of ['.share { flex: 1;', '.share .parts { align-self: stretch;', '.share { grid-template-columns: minmax(104px, min(46%, 340px))'])
+      expect(css).toContain('.cards.bento .w:is([data-w="spending"], [data-w="payees"]) ' + sel);
+    expect(css).toMatch(/\.w:is\(\[data-w="spending"\], \[data-w="payees"\], \[data-w="cash"\]/);
+  });
+});
