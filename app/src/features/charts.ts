@@ -218,7 +218,12 @@ function sankeyPanel(sources: ApiData[], income: number, cats: { name: string, a
   if (spend > inc) left.push({ name: 'From savings', v: spend - inc, kind: 'save' });
   if (inc > spend) right.push({ name: 'Kept', v: inc - spend, kind: 'kept' });
   const d: Flow = { left, right, inc, spend };
-  return html`<section class="panel chart sankey" data-sk="${JSON.stringify(d)}"><h2>Money flow</h2><p class="lead">Where ${cur.all ? 'all your' : cur.label + '’s'} income went · ${matchMedia?.('(hover: none)').matches ? 'tap a band to see its transactions' : 'hover a band for details'}</p><div class="sk-box">${skFirst(d)}</div></section>`;
+  return html`<section class="panel chart sankey" data-sk="${JSON.stringify(d)}"><h2>Money flow</h2><p class="lead">Where ${cur.all ? 'all your' : cur.label + '’s'} income went · ${matchMedia?.('(hover: none)').matches ? 'tap a band to see its transactions' : 'hover a band for details'}</p><div class="sk-box">${skFirst(d)}</div>${skTable(d)}</section>`;
+}
+// The same figures as a table, for keyboard and screen-reader users (and anyone who prefers numbers): a native <details>
+function skTable(d: Flow) {
+  const rows = (nodes: FlowNode[], total: number) => htmlList(nodes.map(n => html`<tr><td>${n.name}</td><td class="num">${money0(n.v)}</td><td class="num">${total ? Math.round(n.v / total * 100) + '%' : ''}</td></tr>`));
+  return html`<details class="sk-table"><summary>Show as table</summary><table class="tbl"><thead><tr><th scope="col">Income</th><th scope="col">Amount</th><th scope="col">Share</th></tr></thead><tbody>${rows(d.left, d.left.reduce((t, x) => t + x.v, 0))}</tbody><thead><tr><th scope="col">Spending</th><th scope="col">Amount</th><th scope="col">Share</th></tr></thead><tbody>${rows(d.right, d.right.reduce((t, x) => t + x.v, 0))}</tbody></table></details>`;
 }
 // Shorten a label with … until it fits in px at the chart's label font
 let skCtx: CanvasRenderingContext2D | null = null;
