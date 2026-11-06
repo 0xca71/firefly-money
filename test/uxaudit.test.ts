@@ -19,3 +19,16 @@ describe('UI UX Pro Max audit fixes', () => {
     expect(css).not.toContain('.eyebrow { font-size: 9.5px; }');
   });
 });
+
+describe('Motion fluidity', () => {
+  it('uses shared decelerating easing for page, card, drawer and press motion', () => {
+    expect(css).toContain('--ease-out: cubic-bezier(.2, .8, .2, 1)');
+    expect(css).toContain('#view.enter > * { animation: fadeUp .26s var(--ease-out) both; }');
+    expect(css).toContain('transform .3s var(--ease-glide)');
+    expect(css).toMatch(/\.btn, \.round[^}]*transform \.18s var\(--ease-out\)/);
+    expect(css).not.toMatch(/\.drawer \{[^}]*transition: transform \.2\d?s ease;/);
+  });
+  it('keeps the global reduced-motion kill switch', () => {
+    expect(css).toMatch(/prefers-reduced-motion: reduce\) \{ \*, \*::before, \*::after \{ animation: none !important; transition: none !important; \} \}/);
+  });
+});
