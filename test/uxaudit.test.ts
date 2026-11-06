@@ -48,3 +48,37 @@ describe('Motion polish', () => {
     expect(css).not.toMatch(/transition:[^;}]* \.1[25]s[,;]/);
   });
 });
+
+describe('Pre-release audit: contrast and labels', () => {
+  const lum = (h: string) => {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
+    return .2126 * r + .7152 * g + .0722 * b;
+  };
+  const ratio = (a: string, b: string) => (Math.max(lum(a), lum(b)) + .05) / (Math.min(lum(a), lum(b)) + .05);
+  it('keeps text colours at 4.5:1 on their surface in the themes that were short', () => {
+    expect(ratio('#a85a38', '#f6f5f1')).toBeGreaterThanOrEqual(4.5);   // Calm light spend
+    expect(ratio('#4f7260', '#f6f5f1')).toBeGreaterThanOrEqual(4.5);   // Calm light good
+    expect(ratio('#ffffff', '#6d4cf5')).toBeGreaterThanOrEqual(4.5);   // Midnight accent
+    expect(ratio('#d99278', '#2e3440')).toBeGreaterThanOrEqual(4.5);   // Nord spend
+    expect(ratio('#ff5c95', '#2a2a30')).toBeGreaterThanOrEqual(4.5);   // Carbon spend
+    expect(ratio('#ffffff', '#c9431d')).toBeGreaterThanOrEqual(4.5);   // Frosted accent
+    for (const c of ['#a85a38', '#4f7260', '#6d4cf5', '#d99278', '#ff5c95', '#c9431d', '#5c5047']) expect(css).toContain(c);
+  });
+  it('labels every Forecast field for screen readers', () => {
+    const src = readFileSync('app/src/pages/forecast.ts', 'utf8');
+    for (const f of ['name="label"', 'name="sign"', 'name="amount"', 'name="date"', 'name="repeat"', "fcSet('account'", "fcSet('days'", 'App.fcBuffer']) {
+      const tag = src.slice(src.lastIndexOf('<', src.indexOf(f)), src.indexOf('>', src.indexOf(f)));
+      expect(tag, f).toContain('aria-label=');
+    }
+  });
+});
+
+describe('Pre-release audit: gateway', () => {
+  it('rate-limits the unauthenticated logo and map-tile proxies', () => {
+    const conf = readFileSync('app/default.conf.template', 'utf8');
+    for (const loc of ['location ~ "^/logo/', 'location ~ "^/tile/']) {
+      const at = conf.indexOf(loc);
+      expect(conf.slice(at, conf.indexOf('\n    }', at))).toContain('limit_req zone=api');
+    }
+  });
+});
