@@ -32,3 +32,19 @@ describe('Motion fluidity', () => {
     expect(css).toMatch(/prefers-reduced-motion: reduce\) \{ \*, \*::before, \*::after \{ animation: none !important; transition: none !important; \} \}/);
   });
 });
+
+describe('Motion polish', () => {
+  it('slides the skeleton shimmer with a transform, not background-position', () => {
+    expect(css).toContain('@keyframes shimmerX { to { transform: translateX(100%); } }');
+    expect(css).toMatch(/\.sk::after \{[^}]*animation: shimmerX/);
+    expect(css).not.toMatch(/\.sk \{[^}]*animation: shimmer /);
+  });
+  it('gives dialogs a spring only when linear() easing and motion are allowed', () => {
+    expect(css).toMatch(/@supports \(animation-timing-function: linear\(0, 1\)\) \{ @media \(prefers-reduced-motion: no-preference\) \{ dialog:not\(\.whatsnew\)\[open\] \{ animation: wn-in \.42s var\(--ease-spring\)/);
+  });
+  it('shares one hover duration token and gives donut segments press feedback', () => {
+    expect(css).toContain('--t-hover: .14s');
+    expect(css).toContain('.donut .seg:active');
+    expect(css).not.toMatch(/transition:[^;}]* \.1[25]s[,;]/);
+  });
+});
