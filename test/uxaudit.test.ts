@@ -82,3 +82,12 @@ describe('Pre-release audit: gateway', () => {
     }
   });
 });
+
+describe('Money flow table alternative', () => {
+  it('offers the chart figures as a toggleable table under the chart', () => {
+    const src = readFileSync('app/src/features/charts.ts', 'utf8');
+    expect(src).toContain('${skTable(d)}</section>');
+    expect(src).toContain('<details class="sk-table"><summary>Show as table</summary>');
+    expect(css).toContain('.sk-table summary:focus-visible');
+  });
+});

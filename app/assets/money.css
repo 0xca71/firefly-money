@@ -804,6 +804,11 @@
   .hm-cell.today { box-shadow: inset 0 0 0 2px var(--accent); }
   .hm-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 14px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
   .sankey svg { width: 100%; height: auto; display: block; }
+  .sk-table { margin-top: 10px; font-size: 13px; }
+  .sk-table summary { cursor: pointer; color: var(--muted); padding: 6px 0; }
+  .sk-table summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  .sk-table .tbl td, .sk-table .tbl th { padding: 8px 10px; }
+  .sk-table .tbl td.num, .sk-table .tbl th:not(:first-child) { text-align: right; }
   .sankey .lk { fill-opacity: .26; transition: fill-opacity var(--t-hover); }
   .sankey .lk:hover { fill-opacity: .55; }
   .sankey .lk, .sankey .sk-node { cursor: pointer; }
