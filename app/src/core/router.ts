@@ -4,6 +4,7 @@ import { showLogin } from './auth';
 import { App, S, type State, el, monthOf, nowMonth, setToday, today } from './base';
 import { VT_OK, drawNav, monthNav, toast, vt, vtName } from './dom';
 import { lists } from './lists';
+import { loadBegin } from './progress';
 import { labelHtml, monthLabel, morph, morphOk, sameLayout, slideLabel, snapshot } from './morph';
 
 /* ================= Router ================= */
@@ -158,6 +159,7 @@ export async function route(opts: { nav?: boolean, quiet?: boolean, instant?: bo
     return;
   }
   S.feed = null; S.kIdx = -1;
+  const endLoad = opts.quiet ? () => {} : loadBegin();      // the loading bar (features/loadbar.ts) follows the requests until the view is done
   // Opening a deeper page (an account) keeps the list on screen a little longer, so a quick answer slides straight
   // in; a slow one slides in its placeholder right away and fills it when the data comes.
   const pushing = S.vtDir === 'push' && !instant;
@@ -239,7 +241,7 @@ export async function route(opts: { nav?: boolean, quiet?: boolean, instant?: bo
       return;
     }
     paint(html`<div class="error"><strong>Couldn’t load this page.</strong><br>${(e as Error).message}<br><br><button class="btn small" data-onclick="App.reload()">Try again</button></div>`);
-  }
+  } finally { endLoad(); }
 }
 // The server couldn't be reached: try the page again after a short wait (longer each time, up to 30 s),
 // or straight away when the device comes back online or the tab is shown again. Stops once you go elsewhere.
@@ -275,6 +277,7 @@ export async function refreshAll(opts: { visible?: boolean } = {}) {
   if (S.refreshing) return S.refreshing;
   S.refreshing = (async () => {
     S.freshAfter = Date.now(); S.lastRefresh = Date.now(); S.listsAt = 0; PAGES.clear();
+    const endLoad = opts.visible ? loadBegin() : () => {};      // pull to refresh: the loading bar follows it
     try {
       if (opts.visible) { S.settledAfter = Date.now(); await route({ quiet: true }); return; }
       const r = parseHash(), key = S.pageKey, tok = S.tok;
@@ -283,6 +286,7 @@ export async function refreshAll(opts: { visible?: boolean } = {}) {
       catch (e) { if (e instanceof AuthError) showLogin(e.message); return; }
       if (tok === S.tok && key === S.pageKey && markup !== null && markup !== S.pageHtml && !busyHere()) await route({ quiet: true });
     } finally {
+      endLoad();
       S.refreshing = null;
       warmTabs();
     }
@@ -294,6 +298,7 @@ export async function refreshAll(opts: { visible?: boolean } = {}) {
 async function recalcAll(btn?: HTMLButtonElement) {
   if (S.recalcing) return;
   S.recalcing = true;
+  const endLoad = loadBegin();
   const label = btn ? btn.textContent : null; if (btn) { btn.disabled = true; btn.textContent = 'Recalculating…'; }
   try {
     CACHE.clear(); INFLIGHT.clear(); PAGES.clear();
@@ -306,7 +311,7 @@ async function recalcAll(btn?: HTMLButtonElement) {
     if (e instanceof AuthError) return showLogin(e.message);
     toast('Couldn’t recalculate: ' + (e as Error).message);
   } finally {
-    S.recalcing = false;
+    S.recalcing = false; endLoad();
     if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = label; }
   }
 }
