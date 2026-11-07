@@ -354,7 +354,28 @@ async function activityRedraw(): Promise<boolean> {
   sec.replaceWith(next);
   return true;
 }
-const methods = { attMore, activityRedraw };
+// The Net worth range chips: same idea. The tile keeps its size (the line becomes a same-height placeholder while the
+// history loads) and shows nothing for the line if Firefly doesn't answer; the rest of the page and the scroll stay put.
+let nwTok = 0;
+async function nwRedraw(): Promise<boolean> {
+  const sec = document.querySelector<HTMLElement>('#dash .w[data-w="networth"] > section.panel'); if (!sec) return false;
+  const big = sec.querySelector<HTMLElement>('.big'); if (!big) return false;
+  const value = +(big.dataset.count || 0), tok = ++nwTok;
+  const swap = (pts: NetWorthPoint[] | null | undefined) => {
+    const tpl = document.createElement('template'); tpl.innerHTML = String(networthTile(value, pts));
+    const next = tpl.content.firstElementChild; if (!next || !sec.isConnected) return false;
+    sec.replaceWith(next); return true;
+  };
+  if (!swap(undefined)) return false;
+  const pts = await App.netWorthHistory().catch(() => null);
+  if (tok !== nwTok) return true;
+  const now = document.querySelector<HTMLElement>('#dash .w[data-w="networth"] > section.panel'); if (!now) return false;
+  const tpl = document.createElement('template'); tpl.innerHTML = String(networthTile(value, pts));
+  const next = tpl.content.firstElementChild; if (!next) return false;
+  now.replaceWith(next);
+  return true;
+}
+const methods = { attMore, activityRedraw, nwRedraw };
 Object.assign(App, methods);
 type Methods = typeof methods;
 declare module '../core/base' { interface AppApi extends Methods {} }

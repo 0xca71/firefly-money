@@ -59,6 +59,6 @@ describe('Reports layout', () => {
     const dash = readFileSync('app/src/features/dashboard.ts', 'utf8'), ov = readFileSync('app/src/pages/overview.ts', 'utf8');
     expect(dash).toMatch(/k === 'activity' && App\.activityRedraw/);
     expect(ov).toMatch(/sec\.replaceWith\(next\)/);
-    expect(ov).toMatch(/const methods = \{ attMore, activityRedraw \}/);
+    expect(ov).toMatch(/const methods = \{ attMore, activityRedraw, nwRedraw \}/);
   });
 });
