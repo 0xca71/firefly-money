@@ -2283,7 +2283,7 @@ html[data-theme="sakura"] .panel,html[data-theme="mint"] .panel,html[data-theme=
 
 /* ---------- Activity grid: a year of days, a week to a column, darker = more spent ---------- */
 html { --ag: var(--spend); }
-.ag-scroll { height: 164px; overflow-y: hidden; box-sizing: border-box; align-items: flex-start; display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 4px 2px 8px; -webkit-overflow-scrolling: touch; }
+.ag-scroll { height: 150px; overflow-y: hidden; box-sizing: border-box; align-items: flex-start; display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 0 2px 2px; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
 .ag-wrap { --agm: 14px; flex: none; margin-right: auto; min-width: 0; display: grid; gap: 4px; }
 .ag-months { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: var(--agm); gap: 3px; height: 14px; font-size: 11px; color: var(--muted); }
 .ag-months span { white-space: nowrap; overflow: visible; }
@@ -2296,13 +2296,16 @@ html { --ag: var(--spend); }
 .ag-c.l4 { background: var(--ag); }
 .ag-c.pad, .ag-c.fut { background: none; box-shadow: none; }
 .ag-c.today { outline: 2px solid var(--text); outline-offset: 1px; }
-.ag-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+.ag-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
 .ag-legend .ag-c { width: 11px; flex: none; }
 html[data-theme="glass"] .ag-c.l3, html[data-theme="glass"] .ag-c.l4 { box-shadow: 0 0 8px color-mix(in srgb, var(--ag) 55%, transparent); }
 
 /* Overview activity grid: fixed height (7 rows of fixed cells + months + legend + table toggle) for every range */
-.ag-lead { min-height: 2.9em; }
-.ag-blank { height: 164px; }
+.panel .ag-lead { min-height: 2.6em; margin-bottom: 8px; }
+.panel:has(.ag-scroll, .ag-blank) { padding: 18px 20px 12px; }
+.panel:has(.ag-scroll) .sk-table { margin-top: 0; }
+.panel:has(.ag-scroll) .sk-table summary { padding: 4px 0; }
+.ag-blank { height: 150px; }
 /* Overview activity grid: the range chips sit by the title, under it on a phone */
 .ag-range { display: flex; flex-wrap: wrap; gap: 6px; }
 .ag-range .btn { min-height: 36px; }
