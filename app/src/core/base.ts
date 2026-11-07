@@ -75,7 +75,7 @@ export function monthRange(y: number, m: number) {
   };
 }
 // The period the month selector shows: one month, or everything up to today when "All time" is picked.
-const ALL_START = '1970-01-01';
+export const ALL_START = '1970-01-01';
 export const period = (): Period => S.all ? { start: ALL_START, end: todayIso(), label: 'all time', short: 'all time', all: true } : monthRange(S.y, S.m);
 // The month a page loads. Usually the one picked at the top; `at` asks for another month (the one before or after),
 // which the router loads ahead of time so stepping to it is instant. A view given `at` only fetches, it draws nothing.

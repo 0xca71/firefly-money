@@ -1,6 +1,6 @@
 import { Html, html, htmlList, raw } from '../core/html';
 import { getAll } from '../core/api';
-import { absDiff, type ApiData, App, fmtD, fmtDay, leadDays, money, money0, pad, type Period, todayIso, txHref, weekOrder } from '../core/base';
+import { absDiff, type ApiData, App, fmtD, fmtDay, isoDate, leadDays, money, money0, pad, type Period, todayIso, txHref, weekOrder } from '../core/base';
 import { SERIES, normGroup, signed, type Group } from '../core/feed';
 import { addDays } from '../core/helpers';
 import type { Account } from '../core/lists';
@@ -183,23 +183,32 @@ export type AgDay = { iso: string, v: number, n: number, level: number };
 const AG_WEEKS = 53;
 // The days from the start of the period (at most the last 53 weeks of it, up to today), each with its level 0-4:
 // quartiles of the days that had spending, so one huge day can't wash the rest out
-export function activityDays(buys: { date: string, amount: number }[], start: string, end: string, today = todayIso()) {
+export function activityDays(buys: { date: string, amount: number }[], start: string, end: string, today = todayIso(), weeks = AG_WEEKS) {
   const last = end > today ? today : end, by = new Map<string, { v: number, n: number }>();
   buys.forEach(b => { const d = b.date.slice(0, 10), x = by.get(d) || { v: 0, n: 0 }; x.v += b.amount; x.n++; by.set(d, x); });
   if (last < start) return [] as AgDay[];
-  const floor = addDays(last, -(AG_WEEKS * 7 - 1)), first = start < floor ? floor : start;
+  const floor = addDays(last, -(weeks * 7 - 1)), first = start < floor ? floor : start;
   const vals = [...by.values()].map(x => x.v).filter(v => v > 0).sort((a, b) => a - b);
   const cut = [.25, .5, .75].map(q => vals.length ? vals[Math.min(vals.length - 1, Math.floor(q * vals.length))] : Infinity);
   const days: AgDay[] = [];
-  for (let d = first, i = 0; d <= last && i < 400; d = addDays(d, 1), i++) {
+  for (let d = first, i = 0; d <= last && i < weeks * 7 + 7; d = addDays(d, 1), i++) {
     const x = by.get(d), v = x ? x.v : 0;
     days.push({ iso: d, v, n: x ? x.n : 0, level: v > 0 ? 1 + cut.filter(c => v >= c).length : 0 });
   }
   return days;
 }
-export function activityPanel(buys: { date: string, amount: number }[], start: string, end: string) {
-  const days = activityDays(buys, start, end);
-  if (!days.length || !buys.length) return '';
+// Few weeks across get bigger cells, so a month isn't a thin strip
+export const activityCell = (weeks: number) => weeks <= 6 ? 28 : weeks <= 14 ? 26 : weeks <= 27 ? 22 : 30;
+export const ACTIVITY_RANGES: Record<string, string> = { '1m': '1M', '3m': '3M', '6m': '6M', year: 'This year', all: 'All' };
+// The days an Overview range covers, up to today: 1m/3m/6m back from today, the year so far, or everything from the first purchase
+export function activityRange(key: string, today: string, first: string) {
+  const back = (n: number) => { const d = new Date(today + 'T12:00:00'); d.setMonth(d.getMonth() - n); return addDays(isoDate(d), 1); };
+  const start = key === '1m' ? back(1) : key === '3m' ? back(3) : key === '6m' ? back(6) : key === 'all' ? (first || today) : today.slice(0, 4) + '-01-01';
+  return { start, end: today };
+}
+export function activityPanel(buys: { date: string, amount: number }[], start: string, end: string, tile?: { range: string, weeks?: number }) {
+  const days = activityDays(buys, start, end, todayIso(), tile ? 2000 : AG_WEEKS);
+  if (!days.length || !buys.length) return tile ? html`<section class="panel chart"><div class="panel-head"><h2>Activity</h2>${rangeChips(tile.range)}</div><p class="lead">No spending in this range.</p></section>` : '';
   const lead = leadDays(new Date(days[0].iso + 'T12:00:00'));    // blank cells before the first day, so each row is one weekday
   const t = todayIso();
   let cells: Html | string = '';
@@ -222,7 +231,12 @@ export function activityPanel(buys: { date: string, amount: number }[], start: s
   const active = days.filter(d => d.v).length, top = days.reduce<AgDay | null>((b, d) => !b || d.v > b.v ? d : b, null);
   const summary = active + ' of ' + days.length + ' days with spending' + (top && top.v ? '; the biggest was ' + fmtDay(top.iso) + ' at ' + money0(top.v) : '');
   const rows = htmlList([...byMonth].map(([m, x]) => html`<tr><td><a href="${txHref({ type: 'withdrawal' }, { start: m + '-01', end: days.filter(d => d.iso.startsWith(m)).pop()!.iso })}">${fmtD(m + '-01', { month: 'long', year: 'numeric' })}</a></td><td class="num">${x.d}</td><td class="num">${x.n}</td><td class="num">${money0(x.v)}</td></tr>`));
-  return html`<section class="panel chart"><h2>Activity</h2><p class="lead">${summary} · ${matchMedia?.('(hover: none)').matches ? 'tap a day to see it' : 'hover a day for details'}</p><div class="ag-scroll"><div class="ag-wrap"><div class="ag-months" aria-hidden="true">${months}</div><div class="ag-grid" role="img" aria-label="Spending each day: ${summary}">${cells}</div></div></div><div class="ag-legend" aria-hidden="true">Less ${htmlList([0, 1, 2, 3, 4].map(l => html`<span class="ag-c l${l}"></span>`))} More</div><details class="sk-table"><summary>Show as table</summary><table class="tbl"><thead><tr><th scope="col">Month</th><th scope="col">Days</th><th scope="col">Purchases</th><th scope="col">Spent</th></tr></thead><tbody>${rows}</tbody></table></details></section>`;
+  const head = tile ? html`<div class="panel-head"><h2>Activity</h2>${rangeChips(tile.range)}</div>` : html`<h2>Activity</h2>`;
+  return html`<section class="panel chart">${head}<p class="lead">${summary} · ${matchMedia?.('(hover: none)').matches ? 'tap a day to see it' : 'hover a day for details'}</p><div class="ag-scroll"><div class="ag-wrap" style="--agm:${activityCell(cols)}px"><div class="ag-months" aria-hidden="true">${months}</div><div class="ag-grid" role="img" aria-label="Spending each day: ${summary}">${cells}</div></div></div><div class="ag-legend" aria-hidden="true">Less ${htmlList([0, 1, 2, 3, 4].map(l => html`<span class="ag-c l${l}"></span>`))} More</div><details class="sk-table"><summary>Show as table</summary><table class="tbl"><thead><tr><th scope="col">Month</th><th scope="col">Days</th><th scope="col">Purchases</th><th scope="col">Spent</th></tr></thead><tbody>${rows}</tbody></table></details></section>`;
+}
+
+function rangeChips(cur: string) {
+  return html`<div class="ag-range" role="group" aria-label="Range">${htmlList(Object.entries(ACTIVITY_RANGES).map(([k, l]) => html`<button type="button" class="btn small${k === cur ? ' primary' : ''}" aria-pressed="${k === cur}" data-onclick="App.dashOpt('activity','range','${k}')">${l}</button>`))}</div>`;
 }
 
 /* ---------- Daily spending heatmap ---------- */

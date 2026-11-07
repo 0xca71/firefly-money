@@ -1,7 +1,7 @@
 import { type Html, html, htmlList } from '../core/html';
 import { api, getAll, sleep } from '../core/api';
 import { paceForecast } from '../features/projections';
-import { App, S, absDiff, arr, el, fmtDate, fmtDay, isoDate, money, money0, monthRange, noneHref, nowMonth, num, pad, sumDiff, todayIso, txHref, type ApiData, type Period, viewPeriod, viewYM } from '../core/base';
+import { ALL_START, App, S, absDiff, arr, el, fmtDate, fmtDay, isoDate, money, money0, monthRange, noneHref, nowMonth, num, pad, sumDiff, todayIso, txHref, type ApiData, type Period, viewPeriod, viewYM } from '../core/base';
 import { head, monthNav } from '../core/dom';
 import { normGroup, rankCats, txRows } from '../core/feed';
 import { addDays, budgetAlert, daysBetween } from '../core/helpers';
@@ -9,7 +9,7 @@ import { type Account, isAsset, isCard, isLiab, lists } from '../core/lists';
 import { VIEWS } from '../core/router';
 import { gettingStarted } from '../features/started';
 import { DASH_NAMES, tileOn, tileOpt } from '../features/dashboard';
-import { barChart, paceChart, ring, shareChart, sparkBars, twoLines } from '../features/charts';
+import { activityPanel, activityRange, barChart, paceChart, ring, shareChart, sparkBars, twoLines } from '../features/charts';
 import { type NetWorthPoint, nwLine, nwSeg, nwWords } from '../features/networth';
 import { bindSwipe } from '../features/phone';
 import { drafts } from '../features/txform';
@@ -38,7 +38,7 @@ VIEWS[''] = async (r, paint) => {
   const future = !all && (vy > ny || (vy === ny && vm > nm));
   const monthOnly = future || all;   // cards that only make sense for one month (insights, the day heatmap)
   const uncatQ = 'has_no_category:true transaction_type:withdrawal date_after:' + cur.start + ' date_before:' + cur.end;
-  const own = L.accounts.filter(a => a.active);
+  const actRange = String(tileOpt('activity', 'range') || 'year'), own = L.accounts.filter(a => a.active);
   const cards = own.filter(isCard), loans = own.filter(isLiab);
   // What the balance tiles list, by their settings: closed (inactive) accounts, zero balances, paid-off debts
   const shown = (k: string, test: (a: Account) => boolean, settled: (a: Account) => boolean) => L.accounts.filter(a => test(a) && (a.active || tileOpt(k, 'closed')) && (tileOpt(k, k === 'cash' ? 'zero' : 'paidOff') || !settled(a)));
@@ -74,7 +74,9 @@ VIEWS[''] = async (r, paint) => {
     on('payees') ? insight('/insight/expense/expense', p(cur), rsFor(cur)).catch(() => []) : none, all || !on('payees') ? none : insight('/insight/expense/expense', p(prev), rsFor(prev)).catch(() => []),
     on('goals') ? getAll('/piggy-banks').then(ps => ps.map(normPiggy)).catch(() => []) : none, on('networth') ? App.netWorthHistory().catch(() => null) : null,
     monthOnly || !on('pace') ? none : getAll('/transactions', { start: prev.start, end: prev.end, type: 'withdrawal' }).catch(() => []),
-    on('trends') ? Promise.all(months.map(mo => insight('/insight/expense/category', p(mo), monthsRs).catch(() => []))) : none]);
+    on('trends') ? Promise.all(months.map(mo => insight('/insight/expense/category', p(mo), monthsRs).catch(() => []))) : none,
+    // The activity grid ignores the month at the top: it covers its own range up to today (from Firefly only, nothing when it is down)
+    on('activity') ? getAll('/transactions', { start: actRange === 'all' ? ALL_START : activityRange(actRange, t0, '').start, end: t0, type: 'withdrawal' }).catch(() => null) : none]);
   slowP.catch(() => {});
   if (r.at) { await Promise.all([coreP, slowP]).catch(() => {}); return; }     // loading a month ahead: the data is all it needs
   const [summary, catNow, catPrev, noCatNow, noCatPrev, trend, recent, budgets, limits, bills, uncat, allTot, prevSoFar] = await coreP;
@@ -92,7 +94,7 @@ VIEWS[''] = async (r, paint) => {
   rankCats([...cats.values()].map(c => ({ name: c.name, v: c.amt })));     // the feed's category colours follow the donut's
 
   const build = (slow: ApiData[] | null) => {
-    const [prog, safe, insights, sparks, dayTx, incomeSrc, payNow, payPrev, piggies, nw, prevTx, monthCats] = slow || [];
+    const [prog, safe, insights, sparks, dayTx, incomeSrc, payNow, payPrev, piggies, nw, prevTx, monthCats, actTx] = slow || [];
     const wait = (k: string) => slow ? null : skeletonPanel(k);
     // A card with nothing to show for this month says so rather than vanishing, so the cards around it stay put
     const idle = (k: string, why = future ? 'Fills in once this month starts.' : 'Shows for one month at a time: pick a month at the top.') => quietPanel(k, why);
@@ -115,6 +117,7 @@ VIEWS[''] = async (r, paint) => {
       ['goals', !tileOn('goals') ? 'off' : wait('goals') ?? goalsPanel(piggies, tileOpt('goals', 'done'))],     // (empty without its data, so offered as is)
       ['cashflow', html`<section class="panel chart">${cashFlowAs(trend, tileOpt('cashflow', 'style'))}</section>`],
       ['recent', html`<section class="panel flush"><div style="padding:24px 26px 6px" class="panel-head"><div><h2>Recent transactions</h2></div><a class="link" href="#/transactions">See all</a></div>${txRows(arr(recent).map(normGroup))}</section>`],
+      ['activity', wait('activity') ?? activityTile(actTx, actRange, t0)],
       ['pace', monthOnly ? idle('pace') : wait('pace') ?? pacePanel(cur, prev, arr(dayTx).map(normGroup), arr(prevTx).map(normGroup))],
       ['savings', html`<section class="panel chart">${savingsRate(trend)}</section>`],
       ['trends', wait('trends') ?? trendsPanel(months.map(mo => mo.short), monthCats || [], months)],
@@ -144,11 +147,18 @@ function fillIn(markup: Html) {
   if (App.fitSankey) App.fitSankey();
   return true;
 }
+function activityTile(tx: ApiData[] | null, range: string, today: string) {
+  if (!tx) return quietPanel('activity', 'Firefly isn’t answering, so nothing is shown.');
+  const buys = tx.map(normGroup).flatMap(g => g.splits.filter(x => x.type === 'withdrawal').map(x => ({ date: String(x.date), amount: x.amount })));
+  const first = buys.reduce((m, b) => !m || b.date.slice(0, 10) < m ? b.date.slice(0, 10) : m, '');
+  const r = activityRange(range, today, first);
+  return activityPanel(buys, r.start, r.end, { range });
+}
 function quietPanel(k: string, why: string) {
   return html`<section class="panel quiet"><h2>${DASH_NAMES[k] || ''}</h2><p class="lead">${why}</p></section>`;
 }
 function skeletonPanel(k: string) {
-  const h = ({ insights: 120, safe: 70, loans: 90, heatmap: 230, flow: 240, payees: 200, networth: 230, pace: 230, trends: 220 } as Record<string, number>)[k] || 120;
+  const h = ({ insights: 120, safe: 70, loans: 90, heatmap: 230, activity: 230, flow: 240, payees: 200, networth: 230, pace: 230, trends: 220 } as Record<string, number>)[k] || 120;
   return html`<section class="panel" aria-busy="true"><h2>${DASH_NAMES[k] || ''}</h2><p class="lead">&nbsp;</p><div class="sk" style="height:${h}px"></div></section>`;
 }
 function attentionPanel({ uncat, bills, budgets, limits, future }: { uncat: ApiData, uncatQ: string, bills: ApiData[], budgets: ApiData[], limits: Record<string, BudgetLimit>, future: boolean }) {
