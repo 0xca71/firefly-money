@@ -341,7 +341,20 @@ function attMore(b: HTMLElement) {
   const m = b.closest('.attention')!.querySelector<HTMLElement>('.att-more'); if (!m) return;
   m.hidden = !m.hidden; b.textContent = m.hidden ? m.children.length + ' more' : 'Fewer';
 }
-const methods = { attMore };
+// The Activity range chips: redraw only that card from its own data (the page, scroll and other cards stay as they are)
+let actTok = 0;
+async function activityRedraw(): Promise<boolean> {
+  const sec = document.querySelector<HTMLElement>('#dash .w[data-w="activity"] > section.panel'); if (!sec) return false;
+  const tok = ++actTok, range = String(tileOpt('activity', 'range') || 'year'), t0 = todayIso();
+  const tx = await getAll('/transactions', { start: range === 'all' ? ALL_START : activityRange(range, t0, '').start, end: t0, type: 'withdrawal' }).catch(() => null);
+  if (tok !== actTok) return true;      // a newer chip press owns the card now
+  if (!sec.isConnected) return false;
+  const tpl = document.createElement('template'); tpl.innerHTML = String(activityTile(tx, range, t0));
+  const next = tpl.content.firstElementChild; if (!next) return false;
+  sec.replaceWith(next);
+  return true;
+}
+const methods = { attMore, activityRedraw };
 Object.assign(App, methods);
 type Methods = typeof methods;
 declare module '../core/base' { interface AppApi extends Methods {} }

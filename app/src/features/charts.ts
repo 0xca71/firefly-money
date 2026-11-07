@@ -197,8 +197,8 @@ export function activityDays(buys: { date: string, amount: number }[], start: st
   }
   return days;
 }
-// Few weeks across get bigger cells, so a month isn't a thin strip
-export const activityCell = (weeks: number) => weeks <= 6 ? 28 : weeks <= 14 ? 26 : weeks <= 27 ? 22 : 30;
+// One small cell size for every range, so the grid is always the same height (7 rows) and only its width follows the range
+export const activityCell = (_weeks: number) => 14;
 export const ACTIVITY_RANGES: Record<string, string> = { '1m': '1M', '3m': '3M', '6m': '6M', year: 'This year', all: 'All' };
 // The days an Overview range covers, up to today: 1m/3m/6m back from today, the year so far, or everything from the first purchase
 export function activityRange(key: string, today: string, first: string) {
@@ -208,7 +208,7 @@ export function activityRange(key: string, today: string, first: string) {
 }
 export function activityPanel(buys: { date: string, amount: number }[], start: string, end: string, tile?: { range: string, weeks?: number }) {
   const days = activityDays(buys, start, end, todayIso(), tile ? 2000 : AG_WEEKS);
-  if (!days.length || !buys.length) return tile ? html`<section class="panel chart"><div class="panel-head"><h2>Activity</h2>${rangeChips(tile.range)}</div><p class="lead">No spending in this range.</p></section>` : '';
+  if (!days.length || !buys.length) return tile ? html`<section class="panel chart"><div class="panel-head"><h2>Activity</h2>${rangeChips(tile.range)}</div><p class="lead">No spending in this range.</p><div class="ag-blank"></div></section>` : '';
   const lead = leadDays(new Date(days[0].iso + 'T12:00:00'));    // blank cells before the first day, so each row is one weekday
   const t = todayIso();
   let cells: Html | string = '';
@@ -232,7 +232,7 @@ export function activityPanel(buys: { date: string, amount: number }[], start: s
   const summary = active + ' of ' + days.length + ' days with spending' + (top && top.v ? '; the biggest was ' + fmtDay(top.iso) + ' at ' + money0(top.v) : '');
   const rows = htmlList([...byMonth].map(([m, x]) => html`<tr><td><a href="${txHref({ type: 'withdrawal' }, { start: m + '-01', end: days.filter(d => d.iso.startsWith(m)).pop()!.iso })}">${fmtD(m + '-01', { month: 'long', year: 'numeric' })}</a></td><td class="num">${x.d}</td><td class="num">${x.n}</td><td class="num">${money0(x.v)}</td></tr>`));
   const head = tile ? html`<div class="panel-head"><h2>Activity</h2>${rangeChips(tile.range)}</div>` : html`<h2>Activity</h2>`;
-  return html`<section class="panel chart">${head}<p class="lead">${summary} · ${matchMedia?.('(hover: none)').matches ? 'tap a day to see it' : 'hover a day for details'}</p><div class="ag-scroll"><div class="ag-wrap" style="--agm:${activityCell(cols)}px"><div class="ag-months" aria-hidden="true">${months}</div><div class="ag-grid" role="img" aria-label="Spending each day: ${summary}">${cells}</div></div></div><div class="ag-legend" aria-hidden="true">Less ${htmlList([0, 1, 2, 3, 4].map(l => html`<span class="ag-c l${l}"></span>`))} More</div><details class="sk-table"><summary>Show as table</summary><table class="tbl"><thead><tr><th scope="col">Month</th><th scope="col">Days</th><th scope="col">Purchases</th><th scope="col">Spent</th></tr></thead><tbody>${rows}</tbody></table></details></section>`;
+  return html`<section class="panel chart">${head}<p class="lead ag-lead">${summary} · ${matchMedia?.('(hover: none)').matches ? 'tap a day to see it' : 'hover a day for details'}</p><div class="ag-scroll"><div class="ag-wrap" style="--agm:${activityCell(cols)}px"><div class="ag-months" aria-hidden="true">${months}</div><div class="ag-grid" role="img" aria-label="Spending each day: ${summary}">${cells}</div></div></div><div class="ag-legend" aria-hidden="true">Less ${htmlList([0, 1, 2, 3, 4].map(l => html`<span class="ag-c l${l}"></span>`))} More</div><details class="sk-table"><summary>Show as table</summary><table class="tbl"><thead><tr><th scope="col">Month</th><th scope="col">Days</th><th scope="col">Purchases</th><th scope="col">Spent</th></tr></thead><tbody>${rows}</tbody></table></details></section>`;
 }
 
 function rangeChips(cur: string) {

@@ -292,6 +292,8 @@ function dashOpt(k: string, id: string, v: string | number | boolean) {
   if (typeof o.def === 'number') v = +v;
   if (!o.options.includes(v)) return;
   dashSave(x => { x.opts = { ...x.opts, [k]: { ...(x.opts || {})[k], [id]: v } }; });
+  // a card's own chips (not the layout editor) redraw just that card: no page swap, scroll reset or refetch of the others
+  if (!S.dashEdit && k === 'activity' && App.activityRedraw) { PAGES.clear(); S.pageHtml = ''; App.activityRedraw().then(ok => { if (!ok) dashRedraw(); }); return; }
   dashRedraw();
 }
 // Hide a card, or add it back (from Add cards): it moves between the cards and that list, and comes back where it was

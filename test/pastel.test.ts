@@ -90,9 +90,9 @@ describe('Activity grid', () => {
     expect(h).toContain('<details class="sk-table">');
     expect(h).toContain('data-tip="');
     expect(css).toMatch(/\.ag-grid \{[^}]*grid-auto-flow: column[^}]*repeat\(7, auto\)/);
-    expect(css).toMatch(/\.ag-grid \{[^}]*minmax\(11px, var\(--agm\)\)/);
+    expect(css).toMatch(/\.ag-grid \{[^}]*grid-auto-columns: var\(--agm\)/);
     expect(css).toMatch(/\.ag-wrap \{[^}]*margin-right: auto/);
-    expect(css).toContain('.ag-scroll { display: flex; flex-direction: row-reverse; overflow-x: auto');
+    expect(css).toMatch(/\.ag-scroll \{[^}]*display: flex; flex-direction: row-reverse; overflow-x: auto/);
   });
   it('shows levels in every theme from the theme’s own colours', () => {
     for (const l of ['l1', 'l2', 'l3', 'l4']) expect(css).toContain('.ag-c.' + l);
