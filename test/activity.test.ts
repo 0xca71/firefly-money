@@ -51,8 +51,10 @@ describe('Reports layout', () => {
     expect(css).toMatch(/\.ag-range \.btn \{ flex: 1 1 0; min-width: 0; min-height: 44px/);
   });
   it('every range has the same fixed-height grid, so switching chips shifts nothing', () => {
-    expect(css).toMatch(/\.ag-scroll \{ height: 164px/);
-    expect(css).toMatch(/\.ag-blank \{ height: 164px/);
+    expect(css).toMatch(/\.ag-scroll \{ height: 150px/);
+    expect(css).toMatch(/\.ag-blank \{ height: 150px/);
+    expect(css).toMatch(/\.panel \.ag-lead \{ min-height: 2\.6em; margin-bottom: 8px/);
+    expect(css).toMatch(/\.panel:has\(\.ag-scroll, \.ag-blank\) \{ padding: 18px 20px 12px/);
     for (const r of ['1m', 'year', 'all']) expect(String(activityPanel(buys, '2019-01-01', '2026-11-07', { range: r }))).toContain('--agm:14px');
   });
   it('a chip press redraws only the Activity card, not the page', () => {
