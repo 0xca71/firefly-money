@@ -2259,11 +2259,11 @@ html[data-theme="sakura"] .panel,html[data-theme="mint"] .panel,html[data-theme=
 
 /* ---------- Activity grid: a year of days, a week to a column, darker = more spent ---------- */
 html { --ag: var(--spend); }
-.ag-scroll { display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 4px 2px 8px; -webkit-overflow-scrolling: touch; }
-.ag-wrap { --agm: 18px; flex: 0 1 auto; margin-right: auto; min-width: 0; display: grid; gap: 4px; }
-.ag-months { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(11px, var(--agm)); gap: 3px; height: 14px; font-size: 11px; color: var(--muted); }
+.ag-scroll { height: 164px; overflow-y: hidden; box-sizing: border-box; align-items: flex-start; display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 4px 2px 8px; -webkit-overflow-scrolling: touch; }
+.ag-wrap { --agm: 14px; flex: none; margin-right: auto; min-width: 0; display: grid; gap: 4px; }
+.ag-months { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: var(--agm); gap: 3px; height: 14px; font-size: 11px; color: var(--muted); }
 .ag-months span { white-space: nowrap; overflow: visible; }
-.ag-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, auto); grid-auto-columns: minmax(11px, var(--agm)); gap: 3px; }
+.ag-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, auto); grid-auto-columns: var(--agm); gap: 3px; }
 .ag-c { aspect-ratio: 1; border-radius: 3px; background: var(--faint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 6%, transparent); }
 .ag-c[data-go] { cursor: pointer; }
 .ag-c.l1 { background: color-mix(in srgb, var(--ag) 28%, var(--panel)); }
@@ -2276,6 +2276,9 @@ html { --ag: var(--spend); }
 .ag-legend .ag-c { width: 11px; flex: none; }
 html[data-theme="glass"] .ag-c.l3, html[data-theme="glass"] .ag-c.l4 { box-shadow: 0 0 8px color-mix(in srgb, var(--ag) 55%, transparent); }
 
+/* Overview activity grid: fixed height (7 rows of fixed cells + months + legend + table toggle) for every range */
+.ag-lead { min-height: 2.9em; }
+.ag-blank { height: 164px; }
 /* Overview activity grid: the range chips sit by the title, under it on a phone */
 .ag-range { display: flex; flex-wrap: wrap; gap: 6px; }
 .ag-range .btn { min-height: 36px; }
