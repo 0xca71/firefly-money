@@ -53,7 +53,7 @@ VIEWS.settings = async (r, paint) => {
 
   const privacy = !!LS.get('privacy', false), compact = !!LS.get('compact', false);
   const look = group('look', 'Appearance', html`
-    ${row('Theme', '', html`<div class="themes">${themeButtons()}</div>`)}
+    ${html`<div class="tp-wrap"><div class="tp-title">Theme</div>${themeButtons()}</div>`}
     ${more('theme-custom', 'Customize colors', html`<span class="tc-name">${themeName()}</span>`, html`<div class="theme-custom">${customizer()}</div>`)}
     ${row('Number & date format', localeSample(), html`<select aria-label="Number and date format" data-onchange="App.setLocale(this.value)">${htmlList(localeOptions())}</select>`)}
     ${row('Hide amounts', 'Blur every amount. Press P to switch.', html`<input ${SWITCH} aria-label="Hide amounts" data-pref="privacy"${privacy ? ' checked' : ''} data-onchange="App.togglePrivacy()">`)}

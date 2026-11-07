@@ -1,4 +1,3 @@
-import { html, htmlList } from './html';
 import { AuthError, PAGES, api, dropSavedCopies } from './api';
 import { SIGN_OUT_FAILED, migrateSavedPassword, rememberedSignIn, showLogin, signIn, signOut } from './auth';
 import { App, S, el, nowMonth } from './base';
@@ -6,6 +5,7 @@ import { closeDrawer, toast, vt } from './dom';
 import { lists } from './lists';
 import { hashWith, route } from './router';
 import { applyCustom } from './themevars';
+import { THEMES, themeButtons } from './themepick';
 import { blankSplit, collectTx, newTx, renderTxForm } from '../features/txform';
 
 /* ================= Login / boot ================= */
@@ -18,24 +18,16 @@ el('loginForm').onsubmit = async ev => {
   catch (e) { el('loginErr').hidden = false; el('loginErr').textContent = (e as Error).message; }
   finally { btn.disabled = false; }
 };
-export const THEMES = [
-  ['auto', 'Calm (follows your system)', 'linear-gradient(135deg,#f6f5f1 50%,#1d1e1b 50%)'],
-  ['light', 'Calm light', '#f6f5f1'], ['dark', 'Calm dark', '#1d1e1b'],
-  ['carbon', 'Carbon neon', 'linear-gradient(135deg,#1f1f23 45%,#39ff9f 45%,#19e3ff)'],
-  ['midnight', 'Midnight', 'linear-gradient(135deg,#7c5cff,#38bdf8)'], ['neon', 'Neon', 'linear-gradient(135deg,#ff2e97,#00e0ff)'],
-  ['glass', 'Liquid glass neon', 'radial-gradient(circle at 30% 30%,#ffffffcc 0 12%,transparent 13%),linear-gradient(135deg,#37f5ff,#b86bff 50%,#ff4fd8)'],
-  ['frosted', 'Frosted glass', 'radial-gradient(circle at 30% 30%,#ffffffd9 0 14%,transparent 15%),linear-gradient(135deg,#efe4d6,#b98a64 55%,#e2552c)'],
-  ['ocean', 'Ocean', 'linear-gradient(135deg,#14b8a6,#3b9eff)'], ['sunrise', 'Sunrise', 'linear-gradient(135deg,#e8452c,#f59e0b)'],
-  ['forest', 'Forest', 'linear-gradient(135deg,#15211b 45%,#6fcf97 45%,#f2c94c)'], ['nord', 'Nord', 'linear-gradient(135deg,#2e3440 45%,#88c0d0 45%,#b48ead)'],
-  ['rose', 'Rosé', 'linear-gradient(135deg,#d6456e,#9b6bdf)'],
-];
+export { THEMES, themeButtons };
 function currentTheme() { return document.documentElement.getAttribute('data-theme') || 'auto'; }
-// border-box origin: otherwise the gradient tiles under the 2px border and a sliver of the opposite colour shows at the edge
-export function themeButtons() {
-  return htmlList(THEMES.map(([k, label, sw]) => html`<button type="button" title="${label}" aria-label="${label} theme" class="${k === currentTheme() ? 'on' : ''}" style="background:${sw};background-origin:border-box" data-onclick="App.setTheme('${k}')"></button>`));
+// The theme picker on the Settings page (the focus goes back to the chosen theme after it's redrawn)
+function drawThemes() {
+  document.querySelectorAll('.tpick').forEach(t => {
+    const had = t.contains(document.activeElement);
+    t.outerHTML = String(themeButtons());
+    if (had) document.querySelector<HTMLElement>('.tpick .tp.on')?.focus();
+  });
 }
-// The theme picker on the Settings page
-function drawThemes() { document.querySelectorAll('.themes').forEach(t => { t.innerHTML = String(themeButtons()); }); }
 export function setTheme(k: string) {
   if (k === currentTheme()) return;
   const apply = () => {
