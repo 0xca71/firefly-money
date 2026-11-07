@@ -1,4 +1,5 @@
 import { type ApiData, S, arr, todayIso } from './base';
+import { progPages, progReq } from './progress';
 
 /* ================= API ================= */
 export class AuthError extends Error {}
@@ -108,6 +109,10 @@ function unreachable(e: unknown): unknown {
 }
 // Returns { r, body }: the slot is held until the whole response has arrived, not just its headers.
 async function netFetch(u: URL, init: RequestInit, blob: boolean): Promise<{ r: Response, body: string | Blob }> {
+  const pq = progReq(u.pathname);      // what the loading bar reports (core/progress.ts)
+  try { return await netFetchTry(u, init, blob, pq); } finally { pq.done(); }
+}
+async function netFetchTry(u: URL, init: RequestInit, blob: boolean, pq: ReturnType<typeof progReq>): Promise<{ r: Response, body: string | Blob }> {
   const read = init.method === 'GET';
   for (let attempt = 0; ; attempt++) {
     let res: { r: Response, body: string | Blob } | null = null, r: Response | null = null, wait = NET_RETRY[attempt];
@@ -117,7 +122,8 @@ async function netFetch(u: URL, init: RequestInit, blob: boolean): Promise<{ r: 
     try {
       res = await netSlot(async () => {
         const ac = read && typeof AbortController !== 'undefined' ? new AbortController() : null, timer = ac ? setTimeout(() => ac.abort(), READ_MS) : 0;
-        try { const x = await fetch(u, ac ? { ...init, signal: ac.signal } : init); return { r: x, body: await (blob && x.ok ? x.blob() : x.text()) }; }
+        pq.stage('sending');
+        try { const x = await fetch(u, ac ? { ...init, signal: ac.signal } : init); pq.stage('receiving'); return { r: x, body: await (blob && x.ok ? x.blob() : x.text()) }; }
         catch (e) { if (ac && ac.signal.aborted) throw new TypeError('Failed to fetch'); throw e; }
         finally { clearTimeout(timer); }
       });
@@ -127,7 +133,9 @@ async function netFetch(u: URL, init: RequestInit, blob: boolean): Promise<{ r: 
     if (r && !((read && NET_BUSY.has(r.status) || r.status === 429) && wait !== undefined && navigator.onLine)) return res!;
     const ra = r ? +(r.headers.get('Retry-After') as string) : 0;
     if (ra > 0) wait = Math.min(10000, ra * 1000);
+    pq.stage('retrying', attempt + 1);
     await sleep(wait + Math.random() * 200);
+    pq.stage('queued');
   }
 }
 async function apiRaw(u: URL, opt: ApiOpts): Promise<ApiData> {
@@ -167,6 +175,7 @@ export async function getAll(path: string, params: ApiOpts['params'] = {}): Prom
   const first = await api(path, { params: { ...params, page: 1, limit: 100 } });
   const total = (first && first.meta && first.meta.pagination && first.meta.pagination.total_pages) || 1, pages = Math.min(MAX_PAGES, total);
   if (total > MAX_PAGES) CAP.at = Date.now();
+  progPages(path, pages);
   const out = [...arr(first)];
   for (let p = 2; p <= pages; p += 6) {      // remaining pages, six at a time
     const batch = await Promise.all(Array.from({ length: Math.min(6, pages - p + 1) }, (_, i) => api(path, { params: { ...params, page: p + i, limit: 100 } })));
