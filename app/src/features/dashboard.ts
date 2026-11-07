@@ -15,27 +15,27 @@ import { tilePreview } from './tilepreview';
    dealt into that many even columns (money.dash place[n] keeps that arrangement for each count). */
 const DASH_WIDE = ['flow', 'cashflow', 'recent'];
 export const DASH_NAMES: Record<string, string> = { safe: 'Safe to spend', attention: 'Needs attention', spending: 'Where it went', budgets: 'Budgets', cash: 'Cash & savings', cards: 'Credit cards',
-  loans: 'Loans', bills: 'Coming up', heatmap: 'Daily spending', flow: 'Money flow', cashflow: 'Cash flow', recent: 'Recent transactions',
+  loans: 'Loans', bills: 'Coming up', heatmap: 'Daily spending', activity: 'Activity', flow: 'Money flow', cashflow: 'Cash flow', recent: 'Recent transactions',
   payees: 'Top payees', income: 'Income sources', goals: 'Savings goals', networth: 'Net worth', pace: 'Spending pace', savings: 'Savings rate',
   trends: 'Category trends', spent: 'Spent', earned: 'Earned', insights: 'Insights' };
 // One line on each card, for the Add cards list in Customize
 const DASH_ABOUT: Record<string, string> = { safe: 'What you can spend until payday', attention: 'Drafts, bills due, budgets running out',
   spending: 'Spending by category', budgets: 'How each budget is doing', cash: 'Bank account balances', cards: 'What you owe on each card',
-  loans: 'Loan balances and payoff', bills: 'Bills due soon', heatmap: 'A calendar of what you spent each day', flow: 'Income flowing into spending',
+  loans: 'Loan balances and payoff', bills: 'Bills due soon', heatmap: 'A calendar of what you spent each day', activity: 'A grid of every day you spent, darker when you spend more', flow: 'Income flowing into spending',
   cashflow: 'Earned vs. spent by month', recent: 'Your latest transactions', payees: 'Who you paid the most', income: 'Where your money came from',
   goals: 'Piggy bank progress', networth: 'Net worth over time', pace: 'This month’s spending against last month, day by day',
   savings: 'How much of your income you kept, month by month', trends: 'Your biggest categories over the last months',
   spent: 'What you spent, against last month', earned: 'What came in and how much you kept', insights: 'What changed this month' };
 // A new Overview starts with these, in this order; the rest are one tap away under Customize → Add cards
 // (rows of tiles about as tall as each other: the numbers, then the two short cards, then the charts with the lists)
-const DASH_DEFAULT = ['networth', 'spent', 'earned', 'safe', 'attention', 'spending', 'budgets', 'bills', 'insights', 'cashflow'];
+const DASH_DEFAULT = ['networth', 'spent', 'earned', 'safe', 'attention', 'spending', 'budgets', 'bills', 'insights', 'cashflow', 'activity'];
 // Each card's bento size: s is a quarter of a wide screen (a sixth of a big one, half a phone), m twice that, l the full width
 type Size = 's' | 'm' | 'l';
-const DASH_SIZE: Record<string, Size> = { spent: 's', earned: 's', budgets: 's', bills: 's', insights: 'l', cashflow: 'l', heatmap: 'l', flow: 'l', recent: 'l' };
+const DASH_SIZE: Record<string, Size> = { spent: 's', earned: 's', budgets: 's', bills: 's', insights: 'l', cashflow: 'l', heatmap: 'l', activity: 'l', flow: 'l', recent: 'l' };
 const SIZES: Size[] = ['s', 'm', 'l'];
 const sizeOf = (L: DashLayout, k: string): Size => SIZES.includes((L.size || {})[k] as Size) ? (L.size || {})[k] as Size : DASH_SIZE[k] || 'm';
 // Rough card heights, only used to deal cards into columns evenly the first time
-const DASH_EST: Record<string, number> = { spent: 170, earned: 170, insights: 200, safe: 200, attention: 200, spending: 640, budgets: 300, cash: 300, cards: 290, loans: 250, bills: 220, heatmap: 420, payees: 640, income: 260, goals: 260, networth: 330,
+const DASH_EST: Record<string, number> = { spent: 170, earned: 170, insights: 200, safe: 200, attention: 200, spending: 640, budgets: 300, cash: 300, cards: 290, loans: 250, bills: 220, heatmap: 420, activity: 330, payees: 640, income: 260, goals: 260, networth: 330,
   pace: 380, savings: 330, trends: 420 };
 // Each tile's own settings (the ⚙ button while customizing), saved in money.dash opts {tile: {setting: value}}
 const yes = [true, false];
@@ -53,6 +53,7 @@ export const TILE_OPTS: Record<string, TileOpt[]> = {
   loans: [{ id: 'paidOff', label: 'Show paid-off loans', options: yes, def: true }, { id: 'closed', label: 'Show closed loans', options: yes, def: false }],
   bills: [{ id: 'days', label: 'Look ahead', options: [7, 14, 30, 45], def: 45, unit: 'days' }],
   goals: [{ id: 'done', label: 'Show goals already reached', options: yes, def: true }],
+  activity: [{ id: 'range', label: 'Range', options: ['1m', '3m', '6m', 'year', 'all'], def: 'year', names: { '1m': 'Last month', '3m': 'Last 3 months', '6m': 'Last 6 months', year: 'This year', all: 'All history' } }],
   cashflow: [{ id: 'style', label: 'Chart', options: ['bars', 'lines', 'net'], def: 'bars', names: { bars: 'Bars', lines: 'Lines', net: 'What you kept' } }, { id: 'months', label: 'Months to show', options: [3, 6, 12], def: 6 }],
 };
 // A tile's setting, or its default when unset or no longer one of the choices

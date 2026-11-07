@@ -162,6 +162,7 @@
   .report-empty { margin: -4px 4px 20px; }
   /* Reports: what it went on (categories, budgets, tags) on the left, who it went to or came from on the right */
   .report-cols:empty { display: none; }
+  .report-gap:not(:empty) { margin-bottom: 20px; } html.compact .report-gap:not(:empty) { margin-bottom: 14px; }
   .search { position: relative; flex: 1; max-width: 420px; }
   .search input { width: 100%; padding-left: 36px; }
   .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
@@ -2259,10 +2260,10 @@ html[data-theme="sakura"] .panel,html[data-theme="mint"] .panel,html[data-theme=
 /* ---------- Activity grid: a year of days, a week to a column, darker = more spent ---------- */
 html { --ag: var(--spend); }
 .ag-scroll { display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 4px 2px 8px; -webkit-overflow-scrolling: touch; }
-.ag-wrap { flex: 0 0 auto; margin-right: auto; min-width: 0; display: grid; gap: 4px; }
-.ag-months { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(11px, 18px); gap: 3px; height: 14px; font-size: 11px; color: var(--muted); }
+.ag-wrap { --agm: 18px; flex: 0 1 auto; margin-right: auto; min-width: 0; display: grid; gap: 4px; }
+.ag-months { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(11px, var(--agm)); gap: 3px; height: 14px; font-size: 11px; color: var(--muted); }
 .ag-months span { white-space: nowrap; overflow: visible; }
-.ag-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, auto); grid-auto-columns: minmax(11px, 18px); gap: 3px; }
+.ag-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, auto); grid-auto-columns: minmax(11px, var(--agm)); gap: 3px; }
 .ag-c { aspect-ratio: 1; border-radius: 3px; background: var(--faint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 6%, transparent); }
 .ag-c[data-go] { cursor: pointer; }
 .ag-c.l1 { background: color-mix(in srgb, var(--ag) 28%, var(--panel)); }
@@ -2274,3 +2275,12 @@ html { --ag: var(--spend); }
 .ag-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
 .ag-legend .ag-c { width: 11px; flex: none; }
 html[data-theme="glass"] .ag-c.l3, html[data-theme="glass"] .ag-c.l4 { box-shadow: 0 0 8px color-mix(in srgb, var(--ag) 55%, transparent); }
+
+/* Overview activity grid: the range chips sit by the title, under it on a phone */
+.ag-range { display: flex; flex-wrap: wrap; gap: 6px; }
+.ag-range .btn { min-height: 36px; }
+@media (max-width: 520px) {
+  .panel-head:has(.ag-range) { flex-wrap: wrap; row-gap: 10px; }
+  .ag-range { width: 100%; flex-wrap: nowrap; }
+  .ag-range .btn { flex: 1 1 0; min-width: 0; min-height: 44px; padding-inline: 4px; }
+}
