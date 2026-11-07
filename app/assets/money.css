@@ -2219,3 +2219,58 @@ html:not(#_) .head .actions .month .round { width: var(--ctl); }
   .search-btn { position: fixed; }
   .btn.small::after, .tl-go::after, .search-btn::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
 }
+
+/* ---------- Pastel themes: a soft page, white cards, a pastel accent for fills and a deeper tone of the same hue for text, buttons and lines (all 4.5:1 or better) ---------- */
+html[data-theme="sakura"] { --bg: #FFF5F7; --panel: #ffffff; --line: #F5DCE3; --text: #4A2030; --muted: #7A5565; --faint: #FBE8ED;
+  --good: #3fa77a; --spend: #c0505a; --income: #E8A0B4; --warn: #d9a441; --good-t: #23744f; --spend-t: #ab3a46; --warn-t: #86600f;
+  --accent: #A04B67; --on-accent: #ffffff; --ag: #A04B67; --shadow: 0 18px 50px color-mix(in srgb, #A04B67 14%, transparent); color-scheme: light; }
+html[data-theme="mint"] { --bg: #F2FBF6; --panel: #ffffff; --line: #D8EEE1; --text: #1D3F2F; --muted: #4F6F5F; --faint: #E3F4EA;
+  --good: #3fa77a; --spend: #c0505a; --income: #8FD3B0; --warn: #d9a441; --good-t: #23744f; --spend-t: #ab3a46; --warn-t: #86600f;
+  --accent: #2F7A57; --on-accent: #ffffff; --ag: #2F7A57; --shadow: 0 18px 50px color-mix(in srgb, #2F7A57 14%, transparent); color-scheme: light; }
+html[data-theme="lavender"] { --bg: #F6F3FD; --panel: #ffffff; --line: #E3DCF6; --text: #2E2650; --muted: #675F85; --faint: #ECE7FA;
+  --good: #3fa77a; --spend: #c0505a; --income: #B7A6E8; --warn: #d9a441; --good-t: #23744f; --spend-t: #ab3a46; --warn-t: #86600f;
+  --accent: #6A55B5; --on-accent: #ffffff; --ag: #6A55B5; --shadow: 0 18px 50px color-mix(in srgb, #6A55B5 14%, transparent); color-scheme: light; }
+html[data-theme="peach"] { --bg: #FFF6EF; --panel: #ffffff; --line: #F8E0D0; --text: #4D2A18; --muted: #7D5A47; --faint: #FDE9DC;
+  --good: #3fa77a; --spend: #c0505a; --income: #F4B393; --warn: #d9a441; --good-t: #23744f; --spend-t: #ab3a46; --warn-t: #86600f;
+  --accent: #A44E27; --on-accent: #ffffff; --ag: #A44E27; --shadow: 0 18px 50px color-mix(in srgb, #A44E27 14%, transparent); color-scheme: light; }
+html[data-theme="sky"] { --bg: #F1F7FD; --panel: #ffffff; --line: #D9E8F6; --text: #1B3550; --muted: #4F6A85; --faint: #E2EEFA;
+  --good: #3fa77a; --spend: #c0505a; --income: #9CC6EE; --warn: #d9a441; --good-t: #23744f; --spend-t: #ab3a46; --warn-t: #86600f;
+  --accent: #2F6DA6; --on-accent: #ffffff; --ag: #2F6DA6; --shadow: 0 18px 50px color-mix(in srgb, #2F6DA6 14%, transparent); color-scheme: light; }
+html[data-theme="butter"] { --bg: #FBFAEE; --panel: #ffffff; --line: #E9E8CE; --text: #33402B; --muted: #5F6B52; --faint: #F1F0D9;
+  --good: #3fa77a; --spend: #c0505a; --income: #A9C7A0; --warn: #d9a441; --good-t: #23744f; --spend-t: #ab3a46; --warn-t: #86600f;
+  --accent: #4E7044; --on-accent: #ffffff; --ag: #4E7044; --shadow: 0 18px 50px color-mix(in srgb, #4E7044 14%, transparent); color-scheme: light; }
+html[data-theme="sakura"] .panel,html[data-theme="mint"] .panel,html[data-theme="lavender"] .panel,html[data-theme="peach"] .panel,html[data-theme="sky"] .panel,html[data-theme="butter"] .panel { box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 6%, transparent), 0 8px 24px color-mix(in srgb, var(--accent) 6%, transparent); }
+
+/* ---------- Theme picker: grouped chips with a swatch preview, one tab stop, arrow keys to move ---------- */
+.tp-wrap { padding: 13px 0 14px; }
+.tp-title { font-size: 14px; margin-bottom: 10px; }
+.tpick { display: grid; gap: 14px; }
+.tp-head { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.tp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 138px), 1fr)); gap: 8px; }
+.tp { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 0; padding: 6px 10px 6px 7px; border: 1.5px solid var(--line); border-radius: 14px;
+  background: var(--panel); color: var(--text); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; transition: border-color var(--t-hover), background var(--t-hover); }
+.tp:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.tp.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--panel)); font-weight: 600; }
+.tp:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tp-sw { flex: none; width: 28px; height: 28px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text) 16%, transparent); }
+.tp-name { min-width: 0; overflow-wrap: anywhere; line-height: 1.2; }
+.tp.on::after { content: ""; flex: none; margin-left: auto; width: 7px; height: 12px; border: solid var(--accent); border-width: 0 2px 2px 0; transform: translate(-1px, -2px) rotate(45deg); }
+
+/* ---------- Activity grid: a year of days, a week to a column, darker = more spent ---------- */
+html { --ag: var(--spend); }
+.ag-scroll { display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 4px 2px 8px; -webkit-overflow-scrolling: touch; }
+.ag-wrap { flex: 0 0 auto; margin-right: auto; min-width: 0; display: grid; gap: 4px; }
+.ag-months { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(11px, 18px); gap: 3px; height: 14px; font-size: 11px; color: var(--muted); }
+.ag-months span { white-space: nowrap; overflow: visible; }
+.ag-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, auto); grid-auto-columns: minmax(11px, 18px); gap: 3px; }
+.ag-c { aspect-ratio: 1; border-radius: 3px; background: var(--faint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 6%, transparent); }
+.ag-c[data-go] { cursor: pointer; }
+.ag-c.l1 { background: color-mix(in srgb, var(--ag) 28%, var(--panel)); }
+.ag-c.l2 { background: color-mix(in srgb, var(--ag) 52%, var(--panel)); }
+.ag-c.l3 { background: color-mix(in srgb, var(--ag) 76%, var(--panel)); }
+.ag-c.l4 { background: var(--ag); }
+.ag-c.pad, .ag-c.fut { background: none; box-shadow: none; }
+.ag-c.today { outline: 2px solid var(--text); outline-offset: 1px; }
+.ag-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+.ag-legend .ag-c { width: 11px; flex: none; }
+html[data-theme="glass"] .ag-c.l3, html[data-theme="glass"] .ag-c.l4 { box-shadow: 0 0 8px color-mix(in srgb, var(--ag) 55%, transparent); }
