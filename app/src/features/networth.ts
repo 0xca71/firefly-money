@@ -1,5 +1,5 @@
 import { html, htmlList } from '../core/html';
-import { getAll } from '../core/api';
+import { getAll, PAGES } from '../core/api';
 import { App, el, fmtD, money0, monthOf, monthRange, S, todayIso } from '../core/base';
 import { buzz } from '../core/haptics';
 import { type Account, isAsset, isLiab, lists, normAccount } from '../core/lists';
@@ -139,7 +139,12 @@ document.addEventListener('pointerout', e => {
 addEventListener('scroll', () => { const c = document.querySelector<HTMLElement>('.nw.scrubbing'); if (c && !dragging) reset(c); }, { passive: true });
 // Open the month of a point on the Overview: the whole page as it was then
 function nwOpen(y: number, m: number) { S.all = false; S.y = y; S.m = m; if (location.hash.replace(/^#\/?/, '') === '') App.reload(); else location.hash = '#/'; }
-function nwRange(m: number) { LS.set('nwMonths', RANGES.some(r => r[0] === m) ? m : 12); route(); }
+function nwRange(m: number) {
+  LS.set('nwMonths', RANGES.some(r => r[0] === m) ? m : 12);
+  PAGES.clear(); S.pageHtml = '';
+  // Redraw only the Net worth tile; the whole page only if the tile isn't there (e.g. another page)
+  if (!S.dashEdit && App.nwRedraw) App.nwRedraw().then(ok => { if (!ok) route(); }); else route();
+}
 
 // The methods markup handlers call (see events.ts), added to App and to its type
 const methods = {
