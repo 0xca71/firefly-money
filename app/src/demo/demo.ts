@@ -2,11 +2,11 @@
    app's /api/v1 calls in the browser with made-up data from mockapi.ts, so the demo needs no server at all.
    It's signed in from the start (nothing checks the session) and adds a small "Demo" badge that links to the repo.
    When built with GOATCOUNTER set, it also counts visits to each page for GoatCounter (no cookies, no personal data). */
+import { DEMO_DASH } from './layout';
 import { NotFound, createMockApi } from './mockapi';
 
-// The demo opens in the Glass theme, with the Overview arranged like the README's screenshots (this runs before boot.js
-// reads the theme): a wide net worth over three years with Earned and Spent beside it, Where it went next to Cash flow,
-// then Money flow with Cash and Credit cards. The demo starts fresh on every page load, for every visitor
+// The demo opens in the Glass theme, with the Overview arranged by layout.ts (this runs before boot.js
+// reads the theme). The demo starts fresh on every page load, for every visitor
 // and device: whatever was saved before (theme, layout, Customize picks, What's new, edits' leftovers) is wiped first,
 // and the data is made up in memory, so a reload or a new visit always shows the same starting point.
 window.MONEY_DEMO = true;
@@ -17,12 +17,8 @@ try { navigator.serviceWorker?.getRegistrations().then(rs => rs.forEach(r => r.u
 try {
   {
     localStorage.setItem('moneyTheme', 'glass');
-    localStorage.setItem('money.nwMonths', '36');
-    localStorage.setItem('money.dash', JSON.stringify({
-      v: 3, units: 4, order: ['networth', 'earned', 'spent', 'spending', 'cashflow', 'flow', 'cash', 'cards'],
-      shown: ['cashflow', 'flow', 'cash', 'cards'], hidden: ['insights', 'attention', 'safe', 'bills', 'budgets', 'heatmap', 'loans'],
-      size: { networth: 'm', spending: 'm', cashflow: 'm', flow: 'm', cash: 's', cards: 's' },
-    }));
+    localStorage.setItem('money.nwMonths', '60');
+    localStorage.setItem('money.dash', JSON.stringify(DEMO_DASH));
   }
 } catch (e) { /* storage blocked */ }
 
