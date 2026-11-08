@@ -803,6 +803,19 @@
   .hm-cell.pad { background: none; }
   .hm-cell.fut { background: none; box-shadow: inset 0 0 0 1px var(--line); opacity: .6; }
   .hm-cell.today { box-shadow: inset 0 0 0 2px var(--accent); }
+  .cc .hm, .cc .hm-foot, .cc-key { max-width: 640px; margin-left: auto; margin-right: auto; }
+  .cc-cell { position: relative; }
+  .cc-cell.risk { color: var(--text); }
+  .cc-cell.tight { box-shadow: inset 0 0 0 2px var(--warn); }
+  .cc-cell.today.tight { box-shadow: inset 0 0 0 2px var(--warn), 0 0 0 2px var(--accent); }
+  .cc-dots { position: absolute; left: 0; right: 0; bottom: 3px; display: flex; justify-content: center; gap: 3px; line-height: 0; pointer-events: none; }
+  .cc b, .cc-key b { display: inline-block; width: 5px; height: 5px; border-radius: 50%; }
+  .cc b.in { background: var(--good); } .cc b.out { background: var(--spend); }
+  .cc-key { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+  .cc-key span { display: inline-flex; align-items: center; gap: 6px; }
+  .cc-key .sw { display: inline-block; width: 12px; height: 12px; border-radius: 4px; background: var(--faint); }
+  .cc-key .sw.risk { background: color-mix(in srgb, var(--spend) 70%, var(--faint)); }
+  .cc-key .sw.tight { box-shadow: inset 0 0 0 2px var(--warn); }
   .hm-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 14px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
   .sankey svg { width: 100%; height: auto; display: block; }
   .sk-table { margin-top: 10px; font-size: 13px; }
