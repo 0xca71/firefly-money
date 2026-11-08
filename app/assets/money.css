@@ -2335,3 +2335,22 @@ html[data-theme="frosted"] .opill { background: var(--ink); }
   .bpace .lim { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 2 4; }
   .bpace .ahead { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 2 5; stroke-linecap: round; opacity: .7; }
   .bhist text.now { fill: var(--text); font-weight: 600; }
+
+/* ---------- Reports: trend insights (features/trends.ts) ---------- */
+.trends { margin: 8px 0 20px; display: flex; flex-direction: column; gap: 20px; }
+.trends > .flow { margin-bottom: 0; }
+.tr-title { margin: 12px 0 0; font-size: 20px; }
+.tr-note { margin: -14px 0 0; }
+.tr-card { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.tr-card > h2, .tr-card > .lead { margin: 0; }
+.tr-verdict { margin: 0; font-size: 14px; color: var(--muted); }
+.tr-verdict .chip { margin: 0 6px 0 0; }
+.tr-h { margin: 6px 0 0; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.tr-vs { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tr-vs .num { font-size: 24px; font-weight: 700; }
+.tr-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 4px 0 0; }
+.tr-stats > div { min-width: 0; }
+.tr-stats dt { font-size: 12px; color: var(--muted); }
+.tr-stats dd { margin: 2px 0 0; font-size: 15px; font-weight: 600; }
+.tr-stats dd.up { color: var(--spend-t); } .tr-stats dd.down { color: var(--good-t); }
+.tr-card > svg { flex: 1 1 auto; min-height: 0; }

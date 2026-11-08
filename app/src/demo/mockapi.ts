@@ -129,6 +129,11 @@ export function createMockApi(now = new Date()) {
   const season = (cat: string, m: number) => cat === 'Shopping' ? [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.4, 2.2][m]
     : cat === 'Gas' ? (m >= 5 && m <= 7 ? 1.25 : 1) : cat === 'Dining' ? (m >= 5 && m <= 7 ? 1.15 : m === 11 ? 1.3 : 1)
     : cat === 'Utilities' ? [1.35, 1.3, 1.1, 1, 0.9, 0.95, 1.15, 1.25, 1, 0.9, 1, 1.3][m] : 1;
+  // Everyday spending has a rhythm: eating out and fun on weekends, more in the week after each payday, less at the month's end
+  const WEEKEND = new Set(['Dining', 'Entertainment', 'Shopping', 'Gifts']), EVERYDAY = new Set(['Dining', 'Entertainment', 'Shopping', 'Gifts', 'Personal care', 'Home', 'Pets']);
+  const rhythm = (cat: string, d: number, day: number) => !EVERYDAY.has(cat) ? 1 : (WEEKEND.has(cat) ? ([0, 6].includes(new Date(d).getUTCDay()) ? 1.7 : 0.8) : 1) * (day <= 7 || (day >= 15 && day <= 21) ? 1.2 : day >= 26 ? 0.7 : 1);
+  // Lifestyle creep: over the last year, the everyday things drift up while pay stays put (which the March raise just covers)
+  const creepUp = (cat: string, d: number) => EVERYDAY.has(cat) ? 1 + 0.4 * Math.max(0, 1 - ago(d)) : 1;
   const APY = (d: number) => { const a = ago(d); return a > 7 ? 1.0 : a > 5 ? 0.5 : a > 3.5 ? 1.2 : 4.2; };   // savings rate, %
   // The car: bought a little over four years ago, part cash from savings and a 6-year loan at 5.9%
   const CAR = utc(ty - 4, tm - 2, 12), LOAN = 25000, RATE = 0.059 / 12, PMT = Math.round(LOAN * RATE / (1 - (1 + RATE) ** -72) * 100) / 100;
@@ -166,9 +171,9 @@ export function createMockApi(now = new Date()) {
         continue;
       }
       // Early in the month the days so far get more of it, so this month's charts are never empty (on the 1st, about a week's worth)
-      const odds = per / 30 * (thisMonth ? Math.max(1, 10 / td) : season(cat, m));
+      const odds = per / 30 * (thisMonth ? Math.max(1, 10 / td) : season(cat, m)) * rhythm(cat, d, day);
       for (let n = Math.floor(odds) + (random() < odds % 1 ? 1 : 0); n > 0; n--) {
-        let mult = thisMonth ? 1 : mood[cat];
+        let mult = thisMonth ? 1 : mood[cat] * creepUp(cat, d);
         if (cat === 'Dining' && thisMonth) mult = 1.9;        // dining spike this month
         if (cat === 'Groceries' && thisMonth) mult = 0.45;    // groceries down
         const src = choice(['1', '3', '3', '4', ...(ago(d) < 4 ? ['9', '9'] : [])]);
