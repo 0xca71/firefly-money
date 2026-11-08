@@ -70,6 +70,7 @@ export const rollsOnly = (l: { pay: number, rolled: number, paidOff: number | nu
 // Loans whose payments come off a credit card are instalment plans unless the user says otherwise (kept on this device, like the rest of the what-if)
 export const isFixed = (l: Account, h: { last?: { from: string } | null } | undefined, over: Record<string, boolean>, L: { byId: Record<string, Account> }) =>
   l.id in over ? over[l.id] : !!(h && h.last && L.byId[h.last.from] && isCard(L.byId[h.last.from]));
+const shortMonth = (n: number) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + n); return (d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2); };
 const monthLabel = (n: number) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + n); return fmtD(d, { month: 'short', year: 'numeric' }); };
 VIEWS.loans = async (r, paint) => {
   const L = await lists();
@@ -82,7 +83,7 @@ VIEWS.loans = async (r, paint) => {
   // Interest paid so far on every loan (paid-off ones too), and what a little more each month would do
   const paid = L.own.filter(isLiab).reduce((t, a) => t + ((hist[a.id] || {}).interest || 0), 0);
   const plus = simulate(model, (plan.strategy === 'now' ? 0 : +plan.extra || 0) + 100, plan.strategy === 'now' ? 'snowball' : plan.strategy);
-  const insight = model.length ? debtPanel(debtInsight(paid, base, sim, plus, 100), sim.totals, base.totals, monthLabel, sim.months === null ? '' : monthLabel(sim.months)) : '';
+  const insight = model.length ? debtPanel(debtInsight(paid, base, sim, plus, 100), sim.totals, base.totals, shortMonth, sim.months === null ? '' : monthLabel(sim.months)) : '';
   const maxM = Math.min(120, Math.max(12, ...sim.loans.map(l => l.paidOff || 120)));
   const rows = htmlList(sim.loans.sort((a, b) => (a.paidOff ?? 9999) - (b.paidOff ?? 9999)).map(l => {
     const b0 = base.loans.find(x => x.id === l.id)!, h = hist[l.id] || {};
