@@ -34,8 +34,8 @@ const EXPORTS = [['transactions', 'Transactions'], ['accounts', 'Accounts'], ['b
 const TRIG = [['STORE_TRANSACTION', 'A transaction is added'], ['UPDATE_TRANSACTION', 'A transaction is changed'], ['DESTROY_TRANSACTION', 'A transaction is deleted']];
 VIEWS.settings = async (r, paint) => {
   const L = await lists(true);
-  const [about, rates, hooks, ingest, glanceKey] = await Promise.all([
-    api('/about').catch(() => ({})), getAll('/exchange-rates').catch(() => null), getAll('/webhooks').catch(() => null), ingestKey(), glanceKeyFor(),
+  const [about, rates, hooks, ingest] = await Promise.all([
+    api('/about').catch(() => ({})), getAll('/exchange-rates').catch(() => null), getAll('/webhooks').catch(() => null), ingestKey(),
     lensOn() ? learnRate() : null,
   ]);
   const cards = ingest ? await loadCards() : null;
@@ -101,7 +101,7 @@ VIEWS.settings = async (r, paint) => {
 
   // One category at a time: the list of them sits on the left on wide screens, and on phones it's the first screen,
   // where tapping one slides it in. The groups that have nothing to show (Apple Pay without the server key) drop out.
-  const groups: Record<string, unknown> = { months, look, sync, applepay: applePayHtml(ingest, cards, L.own.filter(a => isAsset(a) || isLiab(a))), widgets: widgetsHtml(glanceKey), currencies: cur, data, about: aboutHtml };
+  const groups: Record<string, unknown> = { months, look, sync, applepay: applePayHtml(ingest, cards, L.own.filter(a => isAsset(a) || isLiab(a))), currencies: cur, data, about: aboutHtml };
   const cats = SET_SECTIONS.filter(([id]) => groups[id] && String(groups[id]));
   const wide = innerWidth >= SET_WIDE, at = cats.find(c => c[0] === r.q.s) || (wide ? cats[0] : null);
   const nav = htmlList(cats.map(([id, t]) => html`<a href="#/settings?s=${id}" class="${at && at[0] === id ? 'on' : ''}"${at && at[0] === id ? raw(' aria-current="page"') : ''}>${t}</a>`));
@@ -113,7 +113,7 @@ VIEWS.settings = async (r, paint) => {
 /* ---------- The categories, with what's in each (the phone's list shows it under the name) ---------- */
 const SET_WIDE = 1100;          // the width at which the category list sits beside the settings (money.css matches it)
 export const SET_SECTIONS: [string, string, string][] = [['months', 'Months & budgets', 'Month start, budget warning'], ['look', 'Appearance', 'Theme, colors, logos, haptics'],
-  ['sync', 'Sync', 'Settings on all your devices'], ['applepay', 'Apple Pay', 'Add expenses as you pay'], ['widgets', 'Widgets', 'Safe to spend on your Home Screen'], ['currencies', 'Currencies', 'Main currency, exchange rates'],
+  ['sync', 'Sync', 'Settings on all your devices'], ['applepay', 'Apple Pay', 'Add expenses as you pay'], ['currencies', 'Currencies', 'Main currency, exchange rates'],
   ['data', 'Data', 'Export, webhooks, clean up'], ['about', 'About', 'Versions and what’s new']];
 /* ---------- Customize colors: your own background, accent and (for the glass themes) light, tint and blur ---------- */
 const curTheme = () => document.documentElement.getAttribute('data-theme') || 'auto';
@@ -280,25 +280,6 @@ async function ingestKey(): Promise<string | null> {
     const r = await fetch('/api/money-ingest', { cache: 'no-store', headers: { 'X-Money': '1' } });
     return ingestKeyMemo = r.ok ? (await r.json()).key || null : null;
   } catch (e) { return null; }
-}
-// The read-only key for the iPhone widget (app/glance.js): the address and key a Scriptable widget or Shortcut sends.
-// Null when this server doesn't have it. Asked for once, like the Apple Pay key.
-let glanceKeyMemo: string | null = null;
-async function glanceKeyFor(): Promise<string | null> {
-  if (glanceKeyMemo) return glanceKeyMemo;
-  try {
-    const r = await fetch('/api/money-glance?key=1', { cache: 'no-store', headers: { 'X-Money': '1' } });
-    return glanceKeyMemo = r.ok ? (await r.json()).key || null : null;
-  } catch (e) { return null; }
-}
-function widgetsHtml(key: string | null) {
-  if (!key) return '';
-  const url = location.origin + '/api/money-glance';
-  return group('widgets', 'Widgets', html`
-    ${row('Address', html`<code class="set-code">${url}</code>`, html`<button class="link" type="button" data-onclick="App.copyText('${url}', 'Address copied')">Copy</button>`)}
-    ${row('Key', 'Only lets a widget read two numbers', html`<button class="link" type="button" data-onclick="App.copyText('${key}', 'Key copied')">Copy key</button>`)}
-    ${more('widgets-how', 'How it works', '', html`<p class="sub-s">A Scriptable widget or an iPhone Shortcut asks this address, with the key, for how much is safe to spend today and when the next bill is due. The key can’t add or change anything. Money asks Firefly each time and keeps nothing, so if Firefly is down the widget says so instead of showing old numbers. Your iPhone must be able to reach this address, so away from home it needs a VPN (like Tailscale) or a reverse proxy. Changing the dashboard password or Firefly token gives a new key.</p>`)}`,
-    html`Safe to spend and the next bill, without opening the app. <a class="link" href="https://github.com/Muffy0906/firefly-money/blob/main/docs/widgets.md" target="_blank" rel="noopener">Setup guide ↗</a>`);
 }
 // Which account each Wallet card goes to, when its name doesn't say (app/ingest.js reads the same preference).
 // unmatched: cards the server couldn't place, so you can pick their account here.

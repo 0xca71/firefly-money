@@ -25,7 +25,6 @@ ENV NGINX_ENVSUBST_FILTER="^(FIREFLY_URL|FIREFLY_TOKEN|MONEY_VERSION|LISTEN_PORT
 COPY app/nginx.conf /etc/nginx/nginx.conf
 COPY app/session.js /etc/nginx/money/session.js
 COPY app/ingest.js /etc/nginx/money/ingest.js
-COPY app/glance.js /etc/nginx/money/glance.js
 COPY app/default.conf.template /etc/nginx/templates/default.conf.template
 COPY app/index.html /etc/nginx/templates/index.html.template
 # Stylesheet as it is, and the bundled scripts from the build stage, served from /assets/
