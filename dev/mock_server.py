@@ -376,7 +376,7 @@ class H(BaseHTTPRequestHandler):
         if 'money_session=demo' not in (self.headers.get('Cookie') or ''):
             self.send_response(401); self.send_header('X-Dash-Auth', 'required'); self.end_headers(); return
         if not self.headers.get('X-Money'): self.send_response(403); self.end_headers(); return
-        if u.path == '/api/money-ingest':      # stands in for app/ingest.js: the key Settings → Apple Pay shows
+        if u.path in ('/api/money-ingest', '/api/money-glance'):      # stands in for app/ingest.js: the key Settings → Apple Pay shows
             self.send_response(200); self.send_header('Content-Type', 'application/json'); self.end_headers(); self.wfile.write(b'{"key":"demo-key"}'); return
         body = {}
         if method in ('POST', 'PUT'):
