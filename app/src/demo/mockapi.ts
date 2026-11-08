@@ -57,6 +57,8 @@ export function createMockApi(now = new Date()) {
   acc(144, 'Island Air', 'expense'); acc(145, 'Seaside Resort', 'expense');   // a trip every summer, paid from savings
   acc(146, 'Riverside Motors', 'expense'); acc(147, 'Riverside Auto Finance', 'expense');   // the car (and the loan's interest)
   acc(148, 'Savings interest', 'revenue');
+  acc(152, 'Dental Care Associates', 'expense'); acc(153, 'Sunrise Bakery', 'expense');   // first seen this month (Unusual)
+  acc(154, 'Everyday Bank', 'expense'); acc(155, 'Rewards Card issuer', 'expense');   // the fees below
   acc(149, 'Market gains', 'revenue'); acc(150, 'Market losses', 'expense'); acc(151, 'Design client', 'revenue');   // the brokerage's ups and downs, and some freelance work
   const PAYEES: [string, string, string | null, number, number][] = [  // name, category, budget, typical amount, per-month count
     ['Green Grocer', 'Groceries', 'Food', 64, 5], ['Corner Market', 'Groceries', 'Food', 48, 4], ['SQ *BEAN THERE COFFEE', 'Dining', 'Food', 7, 6],
@@ -67,10 +69,11 @@ export function createMockApi(now = new Date()) {
     ['Pizza Place', 'Dining', 'Food', 32, 2], ['Home Goods', 'Shopping', 'Shopping', 140, 0.6],
     ['Cinema Club', 'Entertainment', null, 19, 1], ['Ticket Hub', 'Entertainment', null, 85, 0.4], ['Pet Supply Co', 'Pets', null, 36, 0.8],
     ['Hardware Hub', 'Home', null, 52, 0.7], ['Salon & Spa', 'Personal care', null, 46, 0.6], ['Gift Shop', 'Gifts', null, 48, 0.4], ['Ride Share', 'Transport', 'Transport', 19, 1.5],
+    ['Photo Vault', 'Subscriptions', null, 9.99, 1],     // stopped charging a while ago (the subscription audit flags it)
   ];
   const PID: Record<string, string> = {};
   PAYEES.forEach((p, i) => { PID[p[0]] = String(100 + i); acc(100 + i, p[0], 'expense'); });
-  const CATS = [...[...new Set([...PAYEES.map(p => p[1]), 'Salary', 'Travel', 'Rent'])].sort(), 'Hobbies', 'Car', 'Interest'];   // Hobbies: unused (for Clean up)
+  const CATS = [...[...new Set([...PAYEES.map(p => p[1]), 'Salary', 'Travel', 'Rent'])].sort(), 'Hobbies', 'Car', 'Interest', 'Fees'];   // Hobbies: unused (for Clean up)
   const CAT_ID = Object.fromEntries(CATS.map((c, i) => [c, String(i + 1)]));
   const BUDGETS: Record<string, string> = { Food: '1', Fun: '2', Transport: '3', Shopping: '4' };
   const ACC_BY = Object.fromEntries(ACC.map(a => [a.id, a]));
@@ -129,6 +132,11 @@ export function createMockApi(now = new Date()) {
   const season = (cat: string, m: number) => cat === 'Shopping' ? [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.4, 2.2][m]
     : cat === 'Gas' ? (m >= 5 && m <= 7 ? 1.25 : 1) : cat === 'Dining' ? (m >= 5 && m <= 7 ? 1.15 : m === 11 ? 1.3 : 1)
     : cat === 'Utilities' ? [1.35, 1.3, 1.1, 1, 0.9, 0.95, 1.15, 1.25, 1, 0.9, 1, 1.3][m] : 1;
+  // Everyday spending has a rhythm: eating out and fun on weekends, more in the week after each payday, less at the month's end
+  const WEEKEND = new Set(['Dining', 'Entertainment', 'Shopping', 'Gifts']), EVERYDAY = new Set(['Dining', 'Entertainment', 'Shopping', 'Gifts', 'Personal care', 'Home', 'Pets']);
+  const rhythm = (cat: string, d: number, day: number) => !EVERYDAY.has(cat) ? 1 : (WEEKEND.has(cat) ? ([0, 6].includes(new Date(d).getUTCDay()) ? 1.7 : 0.8) : 1) * (day <= 7 || (day >= 15 && day <= 21) ? 1.2 : day >= 26 ? 0.7 : 1);
+  // Lifestyle creep: over the last year, the everyday things drift up while pay stays put (which the March raise just covers)
+  const creepUp = (cat: string, d: number) => EVERYDAY.has(cat) ? 1 + 0.4 * Math.max(0, 1 - ago(d)) : 1;
   const APY = (d: number) => { const a = ago(d); return a > 7 ? 1.0 : a > 5 ? 0.5 : a > 3.5 ? 1.2 : 4.2; };   // savings rate, %
   // The car: bought a little over four years ago, part cash from savings and a 6-year loan at 5.9%
   const CAR = utc(ty - 4, tm - 2, 12), LOAN = 25000, RATE = 0.059 / 12, PMT = Math.round(LOAN * RATE / (1 - (1 + RATE) ** -72) * 100) / 100;
@@ -144,7 +152,7 @@ export function createMockApi(now = new Date()) {
     const [y, m, day] = ymd(d), thisMonth = y === ty && m === tm, p = prices(d), last = d === utc(y, m + 1, 0);
     if (day === 1) {
       owed['3'] = -BAL['3']; owed['4'] = -BAL['4']; owed['9'] = -BAL['9'];
-      for (const c of CATS) mood[c] = uniform(0.85, 1.2);     // some months are just pricier than others
+      for (const c of CATS) mood[c] = c === 'Fees' ? 1 : uniform(0.85, 1.2);     // some months are just pricier than others
     }
     if (day === 1 || day === 15) addTx(d, 'deposit', pay(d), 'ACME CORP PAYROLL', '6', '1', 'Salary');
     if (m === 2 && day === 15) addTx(d, 'deposit', Math.round(pay(d) * 24 * uniform(0.04, 0.09) / 10) * 10, 'ACME CORP BONUS', '6', '1', 'Salary');
@@ -155,6 +163,7 @@ export function createMockApi(now = new Date()) {
     }
     for (const [i, [name, cat, bud, amt, per]] of PAYEES.entries()) {
       if (ago(d) > (STARTS[name] ?? 99)) continue;
+      if (name === 'Photo Vault' && (TODAY - d) / DAY < 75) continue;
       if (cat === 'Subscriptions' || cat === 'Utilities') {       // these come on the same day every month
         if (day === 4 + i) {
           const sub = SUBS[name];
@@ -166,9 +175,9 @@ export function createMockApi(now = new Date()) {
         continue;
       }
       // Early in the month the days so far get more of it, so this month's charts are never empty (on the 1st, about a week's worth)
-      const odds = per / 30 * (thisMonth ? Math.max(1, 10 / td) : season(cat, m));
+      const odds = per / 30 * (thisMonth ? Math.max(1, 10 / td) : season(cat, m)) * rhythm(cat, d, day);
       for (let n = Math.floor(odds) + (random() < odds % 1 ? 1 : 0); n > 0; n--) {
-        let mult = thisMonth ? 1 : mood[cat];
+        let mult = thisMonth ? 1 : mood[cat] * creepUp(cat, d);
         if (cat === 'Dining' && thisMonth) mult = 1.9;        // dining spike this month
         if (cat === 'Groceries' && thisMonth) mult = 0.45;    // groceries down
         const src = choice(['1', '3', '3', '4', ...(ago(d) < 4 ? ['9', '9'] : [])]);
@@ -181,6 +190,11 @@ export function createMockApi(now = new Date()) {
       addTx(d - 30 * DAY, 'withdrawal', r2(uniform(900, 1400) * p), 'Island Air', '2', '144', 'Travel');
       addTx(d, 'withdrawal', r2(uniform(1800, 3000) * p), 'Seaside Resort', '2', '145', 'Travel');
     }
+    // Fees: an ATM fee now and then, the Rewards Card's annual fee, and a foreign transaction fee on each summer trip
+    if (day === 21 && m % 3 === 0) addTx(d, 'withdrawal', 3.5, 'ATM fee', '1', '154', 'Fees');
+    if (day === 10 && m === 1) addTx(d, 'withdrawal', 95, 'Rewards Card annual fee', '3', '155', 'Fees');
+    if (m === 6 && day === 9 + (y % 4) * 4 && y < ty) addTx(d, 'withdrawal', 48.6, 'Foreign transaction fee', '3', '155', 'Fees');
+    if ((TODAY - d) / DAY === 100) addTx(d, 'withdrawal', 35, 'Late payment fee', '4', '155', 'Fees');
     if (d === CAR) {
       addTx(d, 'withdrawal', 6000, 'Riverside Motors (down payment)', '2', '146', 'Car');
       addTx(d, 'withdrawal', LOAN, 'Riverside Motors', '5', '146', 'Car');
@@ -203,6 +217,12 @@ export function createMockApi(now = new Date()) {
     if (last && d < TODAY) addTx(d, 'deposit', r2(BAL['2'] * APY(d) / 1200), 'Interest', '148', '2', 'Interest');
   }
   addTx(TODAY - Math.min(9, td - 1) * DAY, 'withdrawal', 312.40, 'Airline tickets', '3', PID['Online Store'], 'Travel');
+  // For Unusual: a lunch charged twice, a pharmacy bill far above the usual, a large first-time merchant, and a new bakery
+  const back = (n: number) => TODAY - Math.min(n, td - 1) * DAY;
+  addTx(back(2), 'withdrawal', 18.5, 'Burrito Bar', '3', PID['Burrito Bar'], 'Dining', 'Food'); addTx(back(2), 'withdrawal', 18.5, 'Burrito Bar', '3', PID['Burrito Bar'], 'Dining', 'Food');
+  addTx(back(6), 'withdrawal', 189, 'Pharmacy Plus', '1', PID['Pharmacy Plus'], 'Health');
+  addTx(back(3), 'withdrawal', 420, 'Dental Care Associates', '1', '152', 'Health');
+  addTx(back(1), 'withdrawal', 9.75, 'Sunrise Bakery', '3', '153', 'Dining', 'Food');
   // A refund of part of them, linked to them the way Money makes one (Reports and Budgets take it off spending)
   const LINKS: { id: string, type: string, attributes: { link_type_id: string, inward_id: string, outward_id: string } }[] = [];
   addTx(TODAY - Math.min(3, td - 1) * DAY, 'deposit', 80, 'Refund: Airline tickets', '142', '3', 'Travel');

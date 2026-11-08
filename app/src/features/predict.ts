@@ -78,13 +78,13 @@ export function anomaly(history: number[], value: number, opts: { min?: number, 
    and fixed items are exact. Many runs give the p10, p50 and p90 of the balance for each day. Only what is
    scheduled is simulated: day-to-day spending isn't, and the forecast doesn't pretend it is. */
 export interface BandEvent { day: number; amount: number; kind: string }
-export interface Bands { p10: number[]; p50: number[]; p90: number[]; minP10: number; pBelowZero: number; runs: number }
+export interface Bands { p10: number[]; p50: number[]; p90: number[]; pNeg: number[]; minP10: number; pBelowZero: number; runs: number }
 const SIGMA: Record<string, number> = { Bill: .08, Recurring: .08, Projected: .15, Card: .25, Loan: .03 };
 export function cashBands(start: number, days: number, events: BandEvent[], opts: { runs?: number, seed?: number } = {}): Bands | null {
   const ev = events.filter(e => e.day >= 0 && e.day <= days && e.amount);
   if (ev.length < 3 || days < 1) return null;
   const runs = opts.runs ?? 300, r = rng(opts.seed ?? (ev.length * 7919 + Math.round(start) + days)), n = days + 1;
-  const bal = new Float64Array(runs * n), mins = new Float64Array(runs);
+  const bal = new Float64Array(runs * n), neg = new Float64Array(n), mins = new Float64Array(runs);
   const byDay: BandEvent[][] = Array.from({ length: n }, () => []);
   ev.forEach(e => byDay[Math.min(days, e.day)].push(e));
   let below = 0;
@@ -98,7 +98,7 @@ export function cashBands(start: number, days: number, events: BandEvent[], opts
         else if (e.kind === 'Income' && r() < .2) a = 0;
         b += a;
       }
-      bal[k * n + d] = b; if (b < mn) mn = b;
+      bal[k * n + d] = b; if (b < mn) mn = b; if (b < 0) neg[d]++;
     }
     mins[k] = mn; if (mn < 0) below++;
   }
@@ -107,7 +107,7 @@ export function cashBands(start: number, days: number, events: BandEvent[], opts
     for (let k = 0; k < runs; k++) col[k] = bal[k * n + d];
     p10.push(quantile(col, .1)); p50.push(quantile(col, .5)); p90.push(quantile(col, .9));
   }
-  return { p10, p50, p90, minP10: quantile(Array.from(mins), .1), pBelowZero: below / runs, runs };
+  return { p10, p50, p90, pNeg: Array.from(neg, x => x / runs), minP10: quantile(Array.from(mins), .1), pBelowZero: below / runs, runs };
 }
 
 /* ---------- Backtest ----------

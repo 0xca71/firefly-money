@@ -11,7 +11,7 @@ import { labelHtml, monthLabel, morph, morphOk, sameLayout, slideLabel, snapshot
 // The placeholder shows the shape of the page that's coming (KPI row, chart, list rows, table), so nothing jumps when it arrives
 const SKELETONS: Record<string, string> = {
   '': 'dash', reports: 'dash', recap: 'dash', year: 'dash', timeline: 'dash', forecast: 'dash',
-  transactions: 'feed', account: 'feed', review: 'feed', inbox: 'feed', map: 'chart',
+  transactions: 'feed', account: 'feed', review: 'feed', unusual: 'cards', inbox: 'feed', map: 'chart',
   budgets: 'table', categories: 'table', bills: 'table', accounts: 'table', rules: 'table', recurring: 'table', loans: 'table', piggy: 'cards',
 };
 function skeleton() {
@@ -320,7 +320,7 @@ async function recalcAll(btn?: HTMLButtonElement) {
 const mayLoadAhead = () => document.visibilityState === 'visible' && navigator.onLine && !S.refreshing &&
   !(navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
 // Waits for a quiet moment: no requests going, and (where the browser has it) an idle frame. False: give up for now.
-async function quiet(stillWanted: () => boolean) {
+export async function quiet(stillWanted: () => boolean) {
   for (let i = 0; netBusy() && i < 50; i++) await sleep(200);
   if (netBusy() || !stillWanted() || !mayLoadAhead()) return false;
   const ric = window.requestIdleCallback;

@@ -7,14 +7,17 @@ import { head, monthNav } from '../core/dom';
 import { normGroup, rankCats, txRows } from '../core/feed';
 import { addDays, budgetAlert, daysBetween } from '../core/helpers';
 import { type Account, isAsset, isCard, isLiab, lists } from '../core/lists';
-import { VIEWS } from '../core/router';
+import { VIEWS, quiet } from '../core/router';
+import { type Unusual, loadUnusual } from '../features/unusual';
 import { gettingStarted } from '../features/started';
 import { DASH_NAMES, tileOn, tileOpt } from '../features/dashboard';
 import { activityPanel, activityRange, barChart, paceChart, ring, shareChart, sparkBars, twoLines } from '../features/charts';
 import { type NetWorthPoint, nwLine, nwSeg, nwWords } from '../features/networth';
 import { bindSwipe } from '../features/phone';
 import { drafts } from '../features/txform';
-import { billAmount, billDueDates, billsFrom } from './bills';
+import { billAmount, billDueDates, billsFrom, subCharges } from './bills';
+import { auditSubs } from '../features/subaudit';
+import { subAuditTile } from '../features/subauditview';
 import { fcHorizon } from './forecast';
 import { type BudgetLimit, budgetLimits, budgetPace } from './budgets';
 import { loanHistory } from './loans';
@@ -77,7 +80,9 @@ VIEWS[''] = async (r, paint) => {
     monthOnly || !on('pace') ? none : getAll('/transactions', { start: monthRange(vy, vm - 3).start, end: prev.end, type: 'withdrawal' }).catch(() => []),     // three months back: the pace learns from all of them
     on('trends') ? Promise.all(months.map(mo => insight('/insight/expense/category', p(mo), monthsRs).catch(() => []))) : none,
     // The activity grid ignores the month at the top: it covers its own range up to today (from Firefly only, nothing when it is down)
-    on('activity') ? getAll('/transactions', { start: actRange === 'all' ? ALL_START : activityRange(actRange, t0, '').start, end: t0, type: 'withdrawal' }).catch(() => null) : none]);
+    on('activity') ? getAll('/transactions', { start: actRange === 'all' ? ALL_START : activityRange(actRange, t0, '').start, end: t0, type: 'withdrawal' }).catch(() => null) : none,
+    // The subscription audit works from the past year's charges (from Firefly only, a note when it can't be reached)
+    on('subs') ? subCharges().then(cs => auditSubs(cs, t0)).catch(() => null) : none]);
   slowP.catch(() => {});
   if (r.at) { await Promise.all([coreP, slowP]).catch(() => {}); return; }     // loading a month ahead: the data is all it needs
   const [summary, catNow, catPrev, noCatNow, noCatPrev, trend, recent, budgets, limits, bills, uncat, allTot, prevSoFar] = await coreP;
@@ -94,8 +99,10 @@ VIEWS[''] = async (r, paint) => {
   if (un || unP) cats.set('Uncategorized', { name: 'Uncategorized', amt: un, prev: unP });
   rankCats([...cats.values()].map(c => ({ name: c.name, v: c.amt })));     // the feed's category colours follow the donut's
 
+  let unusual: Unusual | null = null, lastSlow: ApiData[] | null = null;     // odd charges: found after the page is up (below)
   const build = (slow: ApiData[] | null) => {
-    const [prog, safe, insights, sparks, dayTx, incomeSrc, payNow, payPrev, piggies, nw, prevTx, monthCats, actTx] = slow || [];
+    lastSlow = slow;
+    const [prog, safe, insights, sparks, dayTx, incomeSrc, payNow, payPrev, piggies, nw, prevTx, monthCats, actTx, subAudit] = slow || [];
     const wait = (k: string) => slow ? null : skeletonPanel(k);
     // A card with nothing to show for this month says so rather than vanishing, so the cards around it stay put
     const idle = (k: string, why = future ? 'Fills in once this month starts.' : 'Shows for one month at a time: pick a month at the top.') => quietPanel(k, why);
@@ -105,7 +112,7 @@ VIEWS[''] = async (r, paint) => {
       ['earned', earnedTile(last.income, last.spend)],
       ['insights', monthOnly ? idle('insights') : wait('insights') ?? (insights || quietPanel('insights', 'Nothing unusual this month.'))],
       ['safe', future ? idle('safe') : wait('safe') ?? (safe || idle('safe'))],
-      ['attention', attentionPanel({ uncat, uncatQ, bills: arr(bills), budgets: arr(budgets), limits, future })],
+      ['attention', attentionPanel({ uncat, uncatQ, bills: arr(bills), budgets: arr(budgets), limits, future, unusual })],
       ['spending', spendingPanel([...cats.values()], future, all, tileOpt('spending', 'count'), tileOpt('spending', 'compare'), noneHref('category', cur))],
       ['budgets', budgetsMini(arr(budgets), limits, all, tileOpt('budgets', 'unset'), all || future ? null : cur)],
       ['cash', balancesPanel('Cash & savings', 'Bank account balances', cashShown, a => a.balance, false, tileOpt('cash', 'sparks') ? sparks : {})],
@@ -121,6 +128,7 @@ VIEWS[''] = async (r, paint) => {
       ['activity', wait('activity') ?? activityTile(actTx, actRange, t0)],
       ['pace', monthOnly ? idle('pace') : wait('pace') ?? pacePanel(cur, prev, arr(dayTx).map(normGroup), arr(prevTx).map(normGroup))],
       ['savings', html`<section class="panel chart">${savingsRate(trend)}</section>`],
+      ['subs', !tileOn('subs') ? 'off' : wait('subs') ?? subAuditTile(subAudit && !Array.isArray(subAudit) ? subAudit : null)],
       ['trends', wait('trends') ?? trendsPanel(months.map(mo => mo.short), monthCats || [], months)],
     ];
     W.forEach(w => { if (w[1] && !tileOn(w[0])) w[1] = 'off'; });     // off: not drawn, only offered under Add cards
@@ -129,12 +137,22 @@ VIEWS[''] = async (r, paint) => {
   // Saved data (or a fast server): everything is here already, draw once. Another month waits longer, so its cards
   // glide from last month's in one go rather than dropping to placeholders and popping in (last month stays up, dimmed).
   const quick = await Promise.race([slowP, sleep(paint.month ? 2500 : 60).then(() => null)]);
-  if (quick || !paint.live) return paint(build(quick || await slowP));
+  // Six months of spending for the odd-charges row: asked for only once the page is drawn and the network is quiet,
+  // and only for the current month. Firefly not answering means no row (nothing is kept to show instead).
+  const tok0 = S.tok, watch = () => {
+    if (all || r.at || !paint.live || vy !== ny || vm !== nm || !tileOn('attention')) return;
+    quiet(() => tok0 === S.tok).then(ok => ok ? loadUnusual() : null).then(u => {
+      if (!u || tok0 !== S.tok || !u.flags.length) return;
+      unusual = u; fillIn(build(lastSlow));
+    }).catch(() => {});
+  };
+  if (quick || !paint.live) { paint(build(quick || await slowP)); watch(); return; }
   const first = build(null), tok = S.tok;
   paint(first);
   const full = build(await slowP);
   if (tok !== S.tok) return;
   if (S.pageHtml !== first || !fillIn(full)) paint(full);
+  watch();
 };
 // Replace only the placeholders and the cards that changed, so the numbers already on screen don't redraw.
 function fillIn(markup: Html) {
@@ -162,7 +180,7 @@ function skeletonPanel(k: string) {
   const h = ({ insights: 120, safe: 70, loans: 90, heatmap: 230, activity: 155, flow: 240, payees: 200, networth: 230, pace: 230, trends: 220 } as Record<string, number>)[k] || 120;
   return html`<section class="panel" aria-busy="true"><h2>${DASH_NAMES[k] || ''}</h2><p class="lead">&nbsp;</p><div class="sk" style="height:${h}px"></div></section>`;
 }
-function attentionPanel({ uncat, bills, budgets, limits, future }: { uncat: ApiData, uncatQ: string, bills: ApiData[], budgets: ApiData[], limits: Record<string, BudgetLimit>, future: boolean }) {
+function attentionPanel({ uncat, bills, budgets, limits, future, unusual }: { uncat: ApiData, uncatQ: string, bills: ApiData[], budgets: ApiData[], limits: Record<string, BudgetLimit>, future: boolean, unusual?: Unusual | null }) {
   const items: Html[] = [];
   const n = uncat && uncat.meta && uncat.meta.pagination ? uncat.meta.pagination.total : 0;
   const [ny, nm] = nowMonth(), lastMonth = monthRange(ny, nm - 1), cur = monthRange(ny, nm);
@@ -170,6 +188,11 @@ function attentionPanel({ uncat, bills, budgets, limits, future }: { uncat: ApiD
   const nd = drafts().length;
   if (nd) items.push(html`<a class="row" href="#/transactions"><span class="name">📝 ${nd} draft${nd === 1 ? '' : 's'} to finish</span><span class="neutral">Open →</span></a>`);
   if (n) items.push(html`<a class="row" href="#/inbox"><span class="name">🏷 ${n} expense${n === 1 ? '' : 's'} without a category</span><span class="neutral">Categorize →</span></a>`);
+  if (unusual && unusual.flags.length) {
+    const fl = unusual.flags, one = fl.length === 1 ? fl[0] : null;
+    items.push(one ? html`<a class="row" href="#/unusual" data-onclick="event.preventDefault();App.editTx('${one.charge.id}')"><span class="name">🔍 ${one.charge.payee}: ${one.why}</span><span class="neutral">Look →</span></a>`
+      : html`<a class="row" href="#/unusual"><span class="name">🔍 ${fl.length} unusual charges</span><span class="neutral">Review →</span></a>`);
+  }
   const t = todayIso(), week = isoDate(new Date(Date.now() + 7 * 864e5));
   bills.filter(b => b.attributes.active !== false).forEach(b => {
     const d = billDueDates(b.attributes, { end: week })[0];
