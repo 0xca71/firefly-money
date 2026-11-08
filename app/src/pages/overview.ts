@@ -1,6 +1,7 @@
 import { type Html, html, htmlList } from '../core/html';
 import { api, getAll, sleep } from '../core/api';
 import { paceForecast } from '../features/projections';
+import { monthEnd } from '../features/predict';
 import { ALL_START, App, S, absDiff, arr, el, fmtDate, fmtDay, isoDate, money, money0, monthRange, noneHref, nowMonth, num, pad, sumDiff, todayIso, txHref, type ApiData, type Period, viewPeriod, viewYM } from '../core/base';
 import { head, monthNav } from '../core/dom';
 import { normGroup, rankCats, txRows } from '../core/feed';
@@ -73,7 +74,7 @@ VIEWS[''] = async (r, paint) => {
     on('flow', 'income') ? insight('/insight/income/revenue', p(cur), rsFor(cur)).catch(() => []) : none,
     on('payees') ? insight('/insight/expense/expense', p(cur), rsFor(cur)).catch(() => []) : none, all || !on('payees') ? none : insight('/insight/expense/expense', p(prev), rsFor(prev)).catch(() => []),
     on('goals') ? getAll('/piggy-banks').then(ps => ps.map(normPiggy)).catch(() => []) : none, on('networth') ? App.netWorthHistory().catch(() => null) : null,
-    monthOnly || !on('pace') ? none : getAll('/transactions', { start: prev.start, end: prev.end, type: 'withdrawal' }).catch(() => []),
+    monthOnly || !on('pace') ? none : getAll('/transactions', { start: monthRange(vy, vm - 3).start, end: prev.end, type: 'withdrawal' }).catch(() => []),     // three months back: the pace learns from all of them
     on('trends') ? Promise.all(months.map(mo => insight('/insight/expense/category', p(mo), monthsRs).catch(() => []))) : none,
     // The activity grid ignores the month at the top: it covers its own range up to today (from Firefly only, nothing when it is down)
     on('activity') ? getAll('/transactions', { start: actRange === 'all' ? ALL_START : activityRange(actRange, t0, '').start, end: t0, type: 'withdrawal' }).catch(() => null) : none]);
@@ -260,11 +261,14 @@ function pacePanel(cur: Period, prev: Period, now: { date: string, total: number
   const daysIn = (x: Period) => new Date(x.y!, x.m! + 1, 0).getDate();
   const byDay = (gs: { date: string, total: number }[], n: number) => { const v = Array(n).fill(0); gs.forEach(g => { const d = +String(g.date).slice(8, 10); if (d >= 1 && d <= n) v[d - 1] += g.total; }); return v; };
   const dim = daysIn(cur), t = todayIso(), sofar = cur.start.slice(0, 7) === t.slice(0, 7) ? +t.slice(8, 10) : t < cur.start ? 0 : dim;
-  const a = byDay(now, dim).slice(0, sofar), b = byDay(before, daysIn(prev));
+  const inMonth = (m: Period) => before.filter(g => String(g.date).slice(0, 7) === m.start.slice(0, 7)), older = [2, 3].map(k => monthRange(cur.y!, cur.m! - k));
+  const a = byDay(now, dim).slice(0, sofar), b = byDay(inMonth(prev), daysIn(prev)), past = [b, ...older.map(m => byDay(inMonth(m), daysIn(m)))];
   const spent = a.reduce((s, v) => s + v, 0), then = b.slice(0, sofar).reduce((s, v) => s + v, 0), d = spent - then;
-  const ahead = paceForecast(spent, sofar, dim, b);
+  const range = monthEnd(spent, sofar, dim, past), ahead = range ? range.mid : paceForecast(spent, sofar, dim, b);
+  // A likely range once there are 3 months to judge by; before that it is an early guess
+  const spread = range && !range.low && range.hi - range.lo >= 1 ? html` <span class="sub-s" title="Based on how this method did on your last ${range.months} months">(likely ${money0(range.lo)}–${money0(range.hi)})</span>` : range && range.low ? html` <span class="sub-s" title="Only ${range.months} past month${range.months === 1 ? '' : 's'} to go on">(early guess)</span>` : '';
   const line = !sofar ? 'This month hasn’t started yet.' : !then ? html`<strong class="num">${money0(spent)}</strong> spent so far${ahead ? html` · heading for about <strong class="num">${money0(ahead)}</strong>` : ''}` :
-    html`<strong class="num">${money0(spent)}</strong> by day ${sofar}: <span class="${d > 0 ? 'up' : 'down'}">${money0(Math.abs(d))} ${d > 0 ? 'more' : 'less'}</span> than by this day last month${ahead ? html` · heading for about <strong class="num">${money0(ahead)}</strong>` : ''}`;
+    html`<strong class="num">${money0(spent)}</strong> by day ${sofar}: <span class="${d > 0 ? 'up' : 'down'}">${money0(Math.abs(d))} ${d > 0 ? 'more' : 'less'}</span> than by this day last month${ahead ? html` · heading for about <strong class="num">${money0(ahead)}</strong>${spread}` : ''}`;
   return html`<section class="panel chart"><h2>Spending pace</h2><p class="lead">${line}</p>${sofar ? paceChart(a, b, dim, [cur.short, prev.short], d => { const iso = cur.start.slice(0, 8) + pad(d); return txHref({ type: 'withdrawal' }, { start: iso, end: iso }); }) : ''}</section>`;
 }
 // Savings rate: the share of each month's income you kept
