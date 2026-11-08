@@ -37,6 +37,15 @@ describe('Overview activity grid', () => {
     expect(h).toContain('--agm:14px');
     expect(activityCell(5)).toBe(activityCell(53));
   });
+  it('labels carry the year on the first label and each January, and never crowd each other', () => {
+    const h = String(activityPanel(buys, '2024-11-10', '2026-11-07', { range: 'all' }));
+    const m = h.match(/<div class="ag-months"[^>]*>(.*?)<\/div>/)![1];
+    const labels = [...m.matchAll(/grid-column:(\d+) \/ span 3">([^<]+)</g)].map(x => [+x[1], x[2]] as const);
+    expect(labels[0][1]).toMatch(/\d{4}$/);
+    labels.forEach(([, t], i) => { if (i && t.startsWith('Jan')) expect(t).toMatch(/2025|2026/); else if (i) expect(t).not.toMatch(/\d/); });
+    labels.slice(1).forEach(([c], i) => expect(c - labels[i][0]).toBeGreaterThanOrEqual(4));
+    expect(h).toMatch(/data-tip="[^"]*, 20\d\d/);
+  });
   it('an empty range says so, without chips', () => {
     expect(String(activityPanel([], '2026-10-08', '2026-11-07', { range: '1m' }))).toContain('No spending in this range');
   });

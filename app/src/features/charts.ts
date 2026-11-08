@@ -1,6 +1,6 @@
 import { Html, html, htmlList, raw } from '../core/html';
 import { getAll } from '../core/api';
-import { absDiff, type ApiData, App, fmtD, fmtDay, isoDate, leadDays, money, money0, pad, type Period, todayIso, txHref, weekOrder } from '../core/base';
+import { absDiff, type ApiData, App, fmtD, fmtDate, fmtDay, isoDate, leadDays, money, money0, pad, type Period, todayIso, txHref, weekOrder } from '../core/base';
 import { SERIES, normGroup, signed, type Group } from '../core/feed';
 import { addDays } from '../core/helpers';
 import type { Account } from '../core/lists';
@@ -214,22 +214,31 @@ export function activityPanel(buys: { date: string, amount: number }[], start: s
   let cells: Html | string = '';
   for (let i = 0; i < lead; i++) cells = html`${cells}<span class="ag-c pad"></span>`;
   days.forEach(d => {
-    const tip = fmtD(d.iso, { weekday: 'short', month: 'short', day: 'numeric' }) + (d.v ? ' · ' + money(d.v) + ' · ' + d.n + ' purchase' + (d.n === 1 ? '' : 's') : ' · nothing spent');
+    const tip = fmtD(d.iso, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + (d.v ? ' · ' + money(d.v) + ' · ' + d.n + ' purchase' + (d.n === 1 ? '' : 's') : ' · nothing spent');
     cells = html`${cells}<span class="ag-c l${d.level}${d.iso === t ? ' today' : ''}" data-tip="${tip}"${d.v ? html` data-go="${txHref({ type: 'withdrawal' }, { start: d.iso, end: d.iso })}"` : ''}></span>`;
   });
   // A month label over the column where each month's first week begins
   const cols = Math.ceil((lead + days.length) / 7);
-  let months: Html | string = '', prev = '';
+  // The year goes on the first label and on every January, so a long range is never ambiguous
+  const marks: { col: number, iso: string }[] = [];
+  let prev = '';
   days.forEach((d, i) => {
     const m = d.iso.slice(0, 7), col = Math.floor((lead + i) / 7) + 1;
-    if (m !== prev && (d.iso.slice(8) <= '07' || i === 0) && col <= cols - 1) months = html`${months}<span style="grid-column:${col} / span 3">${fmtD(d.iso, { month: 'short' })}</span>`;
+    if (m !== prev && (d.iso.slice(8) <= '07' || i === 0) && col <= cols - 1) marks.push({ col, iso: d.iso });
     prev = m;
+  });
+  // A partial first month too close to the next label would overlap it: drop it
+  if (marks.length > 1 && marks[1].col - marks[0].col < 4) marks.shift();
+  let months: Html | string = '';
+  marks.forEach((k, i) => {
+    const yr = i === 0 || k.iso.slice(5, 7) === '01';
+    months = html`${months}<span style="grid-column:${k.col} / span 3">${fmtD(k.iso, yr ? { month: 'short', year: 'numeric' } : { month: 'short' })}</span>`;
   });
   // The same figures as a table (month by month), for screen readers and keyboards
   const byMonth = new Map<string, { v: number, n: number, d: number }>();
   days.forEach(d => { const m = d.iso.slice(0, 7), x = byMonth.get(m) || { v: 0, n: 0, d: 0 }; x.v += d.v; x.n += d.n; if (d.v) x.d++; byMonth.set(m, x); });
   const active = days.filter(d => d.v).length, top = days.reduce<AgDay | null>((b, d) => !b || d.v > b.v ? d : b, null);
-  const summary = active + ' of ' + days.length + ' days with spending' + (top && top.v ? '; the biggest was ' + fmtDay(top.iso) + ' at ' + money0(top.v) : '');
+  const summary = active + ' of ' + days.length + ' days with spending' + (top && top.v ? '; the biggest was ' + fmtDate(top.iso) + ' at ' + money0(top.v) : '');
   const rows = htmlList([...byMonth].map(([m, x]) => html`<tr><td><a href="${txHref({ type: 'withdrawal' }, { start: m + '-01', end: days.filter(d => d.iso.startsWith(m)).pop()!.iso })}">${fmtD(m + '-01', { month: 'long', year: 'numeric' })}</a></td><td class="num">${x.d}</td><td class="num">${x.n}</td><td class="num">${money0(x.v)}</td></tr>`));
   return html`<section class="panel chart ag-card" aria-label="Activity"><div class="ag-scroll"><div class="ag-wrap" style="--agm:${activityCell(cols)}px"><div class="ag-months" aria-hidden="true">${months}</div><div class="ag-grid" role="img" aria-label="Spending each day, darker means more spent: ${summary}">${cells}</div></div></div><div class="sr-only"><p>${summary}</p><table class="tbl"><caption>Spending by month</caption><thead><tr><th scope="col">Month</th><th scope="col">Days</th><th scope="col">Purchases</th><th scope="col">Spent</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
 }
