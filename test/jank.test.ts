@@ -32,4 +32,9 @@ describe('frame drops', () => {
   it('no animation in the app uses the additive composite', () => {
     for (const f of ['core/morph.ts', 'features/pill.ts', 'features/polish.ts', 'pages/transactions.ts']) expect(readFileSync('app/src/' + f, 'utf8')).not.toMatch(/composite:/);
   });
+  it('the title bar blur is always on, not switched on with the scrolled class', () => {
+    const base = css.match(/html\.shell \.appbar \{[^}]*\}/)![0];
+    expect(base).toMatch(/backdrop-filter: saturate\(180%\) blur\(20px\)/);
+    expect(css.match(/\.appbar\.scrolled \{[^}]*\}/g)!.join('')).not.toMatch(/backdrop-filter/);
+  });
 });
