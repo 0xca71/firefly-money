@@ -2348,3 +2348,6 @@ html[data-theme="frosted"] .opill { background: var(--ink); }
   .bpace .lim { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 2 4; }
   .bpace .ahead { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 2 5; stroke-linecap: round; opacity: .7; }
   .bhist text.now { fill: var(--text); font-weight: 600; }
+.unusual-row { align-items: center; color: inherit; text-decoration: none; }
+.unusual-row .name { flex: 1 1 9em; min-width: 0; white-space: normal; }
+.unusual-row .un-r { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
