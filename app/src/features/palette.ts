@@ -38,8 +38,6 @@ const SETTINGS: [string, string, string][] = [
   ['Apple Pay', 'shortcut iphone wallet automation ingest key', '#set-applepay'],
   ['Apple Pay cards', 'wallet card account match', 'cards'],
   ['How Apple Pay works', 'shortcut setup instructions', 'applepay-how'],
-  ['Widgets', 'widget shortcut iphone home screen scriptable lock screen safe to spend next bill key', '#set-widgets'],
-  ['How widgets work', 'scriptable shortcut setup instructions', 'widgets-how'],
   ['Main currency', 'currencies default primary usd euro', '#set-currencies'],
   ['Enable another currency', 'currencies foreign add', 'cur-add'],
   ['Exchange rates', 'currency conversion rate fx', 'rates'],
@@ -50,7 +48,7 @@ const SETTINGS: [string, string, string][] = [
   ['What’s new', 'whats new release notes changelog update version highlights', '#set-about'],
 ];
 // The Settings category each folded section lives in (a #set-… target names its own), since Settings shows one at a time
-const FOLDED_IN: Record<string, string> = { 'theme-custom': 'look', logos: 'look', cards: 'applepay', 'applepay-how': 'applepay', 'widgets-how': 'widgets', 'cur-add': 'currencies', rates: 'currencies', export: 'data', hooks: 'data' };
+const FOLDED_IN: Record<string, string> = { 'theme-custom': 'look', logos: 'look', cards: 'applepay', 'applepay-how': 'applepay', 'cur-add': 'currencies', rates: 'currencies', export: 'data', hooks: 'data' };
 const settingsCat = (focus: string) => focus.startsWith('#set-') ? focus.slice(5) : FOLDED_IN[focus];
 // Piggy banks and recurring transactions aren't in lists(), so fetch them once in a while
 let extra: { at: number, items: PalItem[] } | null = null;

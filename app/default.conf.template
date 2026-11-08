@@ -6,8 +6,6 @@ js_set $money_session session.check;
 js_set $money_renew session.renew;
 # Apple Pay auto-logging (app/ingest.js)
 js_import ingest from ingest.js;
-# Widget and Shortcut numbers (app/glance.js)
-js_import glance from glance.js;
 
 # Rate limits, per client address. Sign-in attempts: 10 a minute, after a first 5 straight away. API calls:
 # 50 a second with room for bursts of 500, far more than the app sends, so it only stops floods. Behind a
@@ -16,8 +14,6 @@ limit_req_zone $binary_remote_addr zone=signin:1m rate=10r/m;
 limit_req_zone $binary_remote_addr zone=api:2m rate=50r/s;
 # Payments from the Apple Pay shortcut: 20 a minute is plenty for real taps and stops anyone guessing the key.
 limit_req_zone $binary_remote_addr zone=ingest:1m rate=20r/m;
-# Widget refreshes: 30 a minute is far more than iOS allows a widget.
-limit_req_zone $binary_remote_addr zone=glance:1m rate=30r/m;
 limit_req_status 429;
 
 # The page links the stylesheet and scripts with ?v=<build version>, and each build gets a new
@@ -179,13 +175,7 @@ server {
         client_body_buffer_size 4k;
         js_content ingest.endpoint;
     }
-    # Safe-to-spend and next-bill numbers for an iPhone widget or Shortcut (GET, with its own read-only key from
-    # Settings → Widgets). See app/glance.js and docs/widgets.md.
-    location = /api/money-glance {
-        limit_req zone=glance burst=10 nodelay;
-        js_content glance.endpoint;
-    }
-    # Where ingest.js and glance.js reach Firefly: only nginx itself can use this (internal), never a browser.
+    # Where ingest.js reaches Firefly: only nginx itself can use this (internal), never a browser.
     location ~ ^/__firefly(?<ffpath>/api/v1/.*)$ {
         internal;
         resolver ${NGINX_LOCAL_RESOLVERS} valid=30s;
@@ -197,7 +187,7 @@ server {
         proxy_set_header Content-Type "application/json";
         proxy_set_header Accept-Encoding "";
         proxy_read_timeout 30s;
-        # ingest.js and glance.js read the whole answer (a list of up to 500 accounts)
+        # ingest.js reads the whole answer (a list of up to 500 accounts)
         subrequest_output_buffer_size 4m;
     }
 
