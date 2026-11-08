@@ -34,7 +34,6 @@ import './pages/budgets';
 import './pages/piggy';
 import './features/phone';
 import './features/fabdodge';
-import './features/pinhead';
 import './pages/overview';
 import './pages/transactions';
 import './pages/accounts';

@@ -32,13 +32,9 @@ describe('frame drops', () => {
   it('no animation in the app uses the additive composite', () => {
     for (const f of ['core/morph.ts', 'features/pill.ts', 'features/polish.ts', 'pages/transactions.ts']) expect(readFileSync('app/src/' + f, 'utf8')).not.toMatch(/composite:/);
   });
-  it('the pinned page head blur is always on and reaches over the sidebar, not switched on while scrolling', () => {
-    expect(css).not.toMatch(/head-pinned/);
-    const rule = css.match(/html\.pinhead #view > \.head::before, html\.pinhead #view > \.head::after \{ content[^}]*\}/)![0];
-    expect(rule).not.toMatch(/opacity: 0|visibility: hidden/);
-    expect(rule).toMatch(/will-change: transform/);
-    expect(css.match(/\.head::before \{ bottom:[^}]*\}/)![0]).not.toMatch(/background:/);       // the natural blur only, no tint
-    expect(css).toMatch(/html\.pinhead \.side \{ z-index: 13/);
-    expect(css).toMatch(/\.head::after \{ left: calc\(-1 \* \(var\(--head-l\) \+ 224px\)\)/);
+  it('the page title scrolls away: no pinned head, no blur band, no scroll-toggled head state', () => {
+    expect(css).not.toMatch(/pinhead|head-pinned|--head-h\b/);
+    expect(css).not.toMatch(/\.head::(before|after)/);
+    expect(css).not.toMatch(/#view > \.head \{[^}]*position: sticky/);
   });
 });

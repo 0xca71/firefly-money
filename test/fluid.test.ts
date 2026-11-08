@@ -22,11 +22,8 @@ describe('fluid motion', () => {
   it('a newer count-up on a number replaces the older one', () => {
     expect(readFileSync('app/src/features/polish.ts', 'utf8')).toMatch(/node\.dataset\.cu !== String\(t0\)/);
   });
-  it('scroll-linked polish is opacity only, behind @supports and no-preference', () => {
-    const i = css.indexOf('@keyframes subEase'), block = css.slice(css.lastIndexOf('@supports (animation-timeline', i), i + 60);
-    expect(block).toMatch(/prefers-reduced-motion: no-preference/);
-    expect(block).toMatch(/to \{ opacity: \.65; \}/);
-    expect(block).not.toMatch(/height|margin|top:|transform/);
+  it('nothing eases with the scroll: the title scrolls away with the page', () => {
+    expect(css).not.toMatch(/subEase|animation-timeline/);
   });
 });
 
