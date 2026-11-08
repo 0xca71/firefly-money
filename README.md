@@ -5,11 +5,22 @@
 [![Docker image](https://img.shields.io/badge/image-ghcr.io%2Fmuffy0906%2Ffirefly--money-blue?logo=docker&logoColor=white)](https://github.com/Muffy0906/firefly-money/pkgs/container/firefly-money)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Money is a fast, mobile-friendly web app for [Firefly III](https://www.firefly-iii.org/), the self-hosted personal finance manager. It sits beside your existing Firefly server and talks to it through the Firefly API. It doesn't change or replace Firefly, and your data never leaves your server.
+**A fast, phone-first front end for [Firefly III](https://www.firefly-iii.org/).** Add a transaction in one line, log every Apple Pay tap automatically from your iPhone, and see what's safe to spend until payday. It runs beside your existing Firefly, in one small container, and your data never leaves your server.
 
-It's a small static web app (TypeScript bundled into one script) served by a small nginx container, with no server code of its own.
+**[Try the live demo →](https://muffy0906.github.io/firefly-money/)** It runs in your browser with made-up data: nothing to install, no sign-in.
 
-**[Try the live demo →](https://muffy0906.github.io/firefly-money/)** It runs entirely in your browser with made-up data, so there's nothing to install and no sign-in.
+**Quick start**
+
+```bash
+mkdir money && cd money
+curl -O https://raw.githubusercontent.com/muffy0906/firefly-money/main/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/muffy0906/firefly-money/main/.env.example   # set FIREFLY_URL, FIREFLY_TOKEN, DASH_PASSWORD
+docker compose up -d   # then open http://<your-server>:8090
+```
+
+**Highlights:** 12 themes · installable on iPhone and Android · [Apple Pay auto-logging](docs/apple-pay.md) · plain-words quick add · forecast and what-ifs · monthly recap and Year in Money · no database, no AI, no cloud. It doesn't change or replace Firefly; stop using it any time.
+
+It's a small static web app (TypeScript bundled into one script) served by an nginx container, with no server code of its own.
 
 ![Overview in the Frosted glass theme](docs/screenshots/overview.png)
 
