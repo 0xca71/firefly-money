@@ -1176,9 +1176,8 @@
   .appbar { display: none; }
   @media (max-width: 900px) {
     html.shell .appbar { display: flex; position: fixed; top: 0; left: 0; right: 0; z-index: 18; height: calc(env(safe-area-inset-top, 0px) + var(--edge) + 44px);
-      padding: calc(env(safe-area-inset-top, 0px) + var(--edge)) 70px 0; align-items: center; justify-content: center; pointer-events: none; transition: transform .3s var(--ease-out), background-color .2s, box-shadow .2s;
-      -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }   /* always on: toggling it with the scroll state re-rasterises the bar mid-scroll */
-    html.shell .appbar.scrolled { background: color-mix(in srgb, var(--bg) 80%, transparent);
+      padding: calc(env(safe-area-inset-top, 0px) + var(--edge)) 70px 0; align-items: center; justify-content: center; pointer-events: none; transition: transform .3s var(--ease-out), background-color .2s, box-shadow .2s; }
+    html.shell .appbar.scrolled { background: color-mix(in srgb, var(--bg) 80%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
       box-shadow: 0 .5px 0 color-mix(in srgb, var(--text) 18%, transparent); }
     html.shell .ab-title { font-weight: 600; font-size: 17px; opacity: 0; transform: translateY(6px); transition: opacity .18s, transform .18s; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     html.shell .appbar.scrolled .ab-title { opacity: 1; transform: none; }
@@ -2047,7 +2046,7 @@
   html.pinhead #view > .head::before, html.pinhead #view > .head::after { content: ''; position: absolute; z-index: -1; pointer-events: none;
     top: calc(-1 * var(--head-top) - 2px); left: calc(-1 * var(--head-l)); right: calc(-1 * var(--head-r));
     --hx: linear-gradient(#000, #000);
-    opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility 0s .2s; }
+    }
   html.pinhead #view > .head::before { bottom: calc(-1 * var(--head-hold) - 12px);
     -webkit-backdrop-filter: blur(20px) saturate(1.5); backdrop-filter: blur(20px) saturate(1.5);
     --fy: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); }
@@ -2058,12 +2057,10 @@
       rgba(0, 0, 0, .5) calc(var(--f0) + (100% - var(--f0)) * .5), rgba(0, 0, 0, .2) calc(var(--f0) + (100% - var(--f0)) * .75), transparent); }
   html.pinhead #view > .head::before, html.pinhead #view > .head::after {
     -webkit-mask-image: var(--fy), var(--hx); mask-image: var(--fy), var(--hx); -webkit-mask-composite: source-in; mask-composite: intersect; }
-  /* Beside the sidebar they fade in from the left across the gap, so there's no hard vertical edge next to it */
+  /* Always on, and edge to edge: on desktop it also reaches left over the sidebar's top so the band reads as one */
   @media (min-width: 901px) {
-    html.pinhead #view > .head::before, html.pinhead #view > .head::after {
-      --hx: linear-gradient(to right, transparent, rgba(0, 0, 0, .5) calc(var(--head-l) * .45), #000 var(--head-l)); }
+    html.pinhead #view > .head::before, html.pinhead #view > .head::after { left: calc(-1 * (var(--head-l) + 224px)); }
   }
-  html.head-pinned #view > .head::before, html.head-pinned #view > .head::after { opacity: 1; visibility: visible; transition: opacity .2s ease, visibility 0s; }
   /* the day headings on Transactions and the bulk bar stick just below it */
   html.pinhead .tbl.feed tr.dayhead { top: calc(var(--head-top) + var(--head-h, 0px) + 4px) !important; z-index: 13; }
   html.pinhead .bulkbar { top: calc(var(--head-top) + var(--head-h, 0px) + 10px) !important; z-index: 13; }
