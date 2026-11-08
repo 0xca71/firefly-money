@@ -32,4 +32,10 @@ describe('frame drops', () => {
   it('no animation in the app uses the additive composite', () => {
     for (const f of ['core/morph.ts', 'features/pill.ts', 'features/polish.ts', 'pages/transactions.ts']) expect(readFileSync('app/src/' + f, 'utf8')).not.toMatch(/composite:/);
   });
+  it('the pinned page head blur is always on and reaches over the sidebar, not switched on while scrolling', () => {
+    expect(css).not.toMatch(/head-pinned/);
+    const rule = css.match(/html\.pinhead #view > \.head::before, html\.pinhead #view > \.head::after \{ content[^}]*\}/)![0];
+    expect(rule).not.toMatch(/opacity: 0|visibility: hidden/);
+    expect(css).toMatch(/\.head::after \{ left: calc\(-1 \* \(var\(--head-l\) \+ 224px\)\)/);
+  });
 });
