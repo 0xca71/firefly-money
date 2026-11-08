@@ -67,6 +67,7 @@ export function createMockApi(now = new Date()) {
     ['Pizza Place', 'Dining', 'Food', 32, 2], ['Home Goods', 'Shopping', 'Shopping', 140, 0.6],
     ['Cinema Club', 'Entertainment', null, 19, 1], ['Ticket Hub', 'Entertainment', null, 85, 0.4], ['Pet Supply Co', 'Pets', null, 36, 0.8],
     ['Hardware Hub', 'Home', null, 52, 0.7], ['Salon & Spa', 'Personal care', null, 46, 0.6], ['Gift Shop', 'Gifts', null, 48, 0.4], ['Ride Share', 'Transport', 'Transport', 19, 1.5],
+    ['Photo Vault', 'Subscriptions', null, 9.99, 1],     // stopped charging a while ago (the subscription audit flags it)
   ];
   const PID: Record<string, string> = {};
   PAYEES.forEach((p, i) => { PID[p[0]] = String(100 + i); acc(100 + i, p[0], 'expense'); });
@@ -155,6 +156,7 @@ export function createMockApi(now = new Date()) {
     }
     for (const [i, [name, cat, bud, amt, per]] of PAYEES.entries()) {
       if (ago(d) > (STARTS[name] ?? 99)) continue;
+      if (name === 'Photo Vault' && (TODAY - d) / DAY < 75) continue;
       if (cat === 'Subscriptions' || cat === 'Utilities') {       // these come on the same day every month
         if (day === 4 + i) {
           const sub = SUBS[name];

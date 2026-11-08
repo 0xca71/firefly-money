@@ -4,7 +4,7 @@
 export interface Charge { date: string; amount: number; payeeId: string; payee: string; billId?: string }
 export interface Recurring {
   payeeId: string; payee: string; freq: string; skip: number; every: string; count: number;
-  amount: number; min: number; max: number; last: string; next: string; rose: null | { from: number; to: number };
+  amount: number; min: number; max: number; last: string; next: string; rose: null | { from: number; to: number }; billId?: string;
 }
 
 // Firefly's repeat_freq (plus skip) for each pattern, and the gap in days it allows between charges
@@ -31,8 +31,9 @@ export function nextDate(from: string, freq: string, skip = 0) {
   return iso(Date.UTC(y, m, Math.min(day, last), 12));
 }
 
+// opts.all: also keep payees already linked to a bill and ones that have gone quiet (for the subscription audit)
 // opts.tolerance: how far (as a share of the typical amount) a charge may be off and still count as the same bill
-export function findRecurring(charges: Charge[], today: string, opts: { tolerance?: number } = {}): Recurring[] {
+export function findRecurring(charges: Charge[], today: string, opts: { tolerance?: number, all?: boolean } = {}): Recurring[] {
   const tol = opts.tolerance ?? 0.25, now = t(today), groups = new Map<string, Charge[]>();
   charges.forEach(c => {
     if (!(c.amount > 0) || !c.date) return;
@@ -42,7 +43,7 @@ export function findRecurring(charges: Charge[], today: string, opts: { toleranc
   });
   const out: Recurring[] = [];
   groups.forEach(list => {
-    if (list.some(c => c.billId)) return;          // already linked to a bill
+    if (!opts.all && list.some(c => c.billId)) return;          // already linked to a bill
     // Several charges on one day count once (a split, or a refund and a new charge)
     const byDay = new Map<string, Charge>();
     list.forEach(c => { const d = c.date.slice(0, 10), was = byDay.get(d); byDay.set(d, was ? { ...was, amount: was.amount + c.amount } : c); });
@@ -59,13 +60,13 @@ export function findRecurring(charges: Charge[], today: string, opts: { toleranc
     if (near.length < Math.ceil(recent.length * 0.75)) return;
     // Still going: the last charge isn't long overdue
     const last = cs[cs.length - 1];
-    if ((now - t(last.date)) / DAY > f.hi * 1.5 + 5) return;
+    if ((now - t(last.date)) / DAY > (opts.all ? 400 : f.hi * 1.5 + 5)) return;
     // A fixed price (the charges before the last one all the same) that went up: suggest the new price
     const before = cs.slice(0, -1).slice(-5).map(c => c.amount), was = median(before), fixed = before.every(a => Math.abs(a - was) <= was * 0.01);
     const rose = fixed && last.amount > was * 1.02 && last.amount - was >= 0.5 && Math.abs(last.amount - typical) <= typical * tol ? { from: round2(was), to: round2(last.amount) } : null;
     const amounts = rose ? [last.amount] : near.map(c => c.amount);
     out.push({ payeeId: last.payeeId, payee: last.payee, freq: f.freq, skip: f.skip, every: f.every, count: cs.length, amount: round2(rose ? last.amount : typical),
-      min: round2(Math.min(...amounts)), max: round2(Math.max(...amounts)), last: last.date.slice(0, 10), next: nextDate(last.date, f.freq, f.skip), rose });
+      min: round2(Math.min(...amounts)), max: round2(Math.max(...amounts)), last: last.date.slice(0, 10), next: nextDate(last.date, f.freq, f.skip), rose, ...(last.billId ? { billId: last.billId } : {}) });
   });
   // Biggest yearly cost first
   const PER_YEAR: Record<string, number> = { weekly: 52, monthly: 12, quarterly: 4, 'half-year': 2, yearly: 1 };

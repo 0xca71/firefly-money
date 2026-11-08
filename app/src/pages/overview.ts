@@ -14,7 +14,9 @@ import { activityPanel, activityRange, barChart, paceChart, ring, shareChart, sp
 import { type NetWorthPoint, nwLine, nwSeg, nwWords } from '../features/networth';
 import { bindSwipe } from '../features/phone';
 import { drafts } from '../features/txform';
-import { billAmount, billDueDates, billsFrom } from './bills';
+import { billAmount, billDueDates, billsFrom, subCharges } from './bills';
+import { auditSubs } from '../features/subaudit';
+import { subAuditTile } from '../features/subauditview';
 import { fcHorizon } from './forecast';
 import { type BudgetLimit, budgetLimits, budgetPace } from './budgets';
 import { loanHistory } from './loans';
@@ -77,7 +79,9 @@ VIEWS[''] = async (r, paint) => {
     monthOnly || !on('pace') ? none : getAll('/transactions', { start: monthRange(vy, vm - 3).start, end: prev.end, type: 'withdrawal' }).catch(() => []),     // three months back: the pace learns from all of them
     on('trends') ? Promise.all(months.map(mo => insight('/insight/expense/category', p(mo), monthsRs).catch(() => []))) : none,
     // The activity grid ignores the month at the top: it covers its own range up to today (from Firefly only, nothing when it is down)
-    on('activity') ? getAll('/transactions', { start: actRange === 'all' ? ALL_START : activityRange(actRange, t0, '').start, end: t0, type: 'withdrawal' }).catch(() => null) : none]);
+    on('activity') ? getAll('/transactions', { start: actRange === 'all' ? ALL_START : activityRange(actRange, t0, '').start, end: t0, type: 'withdrawal' }).catch(() => null) : none,
+    // The subscription audit works from the past year's charges (from Firefly only, a note when it can't be reached)
+    on('subs') ? subCharges().then(cs => auditSubs(cs, t0)).catch(() => null) : none]);
   slowP.catch(() => {});
   if (r.at) { await Promise.all([coreP, slowP]).catch(() => {}); return; }     // loading a month ahead: the data is all it needs
   const [summary, catNow, catPrev, noCatNow, noCatPrev, trend, recent, budgets, limits, bills, uncat, allTot, prevSoFar] = await coreP;
@@ -95,7 +99,7 @@ VIEWS[''] = async (r, paint) => {
   rankCats([...cats.values()].map(c => ({ name: c.name, v: c.amt })));     // the feed's category colours follow the donut's
 
   const build = (slow: ApiData[] | null) => {
-    const [prog, safe, insights, sparks, dayTx, incomeSrc, payNow, payPrev, piggies, nw, prevTx, monthCats, actTx] = slow || [];
+    const [prog, safe, insights, sparks, dayTx, incomeSrc, payNow, payPrev, piggies, nw, prevTx, monthCats, actTx, subAudit] = slow || [];
     const wait = (k: string) => slow ? null : skeletonPanel(k);
     // A card with nothing to show for this month says so rather than vanishing, so the cards around it stay put
     const idle = (k: string, why = future ? 'Fills in once this month starts.' : 'Shows for one month at a time: pick a month at the top.') => quietPanel(k, why);
@@ -121,6 +125,7 @@ VIEWS[''] = async (r, paint) => {
       ['activity', wait('activity') ?? activityTile(actTx, actRange, t0)],
       ['pace', monthOnly ? idle('pace') : wait('pace') ?? pacePanel(cur, prev, arr(dayTx).map(normGroup), arr(prevTx).map(normGroup))],
       ['savings', html`<section class="panel chart">${savingsRate(trend)}</section>`],
+      ['subs', !tileOn('subs') ? 'off' : wait('subs') ?? subAuditTile(subAudit && !Array.isArray(subAudit) ? subAudit : null)],
       ['trends', wait('trends') ?? trendsPanel(months.map(mo => mo.short), monthCats || [], months)],
     ];
     W.forEach(w => { if (w[1] && !tileOn(w[0])) w[1] = 'off'; });     // off: not drawn, only offered under Add cards
