@@ -31,7 +31,6 @@ services:
     #   - ./app/nginx.conf:/etc/nginx/nginx.conf:ro
     #   - ./app/session.js:/etc/nginx/money/session.js:ro
     #   - ./app/ingest.js:/etc/nginx/money/ingest.js:ro
-    #   - ./app/glance.js:/etc/nginx/money/glance.js:ro
     #   - ./app/default.conf.template:/etc/nginx/templates/default.conf.template:ro
     #   - ./app/index.html:/etc/nginx/templates/index.html.template:ro
     #   - ./app/assets:/usr/share/nginx/html/assets:ro
