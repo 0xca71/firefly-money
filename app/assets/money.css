@@ -2068,10 +2068,18 @@
     html .tbl.feed tr.dayhead { top: 14px !important; }
     html .bulkbar { top: 18px !important; }
   }
-  @media screen and (min-width: 901px) { :root { --pb: 112px; } }       /* the last card scrolls clear of the + button */
+  /* The title band: an explicit height with everything on it centred, and the sidebar's brand row on the same centre line */
+  @media screen and (min-width: 901px) {
+    :root { --band: 82px; --pb: 112px; }          /* (--pb: the last card scrolls clear of the + button) */
+    main#view { padding-top: 0 !important; }
+    #view > .head { min-height: var(--band); align-items: center; }
+    html .side { padding-top: calc(var(--band) / 2 - 27.5px); }      /* (27.5: the brand name sits that far below the top of the sidebar's content box) */
+  }
   @media screen and (max-width: 900px) {
     :root { --pb: calc(96px + env(safe-area-inset-bottom, 0px)); }
-    html.shell { --head-gap: 18px; }
+    :root { --head-gap: 22px; }
+    html.shell { --head-gap: max(16px, calc(var(--edge) + 4px)); }
+    html.shell.ab-row { --head-gap: 18px; }
     html.native-tabs { --pb: calc(env(safe-area-inset-bottom, 0px) + 77px); }
   }
 

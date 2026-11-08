@@ -234,6 +234,8 @@ async def check(pw, width, height, mobile):
         if '$' not in await page.locator('#view .tbl tbody tr td.amt').first.inner_text() or not await page.locator('#view .month').count():
             errors.append('the Payees tab does not show a total for the month')
         # Logos: the ones the server has show, the rest fall back to initials (the broken img is removed)
+        # (images below the fold load lazily, as the page scrolls: scroll the list through first)
+        await page.evaluate("(async () => { const p = document.querySelector('#view > .pg'); if (p) for (let y = 0; y <= p.scrollHeight; y += 400) { p.scrollTo(0, y); await new Promise(r => setTimeout(r, 60)); } })()")
         await page.wait_for_timeout(800)
         logos = await page.evaluate("[...document.querySelectorAll('#view img.logo')].map(i => i.complete && i.naturalWidth > 0 && i.classList.contains('ok'))")
         # (the static demo build has no logo server, so there every logo falls back)
