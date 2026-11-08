@@ -16,3 +16,13 @@ describe('map', () => {
     expect(spots.map(s => [s.name, s.groups.length, s.total])).toEqual([['Grocer', 1, 80], ['Blue Bottle', 2, 11], ['Blue Bottle', 1, 4]]);
   });
 });
+
+describe('places tab', () => {
+  it('is the third To do tab and routes under To do', async () => {
+    const { readFileSync } = await import('node:fs');
+    const dom = readFileSync('app/src/core/dom.ts', 'utf8'), router = readFileSync('app/src/core/router.ts', 'utf8'), main = readFileSync('app/src/main.ts', 'utf8');
+    expect(dom).toMatch(/href="#\/places"/);
+    expect(router).toMatch(/r\.name === 'places' \? 'review'/);
+    expect(main).toContain("./pages/places");
+  });
+});

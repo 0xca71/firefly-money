@@ -70,11 +70,14 @@ async function writePlace(groups: Group[], lat: number, lng: number) {
 }
 const keyOf = (gs: Group[]) => { for (const g of gs) { const p = parseDescriptor(g.splits[0]?.description) || parseDescriptor(String(payeeOf(g).name)); if (p) return p; } return null; };
 
-async function suggestStores() {
+// Also used by the To do > Places page (pages/places.ts): same suggestions, same one-tap pin, its own empty state
+export let storeSolo = false;
+export async function suggestStores(groups: Group[] = allGroups, solo = storeSolo) {
+  allGroups = groups; storeSolo = solo;
   const box = document.getElementById('storeList'); if (!box) return;
   wants = wantedStores(allGroups).slice(0, 30);
-  if (!wants.length) { box.hidden = true; return; }
-  const anchors = spots.map(x => ({ lat: x.lat, lng: x.lng }));
+  if (!wants.length) { found = []; drawStores(); return; }
+  const anchors = spotsOf(allGroups).map(x => ({ lat: x.lat, lng: x.lng }));
   found = await Promise.all(wants.map(w => candidates(w, anchors).catch(() => [])));
   if (!document.body.contains(box)) return;       // moved on to another page meanwhile
   drawStores();
@@ -82,8 +85,9 @@ async function suggestStores() {
 function drawStores() {
   const box = document.getElementById('storeList'); if (!box) return;
   const hit = wants.map((w, i) => i).filter(i => found[i].length), miss = wants.length - hit.length, n = hit.reduce((a, i) => a + wants[i].groups.length, 0);
-  box.hidden = !wants.length;
-  box.innerHTML = String(html`<h2 style="margin:0 0 2px">Stores found</h2><p class="sub-s" style="margin:0 0 10px">${hit.length ? html`${n} purchase${n === 1 ? '' : 's'} name a store but have no place. Tap the right store to pin them; nothing is saved until you do.` : html`No match yet for the ${wants.length} store${wants.length === 1 ? '' : 's'} named in your purchases.`}</p>${htmlList(hit.map(i => { const w = wants[i];
+  box.hidden = !wants.length && !storeSolo;
+  if (!wants.length) { box.innerHTML = String(html`<div class="center-empty" style="padding:60px 20px"><div style="font-size:40px">✓</div><h2 style="font-size:18px;margin:10px 0 4px">No places to pin</h2>Purchases that name a store but have no location show up here.</div>`); return; }
+  box.innerHTML = String(html`${storeSolo ? '' : html`<h2 style="margin:0 0 2px">Stores found</h2>`}<p class="sub-s" style="margin:0 0 10px">${hit.length ? html`${n} purchase${n === 1 ? '' : 's'} name a store but have no place. Tap the right store to pin them; nothing is saved until you do.` : html`No match yet for the ${wants.length} store${wants.length === 1 ? '' : 's'} named in your purchases.`}</p>${htmlList(hit.map(i => { const w = wants[i];
     return html`<div class="list" style="margin-bottom:10px"><p style="margin:0 0 4px"><b>${w.label} #${w.num}</b> <span class="sub-s">· ${w.groups.length} purchase${w.groups.length === 1 ? '' : 's'} · ${money(w.total)}</span></p>${htmlList(found[i].map((p, j) => html`<button type="button" class="row" style="width:100%;text-align:left" data-onclick="App.pinStore(${i},${j})"><span class="name">${p.addr || 'Address not listed'}<br><span class="sub-s">${srcText(p)}${awayText(p)}</span></span><span class="link">Pin</span></button>`))}</div>`; }))}${miss && !osmOn() ? html`<p class="sub-s" style="margin:0">${miss} more ha${miss === 1 ? 's' : 've'} no store in the bundled lists. <button type="button" class="link" data-onclick="App.storeOsm(true)">Look them up online</button> (sends only the chain and store number, through this server).</p>` : osmOn() ? html`<p class="sub-s" style="margin:0">Online lookup is on${miss ? ' · ' + miss + ' not found' : ''}. <button type="button" class="link" data-onclick="App.storeOsm(false)">Turn off</button></p>` : ''}`);
 }
 async function pinStore(i: number, j: number) {
@@ -148,7 +152,7 @@ async function fixUndo() {
   toast('Moved back');
   route({ quiet: true });
 }
-function storeOsm(on: boolean) { LS.set('storeOsm', on); suggestStores(); }
+function storeOsm(on: boolean) { LS.set('storeOsm', on); suggestStores(allGroups, storeSolo); }
 
 const methods = { pinStore, fixSpot, fixPick, fixCancel, fixSave, fixUndo, storeOsm };
 Object.assign(App, methods);
@@ -177,5 +181,5 @@ VIEWS.map = async (r, paint) => {
   });
   if (spots.length) map.fitBounds(L.latLngBounds(spots.map(s => [s.lat, s.lng] as [number, number])), { padding: [40, 40], maxZoom: 16 });
   else map.setView([39.8, -98.6], 3);
-  suggestStores();
+  suggestStores(groups, false);
 };

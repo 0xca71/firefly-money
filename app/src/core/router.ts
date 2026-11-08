@@ -12,7 +12,7 @@ import { labelHtml, monthLabel, morph, morphOk, sameLayout, slideLabel, snapshot
 // The placeholder shows the shape of the page that's coming (KPI row, chart, list rows, table), so nothing jumps when it arrives
 const SKELETONS: Record<string, string> = {
   '': 'dash', reports: 'dash', recap: 'dash', year: 'dash', timeline: 'dash', forecast: 'dash',
-  transactions: 'feed', account: 'feed', review: 'feed', unusual: 'cards', inbox: 'feed', map: 'chart',
+  transactions: 'feed', account: 'feed', review: 'feed', unusual: 'cards', inbox: 'feed', places: 'feed', map: 'chart',
   budgets: 'table', categories: 'table', bills: 'table', accounts: 'table', rules: 'table', recurring: 'table', loans: 'table', piggy: 'cards',
 };
 function skeleton() {
@@ -128,7 +128,7 @@ export async function route(opts: { nav?: boolean, quiet?: boolean, instant?: bo
   S.pageDepth = depth;
   const instant = opts.instant || (traversal && !!window.MONEY_NATIVE);
   if (instant) S.vtDir = '';
-  drawNav(r.name === 'account' || r.name === 'reconcile' ? 'accounts' : r.name === 'inbox' ? 'review' : r.name);
+  drawNav(r.name === 'account' || r.name === 'reconcile' ? 'accounts' : r.name === 'inbox' || r.name === 'places' ? 'review' : r.name);
   clearTimeout(S.skelT);
   // A tab you've already opened: put it back instantly, no network, same scroll position.
   const saved = opts.nav && cacheable && key !== S.pageKey && PAGES.get(key);

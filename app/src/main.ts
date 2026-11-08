@@ -48,6 +48,7 @@ import './pages/recap';
 import './pages/year';
 import './pages/timeline';
 import './pages/map';
+import './pages/places';
 import './pages/settings';
 import './pages/cleanup';
 import './features/palette';
