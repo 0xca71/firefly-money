@@ -25,7 +25,7 @@ describe('fluid motion', () => {
   it('scroll-linked polish is opacity only, behind @supports and no-preference', () => {
     const i = css.indexOf('@keyframes subEase'), block = css.slice(css.lastIndexOf('@supports (animation-timeline', i), i + 60);
     expect(block).toMatch(/prefers-reduced-motion: no-preference/);
-    expect(block).toMatch(/to \{ opacity: \.35; \}/);
+    expect(block).toMatch(/to \{ opacity: \.65; \}/);
     expect(block).not.toMatch(/height|margin|top:|transform/);
   });
 });
