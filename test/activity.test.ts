@@ -23,10 +23,11 @@ describe('Overview activity grid', () => {
     expect(activityDays(buys, '2019-01-01', '2026-11-07', '2026-11-07').length).toBe(371);
     expect(activityDays(buys, '2019-01-01', '2026-11-07', '2026-11-07', 2000).length).toBe(2868);
   });
-  it('the tile has pressed-state range chips, the table alternative', () => {
+  it('the tile has no range chips (the range is set in Customize) and keeps the legend and table alternative', () => {
     const h = String(activityPanel(buys, '2026-10-08', '2026-11-07', { range: '1m' }));
-    expect(h).toContain('aria-pressed="true"');
-    expect(h).toContain("App.dashOpt('activity','range','all')");
+    expect(h).not.toContain('aria-pressed');
+    expect(h).not.toContain('ag-range');
+    expect(h).toContain('class="ag-legend"');
     expect(h).not.toContain('Show as table');
     expect(h).not.toContain('<h2>Activity</h2>');
     expect(h).toContain('class="sr-only"');
@@ -34,7 +35,7 @@ describe('Overview activity grid', () => {
     expect(h).toContain('--agm:14px');
     expect(activityCell(5)).toBe(activityCell(53));
   });
-  it('an empty range still shows the chips, so another can be picked', () => {
+  it('an empty range says so, without chips', () => {
     expect(String(activityPanel([], '2026-10-08', '2026-11-07', { range: '1m' }))).toContain('No spending in this range');
   });
   it('is on the Overview by default and never uses saved data', () => {
@@ -50,16 +51,13 @@ describe('Reports layout', () => {
     expect(reports).toContain('<div class="flow report-cols">');
     expect(reports).toContain('class="report-gap"');
   });
-  it('the range chips are 44px tall on a phone', () => {
-    expect(css).toMatch(/\.ag-range \.btn \{ flex: 1 1 0; min-width: 0; min-height: 44px/);
-  });
-  it('every range has the same fixed-height grid, so switching chips shifts nothing', () => {
+  it('every range has the same fixed-height grid, so changing the range in settings shifts nothing', () => {
     expect(css).toMatch(/\.ag-scroll \{ height: 134px/);
     expect(css).toMatch(/\.ag-none \{ height: 134px/);
     expect(css).toMatch(/\.panel\.ag-card \{ padding: 12px 16px 12px/);
     for (const r of ['1m', 'year', 'all']) expect(String(activityPanel(buys, '2019-01-01', '2026-11-07', { range: r }))).toContain('--agm:14px');
   });
-  it('a chip press redraws only the Activity card, not the page', () => {
+  it('a range change in settings redraws only the Activity card, not the page', () => {
     const dash = readFileSync('app/src/features/dashboard.ts', 'utf8'), ov = readFileSync('app/src/pages/overview.ts', 'utf8');
     expect(dash).toMatch(/k === 'activity' && App\.activityRedraw/);
     expect(ov).toMatch(/sec\.replaceWith\(next\)/);
