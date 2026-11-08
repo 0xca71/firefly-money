@@ -2314,3 +2314,23 @@ html[data-theme="glass"] .ag-c.l3, html[data-theme="glass"] .ag-c.l4 { box-shado
   .ag-range { width: 100%; flex-wrap: nowrap; }
   .ag-range .btn { flex: 1 1 0; min-width: 0; min-height: 44px; padding-inline: 4px; }
 }
+
+/* ---------- Sidebar fits the window's height (desktop): row height, gaps and padding shrink with the viewport so the
+   whole rail shows without scrolling. Mouse rows go down to 26px; a touch screen keeps 40px+ rows and scrolls instead,
+   as does a window too short for even the smallest rows. ---------- */
+@media (min-width: 901px) {
+  .side { --row: clamp(24px, calc((100vh - 215px) / 22), 36px); --hh: clamp(12px, 2.6vh, 30px); --hm: clamp(8px, 1.6vh, 21px);
+    padding-top: clamp(8px, 2.2vh, 24px); padding-bottom: clamp(8px, 2.2vh, 24px); gap: clamp(0px, .4vh, 4px); }
+  .side .brand { padding-bottom: clamp(0px, .9vh, 14px); }
+  .side .side-tg { margin-block: -6px; width: min(30px, var(--row)); height: min(30px, var(--row)); }
+  .side > .ff-pill { margin-bottom: clamp(2px, 1.3vh, 14px); }
+  .side .side-search { height: var(--row); margin-bottom: clamp(2px, 1.3vh, 14px); }
+  .side .nav a, .side .foot .nav a { min-height: var(--row); padding-block: 0; box-sizing: border-box; }
+  .side .foot .nav a { margin-bottom: clamp(0px, .6vh, 6px); }
+  .side .nav-h { height: var(--hh); padding-top: calc(var(--hh) * .42); padding-bottom: calc(var(--hh) * .13); box-sizing: border-box; }
+  html.side-mini .side .nav-h { height: var(--hm); padding-top: 0; padding-bottom: 0; }
+  .side .foot a, .side .foot button { padding-block: 0; min-height: max(22px, calc(var(--row) - 4px)); line-height: 1.2; }
+}
+@media (min-width: 901px) and (pointer: coarse) {
+  .side { --row: 40px; --hh: 30px; --hm: 16px; }
+}
