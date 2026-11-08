@@ -2049,19 +2049,31 @@
   .ff-out-card .ff-chain { width: 100%; max-width: 300px; margin-top: 22px; padding: 10px 16px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--panel) 70%, transparent); text-align: left; font-size: 13.5px; }
   @media print { .ff-alert, .ff-pill, .ff-pop { display: none !important; } }
 
-  /* ---------- The page title scrolls away with the page: no pinning, no blur band. --head-top is where the sticky day headings
-     (Transactions) and the bulk bar stop: under the iPhone app's title bar, and up to the edge while that bar is slid away. ---------- */
-  :root { --head-top: 14px; }
-  html.compact { --head-top: 10px; }
-  @media (max-width: 900px) {
-    :root { --head-top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 4.5px); }
-    html.shell { --head-top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 44px); }
-    html.shell.scroll-down { --head-top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 6px); }
-    html.shell:not(.ab-row) { --head-top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 4px); }
-    html.shell .tbl.feed tr.dayhead, html.shell .bulkbar { transition: top .3s var(--ease-out); }
+  /* ---------- Fixed page title, scrolling content (pagescroll.ts): the page's title row stays put and only what's below it scrolls,
+     in #view > .pg. The content fades out under the title row's edge with a mask on that scroller (it's a box of its own,
+     so the mask never moves with the content), and starts --head-gap below the row so nothing at rest sits in the fade.
+     The sticky day headings (Transactions) and the bulk bar stop just under the fade. ---------- */
+  @media screen {
+    :root { --head-gap: 28px; --pb: 72px; }
+    html.compact { --head-gap: 18px; }
+    html { overflow: hidden; }
+    .app { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+    main#view { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; box-sizing: border-box; padding-bottom: 0 !important; }
+    html.native-tabs main#view { padding-bottom: 0 !important; }
+    #view > .head { flex: none; margin-bottom: 0 !important; }
+    #view > .pg { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: clip; overscroll-behavior-y: contain;
+      margin-inline: -14px; padding: var(--head-gap) 14px var(--pb);       /* the side room keeps card shadows from being clipped */
+      -webkit-mask-image: linear-gradient(to bottom, transparent, #000 16px); mask-image: linear-gradient(to bottom, transparent, #000 16px); }
+    html:has(#story) :is(#view, #view > .pg) { -webkit-mask-image: none; mask-image: none; overflow: visible; }     /* the full-screen story sits in the page */
+    html .tbl.feed tr.dayhead { top: 14px !important; }
+    html .bulkbar { top: 18px !important; }
   }
-  .tbl.feed tr.dayhead { top: calc(var(--head-top) + 4px) !important; z-index: 13; }
-  .bulkbar { top: calc(var(--head-top) + 10px) !important; z-index: 13; }
+  @media screen and (min-width: 901px) { :root { --pb: 112px; } }       /* the last card scrolls clear of the + button */
+  @media screen and (max-width: 900px) {
+    :root { --pb: calc(96px + env(safe-area-inset-bottom, 0px)); }
+    html.shell { --head-gap: 18px; }
+    html.native-tabs { --pb: calc(env(safe-area-inset-bottom, 0px) + 77px); }
+  }
 
   /* ---------- Scrollbars: thin, themed pills on a clear track (mouse and trackpad only; touch keeps its own) ---------- */
   /* The ::-webkit-scrollbar rules are not behind @supports selector(): Safari answers that test "no" and then drew its default bar.
@@ -2089,7 +2101,7 @@
     }
     /* Firefox */
     @supports (-moz-appearance: none) {
-      html { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) transparent; }
+      html, #view > .pg { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) transparent; }
       html.side-mini .side { scrollbar-width: none; }
     }
   }

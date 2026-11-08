@@ -26,7 +26,7 @@ function appbarScroll() {
 function updateAppbar() {
   const h1 = document.querySelector<HTMLElement>('#view .head h1');
   appbar.querySelector('.ab-title')!.textContent = h1 ? h1.textContent : '';
-  const backP = [...document.querySelectorAll<HTMLElement>('#view > p')].find(p => { const a = p.querySelector('a.link'); return a && /^\s*←/.test(a.textContent); });
+  const backP = [...document.querySelectorAll<HTMLElement>('#view .pg > p')].find(p => { const a = p.querySelector('a.link'); return a && /^\s*←/.test(a.textContent); });
   const btn = appbar.querySelector<HTMLElement>('.ab-back')!;
   if (backP) {
     const a = backP.querySelector('a.link')!;
@@ -47,7 +47,7 @@ let lastChrome = '';
 function nativeChrome() {
   const open = el('drawer').classList.contains('open');
   if (SHELL && open !== document.documentElement.classList.contains('sheet-open')) {
-    if (open) document.documentElement.style.setProperty('--sy', (scrollY + innerHeight / 2) + 'px');
+    if (open) document.documentElement.style.setProperty('--sy', (innerHeight / 2) + 'px');
     document.documentElement.classList.toggle('sheet-open', open);
   }
   if (!window.MONEY_NATIVE) return;

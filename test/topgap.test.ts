@@ -10,7 +10,4 @@ describe('mobile space above the page heading', () => {
     expect(Number(m![1])).toBeLessThanOrEqual(12);
     expect(css).toContain('html.shell:not(.ab-row) main#view { padding-top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 4px)');
   });
-  it('keeps the pinned header offset in step with the page padding', () => {
-    expect(css).toContain('html.shell:not(.ab-row) { --head-top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 4px); }');
-  });
 });
