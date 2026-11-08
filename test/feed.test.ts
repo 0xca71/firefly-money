@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type Group, SERIES, catColor, dayLabel, groupUpdate, monogram, payeeOf, rankCats, xferLabel } from '../app/src/core/feed';
+import { type Group, SERIES, catColor, dayLabel, groupUpdate, monogram, payeeOf, placeFields, rankCats, xferLabel } from '../app/src/core/feed';
 
 describe('payeeOf', () => {
   const g = (type: string, splits: unknown[], title = '') => ({ type, title, splits }) as unknown as Group;
@@ -55,6 +55,14 @@ describe('groupUpdate', () => {
   it('leaves the title off a single part and keeps extra fields', () => {
     const body = groupUpdate(g([split]), () => ({ reconciled: true }), { fire_webhooks: true });
     expect(body).toEqual({ apply_rules: false, fire_webhooks: true, transactions: [{ reconciled: true, transaction_journal_id: '1' }] });
+  });
+});
+
+describe('placeFields', () => {
+  it('sends zoom_level with latitude/longitude, which Firefly requires', () => {
+    expect(placeFields(40.7, -74)).toEqual({ latitude: 40.7, longitude: -74, zoom_level: 16 });
+    const body = groupUpdate({ id: '9', title: '', splits: [{ jid: '1', description: 'x' }] } as unknown as Group, () => placeFields(1, 2));
+    expect(body.transactions).toEqual([{ latitude: 1, longitude: 2, zoom_level: 16, transaction_journal_id: '1' }]);
   });
 });
 
