@@ -23,3 +23,11 @@ describe('card chips redraw only their card', () => {
     expect(body(ov, 'nwRedraw')).not.toMatch(/route\(/);
   });
 });
+
+describe('Net worth range chips are centred', () => {
+  it('sit on their own centred row under the heading at any card width', () => {
+    const css = readFileSync('app/assets/money.css', 'utf8');
+    expect(css).toMatch(/\.panel\.stat\.nw \.panel-head \{ flex-direction: column; align-items: flex-start; \}/);
+    expect(css).toMatch(/\.panel\.stat\.nw \.panel-head > \.seg \{ align-self: center;/);
+  });
+});
