@@ -4,9 +4,9 @@ import { readFileSync } from 'node:fs';
 const morph = readFileSync('app/src/core/morph.ts', 'utf8'), pill = readFileSync('app/src/features/pill.ts', 'utf8'), css = readFileSync('app/assets/money.css', 'utf8');
 
 describe('frame drops', () => {
-  it('the month wave nudges cards with translate/scale (compositor), never an additive transform (main thread)', () => {
-    expect(morph).not.toMatch(/composite:\s*'add'/);
-    expect(morph).toMatch(/translate: dx, scale: \.985/);
+  it('the month wave does not move or scale the cards (no nudge)', () => {
+    expect(morph).not.toMatch(/composite:/);
+    expect(morph).not.toMatch(/scale: \.985|translate: dx/);
   });
   it('tweened charts and rolling digits get a layer of their own, so a frame repaints them and not the card', () => {
     expect(morph).toMatch(/const lift = .*willChange = 'transform'/);
