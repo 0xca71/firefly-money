@@ -5,6 +5,7 @@ import { App, S, type State, el, monthOf, nowMonth, setToday, today } from './ba
 import { VT_OK, drawNav, monthNav, toast, vt, vtName } from './dom';
 import { lists } from './lists';
 import { loadBegin } from './progress';
+import { pagedHtml } from './pagescroll';
 import { labelHtml, monthLabel, morph, morphOk, sameLayout, slideLabel, snapshot } from './morph';
 
 /* ================= Router ================= */
@@ -174,7 +175,7 @@ export async function route(opts: { nav?: boolean, quiet?: boolean, instant?: bo
     if (tok !== S.tok) return;
     v.classList.remove('stale');
     // a skipped slide still runs its update later, so the placeholder must not land on top of a page that already painted
-    const show = () => { if (painted || tok !== S.tok) return; stashPage(prevFeed); v.innerHTML = String(skeleton()); };
+    const show = () => { if (painted || tok !== S.tok) return; stashPage(prevFeed); v.replaceChildren(pagedHtml(skeleton())); };
     if (!pushing || S.vtDir !== 'push') return show();
     S.vtDir = '';
     const t = vt('page', show, () => { document.documentElement.dataset.vtdir = 'push'; });
@@ -196,7 +197,7 @@ export async function route(opts: { nav?: boolean, quiet?: boolean, instant?: bo
     const snap = morphOk() && S.painted && S.pageLive && !instant && v.firstElementChild && (!fresh || dir === 'next' || dir === 'prev' || (!dir && sameRoute)) ? snapshot(v) : null;
     let frag: DocumentFragment | null = null, inPlace = false;
     if (snap && fresh) {
-      const tpl = document.createElement('template'); tpl.innerHTML = String(markup); frag = tpl.content;
+      frag = pagedHtml(markup);
       inPlace = sameLayout(snap, frag, dir);
     }
     const swap = () => {
@@ -204,11 +205,11 @@ export async function route(opts: { nav?: boolean, quiet?: boolean, instant?: bo
       const keep = fresh && !inPlace ? 0 : scrollY;
       const lab = monthLabel(v);           // (before the page is put away)
       if (fresh) stashPage(prevFeed);
-      if (frag) v.replaceChildren(frag); else v.innerHTML = String(markup);
+      v.replaceChildren(frag || pagedHtml(markup));
       keepLabel(v);
       if (!instant) slideLabel(v, lab, dir);
       S.sel = new Set();          // the new rows start unticked
-      S.pageKey = key; S.pageHtml = markup; S.pageCacheable = cacheable && !v.querySelector(':scope > .error'); S.pageLive = true;
+      S.pageKey = key; S.pageHtml = markup; S.pageCacheable = cacheable && !v.querySelector(':scope > .pg > .error'); S.pageLive = true;
       if (from) vtName(v.querySelector('.head h1'), 'ptitle');
       if (inPlace) v.classList.remove('enter', 'anim');
       else if (!fresh || !VT_OK || opts.quiet || instant || !dir) { v.classList.remove('enter'); if (fresh && !opts.quiet && !instant) { void v.offsetWidth; v.classList.add('enter'); } }
@@ -233,7 +234,7 @@ export async function route(opts: { nav?: boolean, quiet?: boolean, instant?: bo
     warmMonths(r, tok, stepped);
   } catch (e) {
     if (e instanceof AuthError) return showLogin(e.message);
-    const onError = !!v.querySelector(':scope > .error');
+    const onError = !!v.querySelector(':scope > .pg > .error');
     if (opts.quiet && S.pageLive && !onError) { toast('Couldn’t refresh: ' + (e as Error).message); return; }
     if ((e as ApiError).network) {
       paint(html`<div class="error"><strong>Couldn’t load this page.</strong><br>${(e as Error).message}<br>Trying again by itself…<br><br><button class="btn small" data-onclick="App.reload()">Try again now</button></div>`);
