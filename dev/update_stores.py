@@ -25,7 +25,13 @@ CHAINS = {
     'foodlion': ['food_lion_us'], 'cvs': ['cvs_us'], 'walgreens': ['walgreens'], 'riteaid': ['rite_aid_us'],
     'homedepot': ['home_depot'], 'lowes': ['lowes_us'], 'bestbuy': ['best_buy'], 'dollargeneral': ['dollar_general_us'],
     'dollartree': ['dollar_tree_us'], 'familydollar': ['family_dollar_us'], 'starbucks': ['starbucks_us'],
-    'mcdonalds': ['mcdonalds'], 'dunkin': ['dunkin_us'], 'chickfila': ['chick_fil_a'], 'chipotle': ['chipotle'],
+    'mcdonalds': ['mcdonalds'],
+    'albertsons': ['albertsons'], 'autozone': ['autozone'], 'ross': ['ross_dress_for_less_us'], 'kohls': ['kohls_us'], 'staples': ['staples'],
+    'dominos': ['dominos_pizza_us'], 'ulta': ['ulta_beauty_us'], 'burlington': ['burlington_us'], 'hobbylobby': ['hobby_lobby_us'],
+    'officedepot': ['office_depot'], 'oldnavy': ['old_navy'], 'speedway': ['speedway_us'], 'loves': ['loves_us'], 'sonic': ['sonic_drivein_us'],
+    'arbys': ['arbys_us'], 'pandaexpress': ['panda_express'], 'applebees': ['applebees'], 'ihop': ['ihop'], 'wegmans': ['wegmans_us'],
+    'petco': ['petco'], 'petsmart': ['petsmart'], 'dairyqueen': ['dairy_queen'],
+ 'dunkin': ['dunkin_us'], 'chickfila': ['chick_fil_a'], 'chipotle': ['chipotle'],
     'panera': ['panera_bread_us'], 'wawa': ['wawa'], 'sheetz': ['sheetz'], '7eleven': ['7_eleven_us'],
 }
 MAX_FILE = 2_500_000            # bytes per chain; a chain over this is cut to its first stores (and says so)
@@ -70,19 +76,21 @@ def addr_of(p):
     return ', '.join(str(x).strip() for x in [street, p.get('addr:city'), p.get('addr:state')] if x)
 
 # Some chains keep the number the statement shows in a link rather than in ref
-NUM_IN_LINK = {'walgreens': r'/id=(\d+)', 'bestbuy': r'-(\d{1,5})\.html$'}
+NUM_IN_LINK = {'walgreens': r'/id=(\d+)', 'bestbuy': r'-(\d{1,5})\.html$', 'kroger': r'/details/\d+/(\d+)', 'petco': r'-(\d{1,5})\.html$',
+               'petsmart': r'store0*(\d+)\.html', 'dairyqueen': r'/(\d{1,6})/?$'}
 REF_OK = r'[A-Za-z]{0,2}-?\d{1,7}'
 def number(chain, p):
     ref = str(p.get('ref') or '').strip()
     if re.fullmatch(REF_OK, ref): return ref
     m = chain in NUM_IN_LINK and re.search(NUM_IN_LINK[chain], ref + ' ' + str(p.get('website') or ''))
-    return m.group(1) if m else ''
+    return m.group(m.lastindex) if m else ''
 
 def trim(geojson, chain):
     rows = []
     for f in geojson.get('features', []):
         p, g = f.get('properties') or {}, f.get('geometry') or {}
         c = g.get('coordinates')
+        if p.get('addr:country') not in (None, '', 'US'): continue        # these lists are for US statements
         ref = number(chain, p)
         if not ref or not c or len(c) < 2: continue          # real store numbers only (some chains use slugs)
         rows.append([ref, round(c[1], 5), round(c[0], 5), addr_of(p)])
