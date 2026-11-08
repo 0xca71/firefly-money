@@ -51,7 +51,9 @@ function countUp() {
   document.querySelectorAll<HTMLElement>('#view [data-count]').forEach(node => {
     const target = parseFloat(node.dataset.count!); if (!isFinite(target) || Math.abs(target) < 1) return;
     const t0 = performance.now(), dur = 520;
+    node.dataset.cu = String(t0);        // a newer count on this number takes over: two loops never fight
     const step = (now: number) => {
+      if (node.dataset.cu !== String(t0)) return;
       const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
       node.textContent = money0(target * e);
       if (p < 1 && node.isConnected) requestAnimationFrame(step);

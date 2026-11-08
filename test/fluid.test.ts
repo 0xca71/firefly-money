@@ -15,4 +15,17 @@ describe('fluid motion', () => {
     expect(pill).toMatch(/reduceMotion/);
     expect(css).toMatch(/\.pilled > :is\(button, a\)\.on \{ background: none/);
   });
+  it('an interrupted glide restarts from where the pill is drawn, and the pill is placed in the redraw microtask', () => {
+    expect(pill).toMatch(/getAnimations\(\)\.length/);
+    expect(pill).toMatch(/scan\(\);\s+\/\/ in the same microtask/);
+  });
+  it('a newer count-up on a number replaces the older one', () => {
+    expect(readFileSync('app/src/features/polish.ts', 'utf8')).toMatch(/node\.dataset\.cu !== String\(t0\)/);
+  });
+  it('scroll-linked polish is opacity only, behind @supports and no-preference', () => {
+    const i = css.indexOf('@keyframes subEase'), block = css.slice(css.lastIndexOf('@supports (animation-timeline', i), i + 60);
+    expect(block).toMatch(/prefers-reduced-motion: no-preference/);
+    expect(block).toMatch(/to \{ opacity: \.35; \}/);
+    expect(block).not.toMatch(/height|margin|top:|transform/);
+  });
 });

@@ -2338,3 +2338,9 @@ html[data-theme="frosted"] .tabs.pilled > a.on { background: var(--ink) !importa
 .insight, .list a.row, .hm-cell { transition: transform .22s var(--ease-out), opacity var(--t-hover); }
 @media (hover: hover) { .insight:active { transform: scale(.992); } }
 @media (prefers-reduced-motion: reduce) { .opill { transition: none; } .insight, .list a.row, .hm-cell { transition: none; } .insight:active { transform: none; } }
+
+/* The pinned page head's subtitle eases back as you scroll (opacity only, so nothing shifts); browsers without scroll timelines keep it as is */
+@supports (animation-timeline: scroll()) { @media (prefers-reduced-motion: no-preference) {
+  html.pinhead #view > .head .sub { animation: subEase linear both; animation-timeline: scroll(root block); animation-range: 0 100px; }
+  @keyframes subEase { to { opacity: .35; } }
+} }
