@@ -2283,9 +2283,9 @@ html[data-theme="sakura"] .panel,html[data-theme="mint"] .panel,html[data-theme=
 
 /* ---------- Activity grid: a year of days, a week to a column, darker = more spent ---------- */
 html { --ag: var(--spend); }
-.ag-scroll { height: 134px; overflow-y: hidden; box-sizing: border-box; align-items: flex-start; display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 0 2px 2px; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
-.ag-wrap { --agm: 14px; flex: none; margin-right: auto; min-width: 0; display: grid; gap: 4px; }
-.ag-months { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: var(--agm); gap: 3px; height: 14px; font-size: 11px; color: var(--muted); }
+.ag-scroll { height: 131px; overflow-y: hidden; box-sizing: border-box; align-items: flex-start; display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.ag-wrap { --agm: 14px; flex: none; margin-right: auto; min-width: 0; display: grid; gap: 3px; }
+.ag-months { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: var(--agm); gap: 3px; height: 12px; line-height: 12px; font-size: 11px; color: var(--muted); }
 .ag-months span { white-space: nowrap; overflow: visible; }
 .ag-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, auto); grid-auto-columns: var(--agm); gap: 3px; }
 .ag-c { aspect-ratio: 1; border-radius: 3px; background: var(--faint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 6%, transparent); }
@@ -2296,16 +2296,12 @@ html { --ag: var(--spend); }
 .ag-c.l4 { background: var(--ag); }
 .ag-c.pad, .ag-c.fut { background: none; box-shadow: none; }
 .ag-c.today { outline: 2px solid var(--text); outline-offset: 1px; }
-.ag-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
-.ag-legend .ag-c { width: 11px; flex: none; }
 html[data-theme="glass"] .ag-c.l3, html[data-theme="glass"] .ag-c.l4 { box-shadow: 0 0 8px color-mix(in srgb, var(--ag) 55%, transparent); }
 
-/* Activity card: no title; the range lives in the card's settings. A slim legend row, then a fixed-height 7-row grid (same for every range) */
+/* Activity card: no title; the range lives in the card's settings. No legend row (meaning is in the grid's label); month labels then a fixed-height 7-row grid (same for every range) */
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.panel.ag-card { padding: 12px 16px 12px; }
-.ag-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; min-height: 20px; margin-bottom: 8px; }
-.ag-head .ag-legend { margin: 0 0 0 auto; }
-.ag-none { height: 134px; margin: 0; display: flex; align-items: center; color: var(--muted); font-size: 13px; }
+.panel.ag-card { padding: 10px 12px; }
+.ag-none { height: 131px; margin: 0; display: flex; align-items: center; color: var(--muted); font-size: 13px; }
 
 /* ---------- Sidebar fits the window's height (desktop): row height, gaps and padding shrink with the viewport so the
    whole rail shows without scrolling. Mouse rows go down to 26px; a touch screen keeps 40px+ rows and scrolls instead,
