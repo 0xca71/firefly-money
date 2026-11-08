@@ -18,7 +18,7 @@
   html[data-theme="sunrise"] { --spend-t: #c0301b; --good-t: #0a7650; --warn-t: #8a5800; }
   html[data-theme="rose"] { --spend-t: #b8335b; --good-t: #1b7552; --warn-t: #855808; }
   @media (prefers-color-scheme: light) { html:not([data-theme]) { --spend-t: #a64d2a; --good-t: #3f6b54; --warn-t: #86600f; } }
-  :root { --accent: var(--text); --on-accent: var(--bg); color-scheme: light dark; --ease-glide: cubic-bezier(.32, .72, 0, 1); --ease-out: cubic-bezier(.2, .8, .2, 1); --t-hover: .14s;
+  :root { --accent: var(--text); --on-accent: var(--bg); color-scheme: light dark; --ease-glide: cubic-bezier(.32, .72, 0, 1); --ease-out: cubic-bezier(.2, .8, .2, 1); --t-hover: .14s; --ease-enter: cubic-bezier(.2, .8, .2, 1); --ease-exit: cubic-bezier(.4, 0, 1, 1);
     --ease-spring: linear(0, .22 6%, .62 14%, .92 24%, 1.04 33%, 1.05 40%, 1.02 52%, .995 66%, 1); }
   html[data-theme="light"] { --bg: #f6f5f1; --panel: #ffffff; --line: #e9e7e0; --text: #22221f; --muted: #6a665c; --faint: #efede7;
     --good: #4f7260; --spend: #a85a38; --income: #9fb8a8; --warn: #b8893a; --shadow: 0 18px 50px rgba(34,34,31,.12); color-scheme: light; }
@@ -521,12 +521,12 @@
   .goal-bar .track { height: 10px; margin: 12px 0 10px; }
   /* ---------- Page entrance (polish.ts playIn adds .anim; a card that arrives late gets .pop) ---------- */
   @media (prefers-reduced-motion: no-preference) {
-    #view.anim:not(.calm) :is(.hero, .kpi, .panel, .insight) { animation: riseIn .5s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 45ms); }
+    #view.anim:not(.calm) :is(.hero, .kpi, .panel, .insight) { animation: riseIn .5s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 45ms); }
     :is(#view.anim, .pop) .draw { stroke-dasharray: 1; animation: drawIn 1.1s .2s cubic-bezier(.45, 0, .2, 1) both; }
     :is(#view.anim, .pop) .draw.late { animation-delay: .4s; }
     :is(#view.anim, .pop) .area { animation: fadeIn .9s .55s ease both; }
-    :is(#view.anim, .pop) :is(.flowchart, .barchart, .sbars, .pairbars) .bar { transform-box: fill-box; transform-origin: 50% 100%; animation: growUp .7s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(.15s + var(--j, 0) * 60ms); }
-    :is(#view.anim, .pop) .fill { transform-origin: left; animation: growRight .8s .2s cubic-bezier(.2, .8, .2, 1) both; }
+    :is(#view.anim, .pop) :is(.flowchart, .barchart, .sbars, .pairbars) .bar { transform-box: fill-box; transform-origin: 50% 100%; animation: growUp .7s var(--ease-out) both; animation-delay: calc(.15s + var(--j, 0) * 60ms); }
+    :is(#view.anim, .pop) .fill { transform-origin: left; animation: growRight .8s .2s var(--ease-out) both; }
     :is(#view.anim, .pop) :is(.donut, .ring) .seg { animation: sweepIn .6s cubic-bezier(.3, 0, .2, 1) both; animation-delay: calc(.25s + var(--at, 0) * .9s); }
     :is(#view.anim, .pop) .chart .pt .dot { animation: fadeIn .4s 1.1s both; }
   }
@@ -1163,7 +1163,7 @@
   .appbar { display: none; }
   @media (max-width: 900px) {
     html.shell .appbar { display: flex; position: fixed; top: 0; left: 0; right: 0; z-index: 18; height: calc(env(safe-area-inset-top, 0px) + var(--edge) + 44px);
-      padding: calc(env(safe-area-inset-top, 0px) + var(--edge)) 70px 0; align-items: center; justify-content: center; pointer-events: none; transition: transform .3s cubic-bezier(.2, .8, .2, 1), background-color .2s, box-shadow .2s; }
+      padding: calc(env(safe-area-inset-top, 0px) + var(--edge)) 70px 0; align-items: center; justify-content: center; pointer-events: none; transition: transform .3s var(--ease-out), background-color .2s, box-shadow .2s; }
     html.shell .appbar.scrolled { background: color-mix(in srgb, var(--bg) 80%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
       box-shadow: 0 .5px 0 color-mix(in srgb, var(--text) 18%, transparent); }
     html.shell .ab-title { font-weight: 600; font-size: 17px; opacity: 0; transform: translateY(6px); transition: opacity .18s, transform .18s; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1182,7 +1182,7 @@
     html.shell .ptr { top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 44px); }
     /* Scrolling down slides the title bar away (phone.ts foldOnScroll); scrolling up or reaching the top brings it back */
     html.shell.scroll-down .appbar { transform: translateY(-100%); }
-    html.shell :is(.tbl.feed tr.dayhead, .bulkbar) { transition: top .3s cubic-bezier(.2, .8, .2, 1); }
+    html.shell :is(.tbl.feed tr.dayhead, .bulkbar) { transition: top .3s var(--ease-out); }
     html.shell.scroll-down .tbl.feed tr.dayhead { top: calc(env(safe-area-inset-top, 0px) + var(--edge)); }
     html.shell.scroll-down .bulkbar { top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 8px); }
     /* Pages without a back button have no title bar row: the large title starts just under the status bar blur, with search
@@ -1368,7 +1368,7 @@
     html.shell .search-btn { top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 4px); right: calc(10px + env(safe-area-inset-right, 0px)); border-color: transparent; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--accent); }
     html.shell .search-btn svg { width: 22px; height: 22px; }
     /* leaves with the title bar, by the same distance so the two move as one */
-    .search-btn { transition: transform .3s cubic-bezier(.2, .8, .2, 1), opacity .2s; }
+    .search-btn { transition: transform .3s var(--ease-out), opacity .2s; }
     html.scroll-down .search-btn { transform: translateY(calc(-1 * (env(safe-area-inset-top, 0px) + var(--edge) + 44px))); opacity: 0; pointer-events: none; }
     html:not(.shell) #view > .head:first-child { padding-right: 52px; }
     html.pal-open .search-btn, #app[hidden] ~ .search-btn { display: none; }
@@ -1486,7 +1486,7 @@
   .dbars .db.now i { background: var(--accent); }
   .dbars .db.fut { cursor: default; }
   .dbars .db.fut i { background: var(--faint); }
-  #view.anim:not(.calm) .dbars .db i { animation: growUp .55s cubic-bezier(.2, .8, .2, 1) both; }
+  #view.anim:not(.calm) .dbars .db i { animation: growUp .55s var(--ease-out) both; }
   .txbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
   .txbar .search { flex: 0 1 340px; max-width: none; }
   .txbar .search input { border-radius: 999px; }
@@ -1565,11 +1565,11 @@
   .st-card { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px;
     padding: calc(80px + env(safe-area-inset-top) + var(--edge)) var(--st-pad) calc(60px + env(safe-area-inset-bottom));
     background: radial-gradient(90% 45% at 50% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%);
-    opacity: 0; visibility: hidden; transform: scale(1.04); transition: opacity .35s ease, transform .5s cubic-bezier(.2, .8, .2, 1), visibility 0s .35s; }
-  .st-card.on { opacity: 1; visibility: visible; transform: none; transition: opacity .35s ease, transform .5s cubic-bezier(.2, .8, .2, 1); }
+    opacity: 0; visibility: hidden; transform: scale(1.04); transition: opacity .35s ease, transform .5s var(--ease-out), visibility 0s .35s; }
+  .st-card.on { opacity: 1; visibility: visible; transform: none; transition: opacity .35s ease, transform .5s var(--ease-out); }
   .st-card.past { transform: scale(.96); }
   .st-in { opacity: 0; transform: translateY(18px); }
-  .st-card.on .st-in { animation: stIn .6s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--d) * .32s + .1s); }
+  .st-card.on .st-in { animation: stIn .6s var(--ease-out) both; animation-delay: calc(var(--d) * .32s + .1s); }
   @keyframes stIn { to { opacity: 1; transform: none; } }
   .st-kick { font-size: 13px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
   .st-big { font-size: clamp(84px, 26vw, 150px); line-height: .95; margin: 0; font-weight: 800; letter-spacing: -.04em; }
@@ -1585,12 +1585,12 @@
   .st-yr { color: var(--text); text-decoration: none; font-weight: 600; font-size: 14px; padding: 7px 14px; border-radius: 999px; background: var(--faint, var(--line)); }
   .st-day { height: 14px; border-radius: 7px; background: var(--faint, var(--line)); margin: 16px 0 10px; overflow: hidden; }
   .st-day i { display: block; height: 100%; width: 0; border-radius: 7px; background: var(--accent); }
-  .st-card.on .st-day i { animation: stGrow 1.1s cubic-bezier(.2, .8, .2, 1) .9s forwards; }
+  .st-card.on .st-day i { animation: stGrow 1.1s var(--ease-out) .9s forwards; }
   @keyframes stGrow { to { width: var(--p); } }
   .st-bars { display: grid; gap: 8px; margin-top: 18px; }
   .st-bar { position: relative; display: flex; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: 15px; overflow: hidden; background: var(--faint, var(--line)); }
   .st-bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 0; background: color-mix(in srgb, var(--accent) 22%, transparent); border-radius: inherit; }
-  .st-card.on .st-bar::before { animation: stGrowW .9s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(.8s + var(--j) * .08s); }
+  .st-card.on .st-bar::before { animation: stGrowW .9s var(--ease-out) both; animation-delay: calc(.8s + var(--j) * .08s); }
   @keyframes stGrowW { to { width: var(--w); } }
   .st-bar > * { position: relative; }
   .st-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1602,7 +1602,7 @@
   .st-months i { display: block; width: 100%; height: 0; border-radius: 5px; background: color-mix(in srgb, var(--text) 22%, transparent); }
   .st-months .hi i { background: var(--accent); }
   .st-months .fut i { background: var(--line); }
-  .st-card.on .st-months i { animation: stGrowH .8s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(.7s + var(--j) * .05s); }
+  .st-card.on .st-months i { animation: stGrowH .8s var(--ease-out) both; animation-delay: calc(.7s + var(--j) * .05s); }
   @keyframes stGrowH { from { height: 0; } to { height: max(3px, var(--v)); } }
   .st-months span { font-size: 11px; opacity: .7; }
   .st-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
@@ -1762,7 +1762,7 @@
   .io-r { display: grid; grid-template-columns: 2.4em minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 12px; }
   .io-l { color: var(--muted); }
   .io-t { height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--muted) 16%, transparent); overflow: hidden; }
-  .io-t i { display: block; height: 100%; border-radius: inherit; transition: width .5s cubic-bezier(.2, .8, .2, 1); }
+  .io-t i { display: block; height: 100%; border-radius: inherit; transition: width .5s var(--ease-out); }
   .io-t i.in { background: var(--good); } .io-t i.out { background: color-mix(in srgb, var(--spend) 70%, transparent); } .io-t i.over { background: var(--spend); }
   .io-v { min-width: 4.5em; text-align: right; color: var(--muted); }
   @container (max-width: 190px) { .io-v { display: none; } .io-r { grid-template-columns: 2.4em minmax(0, 1fr); } }
@@ -1866,7 +1866,7 @@
   .tl-end::before { bottom: auto !important; height: 11px; }
   .tl-end p { margin: 0; color: var(--muted); font-size: 13px; line-height: 22px; }
   .tl-end p strong { color: var(--text); }
-  .tl-new { animation: riseIn .45s cubic-bezier(.2, .8, .2, 1) both; }
+  .tl-new { animation: riseIn .45s var(--ease-out) both; }
   @media (min-width: 1000px) {
     .tl { --gap: 40px; }
     .tl > li { --sx: 50%; }
@@ -1892,10 +1892,10 @@
   /* The sidebar swells like the macOS Dock: dock.ts sets --dock (0 to 1) on each link by how near the pointer is, and
      --dock-x, the label's nudge in whole pixels. The rows and the hover pill stay where they are. */
   @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-    .side .nav a svg { scale: calc(1 + var(--dock, 0) * .3); transition: scale .2s cubic-bezier(.2, .8, .2, 1); }
+    .side .nav a svg { scale: calc(1 + var(--dock, 0) * .3); transition: scale .2s var(--ease-out); }
     .side .nav a span { translate: var(--dock-x, 0px) 0; }
     html.side-mini .side .nav a svg { scale: calc(1 + var(--dock, 0) * .42); }
-    .side-search svg, .side-tg svg { transition: scale .2s cubic-bezier(.2, .8, .2, 1), transform .34s var(--ease-glide); }
+    .side-search svg, .side-tg svg { transition: scale .2s var(--ease-out), transform .34s var(--ease-glide); }
     .side-search:hover svg, .side-tg:hover svg { scale: 1.14; }
     /* Magnetic hover (magnet.ts, off unless turned on in Settings) writes its lean straight into the element's
        `translate` while .mag is set, and removes it once it's home, since any translate makes a stacking context. */
@@ -2020,7 +2020,7 @@
     html.shell:not(.ab-row) { --head-top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 4px); }
     /* search sits on the pinned title row there, so it stays with it instead of sliding away */
     html.shell.pinhead:not(.ab-row) .search-btn { transform: none; opacity: 1; pointer-events: auto; }
-    html.shell.pinhead #view > .head { transition: top .3s cubic-bezier(.2, .8, .2, 1); }
+    html.shell.pinhead #view > .head { transition: top .3s var(--ease-out); }
   }
   html.pinhead #view > .head { position: sticky; top: var(--head-top); z-index: 12; }
   /* A clear blur, no tint, in two steps so it fades without a smeared half-sharp band: ::before blurs strongly behind the title
@@ -2048,7 +2048,7 @@
   /* the day headings on Transactions and the bulk bar stick just below it */
   html.pinhead .tbl.feed tr.dayhead { top: calc(var(--head-top) + var(--head-h, 0px) + 4px) !important; z-index: 13; }
   html.pinhead .bulkbar { top: calc(var(--head-top) + var(--head-h, 0px) + 10px) !important; z-index: 13; }
-  html.pinhead.shell .tbl.feed tr.dayhead, html.pinhead.shell .bulkbar { transition: top .3s cubic-bezier(.2, .8, .2, 1); }
+  html.pinhead.shell .tbl.feed tr.dayhead, html.pinhead.shell .bulkbar { transition: top .3s var(--ease-out); }
   @media print { html.pinhead #view > .head { position: static; } html.pinhead #view > .head::before, html.pinhead #view > .head::after { display: none; } }
 
   /* ---------- Scrollbars: thin, themed pills on a clear track (mouse and trackpad only; touch keeps its own) ---------- */
@@ -2322,3 +2322,25 @@ html[data-theme="glass"] .ag-c.l3, html[data-theme="glass"] .ag-c.l4 { box-shado
 @media (min-width: 901px) and (pointer: coarse) {
   .side { --row: 40px; --hh: 30px; --hm: 16px; }
 }
+
+/* Sliding pill under the active choice of segmented controls and tab rows (pill.ts); moves with transform only */
+.seg, .tabs { position: relative; }
+.opill { position: absolute; z-index: 0; pointer-events: none; border-radius: 9px; }
+.seg > .opill { background: var(--panel); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.tabs > .opill { border-radius: 2px; background: var(--accent); }
+.seg > :is(button, a) { position: relative; z-index: 1; }
+.pilled > :is(button, a).on { background: none !important; box-shadow: none !important; }
+.tabs.pilled > a.on { border-color: transparent !important; }
+html[data-theme="frosted"] .seg > .opill { background: var(--ink); }
+html[data-theme="frosted"] .tabs > .opill { display: none; }
+html[data-theme="frosted"] .tabs.pilled > a.on { background: var(--ink) !important; }
+/* A soft press on tappable cards, desktop and phone alike; it springs back on release */
+.insight, .list a.row, .hm-cell { transition: transform .22s var(--ease-out), opacity var(--t-hover); }
+@media (hover: hover) { .insight:active { transform: scale(.992); } }
+@media (prefers-reduced-motion: reduce) { .opill { transition: none; } .insight, .list a.row, .hm-cell { transition: none; } .insight:active { transform: none; } }
+
+/* The pinned page head's subtitle eases back as you scroll (opacity only, so nothing shifts); browsers without scroll timelines keep it as is */
+@supports (animation-timeline: scroll()) { @media (prefers-reduced-motion: no-preference) {
+  html.pinhead #view > .head .sub { animation: subEase linear both; animation-timeline: scroll(root block); animation-range: 0 100px; }
+  @keyframes subEase { to { opacity: .35; } }
+} }

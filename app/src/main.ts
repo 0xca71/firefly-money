@@ -26,6 +26,7 @@ import './features/flow';
 import './features/chartfit';
 import './features/tilepreview';
 import './features/magnet';
+import './features/pill';
 import './features/edge';
 import './features/dashboard';
 import './features/pageopts';
