@@ -284,7 +284,9 @@ async def check(pw, width, height, mobile):
         # A tile's own settings: fewer recent transactions
         await page.locator('#dash [data-w="recent"] .obtn').click(); await page.wait_for_selector('#dash [data-w="recent"] .wopts:not([hidden]) select')
         await page.locator('#dash [data-w="recent"] .wopts select').select_option('5'); await page.wait_for_function(PAINTED, timeout=15000)
-        await page.wait_for_selector('#dash [data-w="recent"] tr.click')
+        # PAINTED can already be true before the tile redraws, so wait for the row count to settle on 5 instead of reading it once
+        try: await page.wait_for_function("""document.querySelectorAll('#dash [data-w="recent"] tr.click').length === 5""", timeout=10000)
+        except Exception: pass
         n = await page.locator('#dash [data-w="recent"] tr.click').count()
         if n != 5: errors.append(f'the recent transactions setting showed {n} rows instead of 5')
         await page.evaluate('App.dashReset()'); await page.wait_for_function(PAINTED, timeout=15000)
