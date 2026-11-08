@@ -8,6 +8,8 @@ import { invalidate, lists, type Lists } from '../core/lists';
 import { VIEWS, hashWith, route } from '../core/router';
 import { budgetsLessRefunds, insight, refundsIn } from '../features/refunds';
 import { pairBars, ring } from '../features/charts';
+import { type BMonth, budgetCard, budgetInsight } from '../features/budgetinsight';
+import { normGroup } from '../core/feed';
 import { customizeButton, pageCard, pageOpt } from '../features/pageopts';
 
 /* ================= Budgets ================= */
@@ -63,14 +65,48 @@ export async function budgetLimits(cur: Period, L: Lists) {
   }
   return done();
 }
+// Each budget's last `n` months up to y/m: what it spent on each day (less refunds of its purchases) and its amount
+// Budget insights (budgetinsight.ts) are worked out from these. Throws when Firefly can't be reached: nothing is kept.
+export async function budgetHistory(y: number, m: number, n: number, L: Lists) {
+  const per = Array.from({ length: n }, (_, i) => monthRange(y, m - (n - 1 - i))), start = per[0].start, end = per[n - 1].end;
+  const parts: Record<string, LimitPart[]> = {};
+  const take = (bid: string, x: ApiData) => {
+    const at = x.attributes || {};
+    (parts[String(bid)] = parts[String(bid)] || []).push({ id: String(x.id), amount: num(at.amount), start: String(at.start || '').slice(0, 10), end: String(at.end || '').slice(0, 10) });
+  };
+  const limitsP = getAll('/budget-limits', { start, end }).then(all => all.forEach(x => take(x.attributes.budget_id, x))).catch(async () => {
+    Object.keys(parts).forEach(k => delete parts[k]);
+    await Promise.all(L.budgets.map(b => getAll('/budgets/' + b.id + '/limits', { start, end }).then(ls => ls.forEach(x => take(b.id, x)))));
+  });
+  const [txs, , rs] = await Promise.all([getAll('/transactions', { start, end, type: 'withdrawal' }), limitsP, refundsIn(start, end)]);
+  const days = per.map(p => daysBetween(p.start, p.end) + 1), daily: Record<string, number[][]> = {};
+  const slot = (bid: string) => daily[bid] || (daily[bid] = days.map(d => Array(d).fill(0)));
+  const add = (bid: string, date: string, v: number) => {
+    const d = date.slice(0, 10), k = per.findIndex(p => d >= p.start && d <= p.end);
+    if (k >= 0 && bid) slot(bid)[k][daysBetween(per[k].start, d)] += v;
+  };
+  txs.map(normGroup).forEach(g => g.splits.forEach(s => { if (s.type === 'withdrawal' && s.budget_id) add(s.budget_id, String(s.date), s.amount); }));
+  rs.forEach(r => add(r.budgetId, r.date, -r.amount));
+  const out: Record<string, BMonth[]> = {};
+  new Set([...Object.keys(daily), ...Object.keys(parts)]).forEach(bid => {
+    out[bid] = per.map((p, k) => {
+      const dd = slot(bid)[k], total = dd.reduce((a, v) => a + v, 0);
+      return { start: p.start, end: p.end, label: p.label, short: p.short, daily: dd.map(v => Math.max(0, v)), spent: Math.max(0, Math.round(total * 100) / 100), limit: parts[bid] ? limitTotal(parts[bid], p) : 0 };
+    });
+  });
+  return out;
+}
 VIEWS.budgets = async (r, paint) => {
   const L = await lists();
   const cur = viewPeriod(r), all = !!cur.all;   // All time shows what was spent; amounts are set per month
   const rs = refundsIn(cur.start, cur.end);   // refunds of purchases on a budget come off what it spent (see refunds.ts)
-  const [res, limits, noBudget, avail] = await Promise.all([
+  const t0 = todayIso(), showHist = !all && !r.at && cur.start <= t0 && pageCard('budgets', 'insights');
+  const hist = showHist ? budgetHistory(cur.y!, cur.m!, pageOpt('budgets', 'months'), L).catch(e => { if (e instanceof AuthError) throw e; return null; }) : Promise.resolve(null);
+  const [res, limits, noBudget, avail, history] = await Promise.all([
     Promise.all([api('/budgets', { params: { start: cur.start, end: cur.end } }), rs]).then(([b, x]) => budgetsLessRefunds(arr(b), x)), all ? {} as Record<string, BudgetLimit> : budgetLimits(cur, L),
     insight('/insight/expense/no-budget', { start: cur.start, end: cur.end }, rs).catch(() => []),
     all ? { data: [] } : api('/available-budgets', { params: { start: cur.start, end: cur.end } }).catch(() => ({ data: [] })),
+    hist,
   ]);
   if (r.at) return;     // loading a month ahead
   const available = arr(avail).reduce((s, x) => s + num(x.attributes.amount), 0);
@@ -95,8 +131,11 @@ VIEWS.budgets = async (r, paint) => {
     return html`<tr${b.active ? '' : html` style="opacity:.5"`}><td class="namecol"><a class="desc" href="#/transactions?budget=${b.id}" style="text-decoration:none">${b.name}</a>${b.lim ? html`<div class="track pace" style="max-width:360px"><div class="fill ${pct > 100 ? 'over' : pace && pace.tone === 'warn' ? 'warn' : 'good'}" style="width:${Math.min(100, pct).toFixed(1)}%"></div>${pace && showPace ? html`<i class="today" style="left:${(pace.at * 100).toFixed(1)}%" title="Today"></i>` : ''}</div><div class="sub-s"><span class="show-s">${money(b.spent)} spent · </span>${pct > 100 ? html`<span class="up">${money(b.spent - b.lim.amount)} over</span>` : money(b.lim.amount - b.spent) + ' left · ' + pct.toFixed(0) + '% used'}${pace && pace.text ? html` · <span class="${pace.tone === 'warn' ? 'up' : 'neutral'}">${pace.text}</span>` : ''}</div>` : all ? '' : html`<div class="sub-s">No amount set for ${cur.short}</div>`}${b.lim ? '' : html`<div class="sub-s show-s">${money(b.spent)} spent</div>`}${all ? '' : carried(b)}${b.auto ? html`<span class="chip" title="Auto-budget: Firefly sets the amount each period">${AUTO_LABEL[b.auto] || b.auto} · ${money0(b.autoAmt)}${(AUTO_PERIODS.find(x => x[0] === b.autoPeriod) || ['', '', ''])[2]}</span>` : ''}</td><td class="amt hide-s">${money(b.spent)}</td>${all ? '' : html`<td class="r"><input class="inline num" type="number" min="0" step="1" placeholder="Set…" value="${b.lim ? b.lim.amount : ''}" data-onchange="App.setLimit('${b.id}',this)" aria-label="Budget for ${b.name}"></td>`}<td class="act"><button class="btn small" data-onclick="App.budgetForm('${b.id}')">Edit</button></td></tr>`;
   }));
   const inactiveCount = bs.filter(b => !b.active).length;
+  const nHist = pageOpt('budgets', 'months') as number;
+  const cards = showHist && history ? visible.map(b => { const ms = history[b.id]; return ms && ms.some(m => m.limit > 0 || m.spent > 0) ? budgetCard(b, budgetInsight(ms, t, alertPct), alertPct) : ''; }).filter(Boolean) : [];
+  const insights = !showHist ? '' : html`<section class="bi-wrap"><div class="panel-head"><h2>Budget insights</h2></div><p class="lead">${history ? 'Each budget over the last ' + nHist + ' months, to ' + cur.label + ' · average, pace and where this month is heading' : 'Budget history'}</p>${!history ? html`<p class="empty">Couldn’t load the budget history. Try again in a moment.</p>` : cards.length ? html`<div class="binsights">${htmlList(cards)}</div>` : html`<p class="empty">Nothing spent in a budget over the last ${nHist} months yet.</p>`}</section>`;
   paint(html`${head('Budgets', 'Set how much you plan to spend each month', html`${monthNav()}${customizeButton('budgets')}<button class="btn primary" data-onclick="App.budgetForm()">+ New budget</button>`)}${pageCard('budgets', 'kpis') ? html`<div class="kpis">${available ? html`<div class="kpi"><div class="eyebrow">Available to budget</div><div class="val num">${money0(available)}</div><div class="sub-s">${available - totLim >= 0 ? money0(available - totLim) + ' not yet assigned' : html`<span class="up">${money0(totLim - available)} more assigned than available</span>`}</div></div>` : ''}${all ? '' : html`<div class="kpi"><div class="eyebrow">Budgeted</div><div class="val num">${money0(totLim)}</div></div>`}<div class="kpi"><div class="eyebrow">Spent in budgets</div><div class="val num">${money0(totSpent)}</div></div>${all ? '' : html`<div class="kpi"><div class="eyebrow">Left</div><div class="val num ${totLim - totSpent < 0 ? 'neg' : ''}">${money0(totLim - totSpent)}</div></div>`}<div class="kpi"><div class="eyebrow">Spent outside budgets</div><div class="val num">${money0(unb)}</div></div></div>` : ''}${chart}<section class="panel flush">${rows ? html`<table class="tbl"><thead><tr><th>Budget</th><th class="r hide-s">Spent</th>${all ? '' : html`<th class="r"><span class="hide-s">Budget for ${cur.short}</span><span class="show-s">Amount</span></th>`}<th></th></tr></thead><tbody>${rows}</tbody></table>`
-      : emptyState('budgets', 'No budgets yet', 'Give a category a monthly limit and see how fast you are using it, with a warning before you go over.', html`<button class="btn primary" data-onclick="App.budgetForm()">+ New budget</button>`)}</section>${inactiveCount ? html`<p style="margin-top:14px"><a class="link" href="${hashWith({ inactive: showInactive ? '' : '1' })}">${showInactive ? 'Hide' : 'Show'} ${inactiveCount} inactive</a></p>` : ''}<p class="sub-s" style="margin-top:14px">${all ? 'Budget amounts are set per month. Pick a month to set them.' : 'Type an amount in the right column and press Enter to set that month’s budget. Clear it to remove it.'}</p>`);
+      : emptyState('budgets', 'No budgets yet', 'Give a category a monthly limit and see how fast you are using it, with a warning before you go over.', html`<button class="btn primary" data-onclick="App.budgetForm()">+ New budget</button>`)}</section>${insights}${inactiveCount ? html`<p style="margin-top:14px"><a class="link" href="${hashWith({ inactive: showInactive ? '' : '1' })}">${showInactive ? 'Hide' : 'Show'} ${inactiveCount} inactive</a></p>` : ''}<p class="sub-s" style="margin-top:14px">${all ? 'Budget amounts are set per month. Pick a month to set them.' : 'Type an amount in the right column and press Enter to set that month’s budget. Clear it to remove it.'}</p>`);
   S.budgetLimits = limits; S.budgetCache = Object.fromEntries(bs.map(b => [b.id, b]));
 };
 async function setLimit(bid: string, input: HTMLInputElement) {

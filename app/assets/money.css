@@ -2312,3 +2312,26 @@ html[data-theme="frosted"] .opill { background: var(--ink); }
   html.pinhead #view > .head .sub { animation: subEase linear both; animation-timeline: scroll(root block); animation-range: 0 100px; }
   @keyframes subEase { to { opacity: .35; } }
 } }
+
+  /* ---------- Budget insights: a card per budget under the Budgets list ---------- */
+  .bi-wrap { margin-top: 28px; }
+  .bi-wrap > .lead { margin: 2px 0 16px; }
+  .binsights { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; align-items: start; }
+  .binsight { min-width: 0; display: flex; flex-direction: column; gap: 14px; padding: 20px; }
+  .binsight > header { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-width: 0; }
+  .binsight > header .desc { font-size: 17px; font-weight: 600; text-decoration: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .binsight > header .chip { margin: 0; flex: none; }
+  .binsight .bi-verdict { margin: -6px 0 0; font-size: 14px; color: var(--muted); }
+  .bi-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; margin: 0; }
+  .bi-stats > div { min-width: 0; }
+  .bi-stats dt { font-size: 12px; color: var(--muted); }
+  .bi-stats dd { margin: 2px 0 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+  .bi-stats dd.up { color: var(--spend-t, var(--spend)); } .bi-stats dd.down { color: var(--good-t, var(--good)); }
+  .bi-chart h3 { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .bi-chart .legend { flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
+  .bi-chart .legend i.tick { width: 12px; height: 2px; border-radius: 1px; background: var(--text); vertical-align: 3px; }
+  .bi-chart .legend i.dash { width: 12px; height: 0; border-radius: 0; border-top: 2px dashed var(--muted); vertical-align: 3px; }
+  .lines .lim { stroke: var(--text); stroke-width: 2; stroke-linecap: round; }
+  .bpace .lim { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 2 4; }
+  .bpace .ahead { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 2 5; stroke-linecap: round; opacity: .7; }
+  .bhist text.now { fill: var(--text); font-weight: 600; }

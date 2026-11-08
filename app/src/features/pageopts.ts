@@ -43,7 +43,8 @@ export const PAGE_OPTS: Record<string, { title: string, opts: PageOpt[] }> = {
     { id: 'chart', label: 'Chart', hint: 'Shown above the list', def: 'none', choices: [['none', 'None'], ['rings', 'A ring for each budget'], ['bars', 'Spent vs. budgeted']] },
     { id: 'sort', label: 'Sort by', def: 'firefly', choices: [['firefly', 'Firefly’s order'], ['used', 'Most used'], ['left', 'Most left'], ['spent', 'Most spent'], ['name', 'Name']] },
     { id: 'pace', label: 'Today marker on the bars', def: true, choices: [[true, 'Show'], [false, 'Hide']] },
-    on('kpis', 'Totals'),
+    { id: 'months', label: 'Months of history', hint: 'For the insights under the list', def: 6, choices: [[6, '6'], [9, '9'], [12, '12']] },
+    on('kpis', 'Totals'), on('insights', 'Budget insights', true, 'History, average and current pace for each budget'),
   ] },
   piggy: { title: 'Piggy banks', opts: [
     { id: 'style', label: 'Progress as', def: 'ring', choices: [['ring', 'Rings'], ['bar', 'Bars']] },

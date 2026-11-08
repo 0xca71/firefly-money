@@ -15,7 +15,7 @@ import { bindSwipe } from '../features/phone';
 import { drafts } from '../features/txform';
 import { billAmount, billDueDates, billsFrom } from './bills';
 import { fcHorizon } from './forecast';
-import { type BudgetLimit, budgetLimits } from './budgets';
+import { type BudgetLimit, budgetLimits, budgetPace } from './budgets';
 import { loanHistory } from './loans';
 import { type Piggy, normPiggy, paceBits } from './piggy';
 import { budgetsLessRefunds, insight, refundsIn } from '../features/refunds';
@@ -106,7 +106,7 @@ VIEWS[''] = async (r, paint) => {
       ['safe', future ? idle('safe') : wait('safe') ?? (safe || idle('safe'))],
       ['attention', attentionPanel({ uncat, uncatQ, bills: arr(bills), budgets: arr(budgets), limits, future })],
       ['spending', spendingPanel([...cats.values()], future, all, tileOpt('spending', 'count'), tileOpt('spending', 'compare'), noneHref('category', cur))],
-      ['budgets', budgetsMini(arr(budgets), limits, all, tileOpt('budgets', 'unset'))],
+      ['budgets', budgetsMini(arr(budgets), limits, all, tileOpt('budgets', 'unset'), all || future ? null : cur)],
       ['cash', balancesPanel('Cash & savings', 'Bank account balances', cashShown, a => a.balance, false, tileOpt('cash', 'sparks') ? sparks : {})],
       ['cards', balancesPanel('Credit cards', 'Current balances owed', cardsShown, a => Math.max(0, -a.balance), true, tileOpt('cards', 'sparks') ? sparks : {})],
       ['loans', loansShown.length ? wait('loans') ?? loansPanel(loansShown, prog) : loansPanel(loansShown, {})], ['bills', billsMini(arr(bills), tileOpt('bills', 'days'), 4)],
@@ -287,14 +287,19 @@ function trendsPanel(labels: string[], months: ApiData[][], ranges: Period[]) {
   return html`<section class="panel"><h2>Category trends</h2><p class="lead">Your biggest categories, ${labels[0]} to ${labels[labels.length - 1]}</p>${rows ? html`<div class="trends">${rows}</div>` : html`<p class="empty">No spending recorded yet.</p>`}</section>`;
 }
 // Each budget as a ring of how much of it is used, and what's left
-function budgetsMini(budgets: ApiData[], limits: Record<string, BudgetLimit>, all: boolean, unset = true) {
+function budgetsMini(budgets: ApiData[], limits: Record<string, BudgetLimit>, all: boolean, unset = true, cur: Period | null = null) {
   const rows = htmlList(budgets.filter(b => b.attributes.active !== false && (unset || all || limits[String(b.id)])).map(b => {
     const spent = Math.abs((b.attributes.spent || []).reduce((s: number, x: ApiData) => s + num(x.sum), 0)), lim = limits[String(b.id)];
     const pct = lim && lim.amount ? spent / lim.amount * 100 : 0, cls = !lim ? '' : pct > 100 ? 'over' : pct >= budgetAlert() ? 'warn' : 'good';
     const sub = lim ? pct > 100 ? html`<span class="up">${money0(spent - lim.amount)} over</span>` : html`${money0(lim.amount - spent)} left` : html`${money0(spent)} spent`;
     return html`<a class="bring" href="#/transactions?budget=${b.id}">${ring(pct, cls, '', lim ? '' : '–')}<span class="name">${b.attributes.name}</span><span class="sub-s num">${sub}</span></a>`;
   }));
-  return html`<section class="panel"><div class="panel-head"><h2>Budgets</h2><a class="link" href="#/budgets">Manage</a></div><p class="lead">${all ? 'Spent of all time' : 'This month'}</p>${rows ? html`<div class="brings">${rows}</div>` : html`<p class="empty">No budgets yet.</p>`}</section>`;
+  // How many are running ahead of their month (the Budgets page has each one's history and pace)
+  const t = todayIso(), ahead = !cur ? 0 : budgets.filter(b => {
+    const lim = limits[String(b.id)], spent = Math.abs((b.attributes.spent || []).reduce((s: number, x: ApiData) => s + num(x.sum), 0)), p = b.attributes.active !== false && lim ? budgetPace(spent, lim.amount, cur.start, cur.end, t, budgetAlert()) : null;
+    return p && (p.tone === 'warn' || p.tone === 'over');
+  }).length;
+  return html`<section class="panel"><div class="panel-head"><h2>Budgets</h2><a class="link" href="#/budgets">Insights</a></div><p class="lead">${all ? 'Spent of all time' : 'This month'}${ahead ? html` · <span class="up">${ahead} ahead of pace</span>` : ''}</p>${rows ? html`<div class="brings">${rows}</div>` : html`<p class="empty">No budgets yet.</p>`}</section>`;
 }
 // Where the money went by who was paid (Firefly's expense accounts), against last month
 function payeesPanel(now: ApiData[], prev: ApiData[], future: boolean, all: boolean, count = 8, compare = true) {

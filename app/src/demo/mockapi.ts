@@ -60,19 +60,19 @@ export function createMockApi(now = new Date()) {
   acc(149, 'Market gains', 'revenue'); acc(150, 'Market losses', 'expense'); acc(151, 'Design client', 'revenue');   // the brokerage's ups and downs, and some freelance work
   const PAYEES: [string, string, string | null, number, number][] = [  // name, category, budget, typical amount, per-month count
     ['Green Grocer', 'Groceries', 'Food', 64, 5], ['Corner Market', 'Groceries', 'Food', 48, 4], ['SQ *BEAN THERE COFFEE', 'Dining', 'Food', 7, 6],
-    ['Burrito Bar', 'Dining', 'Food', 14, 3], ['Taco Stand', 'Dining', 'Food', 22, 2], ['Fuel Stop', 'Gas', null, 42, 3], ['Online Store', 'Shopping', null, 38, 3],
+    ['Burrito Bar', 'Dining', 'Food', 14, 3], ['Taco Stand', 'Dining', 'Food', 22, 2], ['Fuel Stop', 'Gas', 'Transport', 42, 3], ['Online Store', 'Shopping', 'Shopping', 38, 3],
     ['StreamFlix', 'Subscriptions', null, 15.49, 1], ['Tunes Plus', 'Subscriptions', null, 11.99, 1], ['City Power & Light', 'Utilities', null, 96, 1],
-    ['Pharmacy Plus', 'Health', null, 23, 1], ['Big Box Store', 'Shopping', null, 55, 1],
+    ['Pharmacy Plus', 'Health', null, 23, 1], ['Big Box Store', 'Shopping', 'Shopping', 55, 1],
     ['Mobile Co', 'Utilities', null, 65, 1], ['FiberNet', 'Utilities', null, 70, 1], ['FitLife Gym', 'Health', null, 45, 1],
-    ['Pizza Place', 'Dining', 'Food', 32, 2], ['Home Goods', 'Shopping', null, 140, 0.6],
+    ['Pizza Place', 'Dining', 'Food', 32, 2], ['Home Goods', 'Shopping', 'Shopping', 140, 0.6],
     ['Cinema Club', 'Entertainment', null, 19, 1], ['Ticket Hub', 'Entertainment', null, 85, 0.4], ['Pet Supply Co', 'Pets', null, 36, 0.8],
-    ['Hardware Hub', 'Home', null, 52, 0.7], ['Salon & Spa', 'Personal care', null, 46, 0.6], ['Gift Shop', 'Gifts', null, 48, 0.4], ['Ride Share', 'Transport', null, 19, 1.5],
+    ['Hardware Hub', 'Home', null, 52, 0.7], ['Salon & Spa', 'Personal care', null, 46, 0.6], ['Gift Shop', 'Gifts', null, 48, 0.4], ['Ride Share', 'Transport', 'Transport', 19, 1.5],
   ];
   const PID: Record<string, string> = {};
   PAYEES.forEach((p, i) => { PID[p[0]] = String(100 + i); acc(100 + i, p[0], 'expense'); });
   const CATS = [...[...new Set([...PAYEES.map(p => p[1]), 'Salary', 'Travel', 'Rent'])].sort(), 'Hobbies', 'Car', 'Interest'];   // Hobbies: unused (for Clean up)
   const CAT_ID = Object.fromEntries(CATS.map((c, i) => [c, String(i + 1)]));
-  const BUDGETS: Record<string, string> = { Food: '1', Fun: '2' };
+  const BUDGETS: Record<string, string> = { Food: '1', Fun: '2', Transport: '3', Shopping: '4' };
   const ACC_BY = Object.fromEntries(ACC.map(a => [a.id, a]));
 
   const PIGGIES = ([['Emergency fund', 10000, 6200, null], ['Summer trip', 2400, 950, iso(TODAY + 200 * DAY)]] as [string, number, number, string | null][])
@@ -311,7 +311,7 @@ export function createMockApi(now = new Date()) {
         return { id: bid, attributes: { name, active: true, spent: [{ sum: '-' + spent.toFixed(2), currency_code: 'USD' }] } };
       }), q);
     }
-    if (path === '/budget-limits') return page([{ id: '1', attributes: { budget_id: '1', amount: '900' } }, { id: '2', attributes: { budget_id: '2', amount: '200' } }], q);
+    if (path === '/budget-limits') return page([{ id: '1', attributes: { budget_id: '1', amount: '750' } }, { id: '2', attributes: { budget_id: '2', amount: '200' } }, { id: '3', attributes: { budget_id: '3', amount: '160' } }, { id: '4', attributes: { budget_id: '4', amount: '240' } }], q);
     if (path === '/piggy-banks') return page(PIGGIES, q);
     if (path === '/bills') return page(BILLS.map(b => billJson(b, q)), q);
     if ((m = path.match(/^\/bills\/(\d+)\/transactions$/))) return page(TX.filter(g => jd(g).bill_id === m![1] && inRange(g, q)), q);
