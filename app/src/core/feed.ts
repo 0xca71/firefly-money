@@ -42,6 +42,7 @@ export function groupUpdate(g: Group, patch: (s: Split) => Record<string, unknow
 
 // Firefly rejects a location without zoom_level ("Undefined array key zoom_level"), so always send all three.
 export const placeFields = (latitude: number, longitude: number) => ({ latitude, longitude, zoom_level: 16 });
+export const unplaceFields = () => ({ latitude: null, longitude: null, zoom_level: null });
 
 // Signed amount: negative = money out. With an account in view, sign is relative to that account.
 export function signed(g: Group, accountId?: string) {

@@ -2,7 +2,7 @@ import { html, htmlList } from '../core/html';
 import { api, getAll } from '../core/api';
 import { App, el, fmtDay, money, money0, period } from '../core/base';
 import { head, monthNav, toast } from '../core/dom';
-import { type Group, avatarHtml, groupUpdate, normGroup, payeeOf, placeFields } from '../core/feed';
+import { type Group, avatarHtml, groupUpdate, normGroup, payeeOf, placeFields, unplaceFields } from '../core/feed';
 import { LS } from '../core/helpers';
 import { lists } from '../core/lists';
 import { VIEWS, route } from '../core/router';
@@ -68,7 +68,17 @@ const srcText = (p: Place) => p.src === 'learned' ? 'Confirmed before' : p.src =
 async function writePlace(groups: Group[], lat: number, lng: number) {
   await Promise.all(groups.map(g => api('/transactions/' + g.id, { method: 'PUT', body: groupUpdate(g, () => placeFields(lat, lng)) })));
 }
+async function clearPlace(groups: Group[]) {
+  await Promise.all(groups.map(g => api('/transactions/' + g.id, { method: 'PUT', body: groupUpdate(g, () => unplaceFields()) })));
+}
 const keyOf = (gs: Group[]) => { for (const g of gs) { const p = parseDescriptor(g.splits[0]?.description) || parseDescriptor(String(payeeOf(g).name)); if (p) return p; } return null; };
+
+// Bulk pin (To do > Places): tick stores, each pins its chosen candidate (the top one unless you tap another)
+const ticked = new Set<string>(), chosen = new Map<string, number>();
+type BulkState = { run: { done: number, total: number } | null, failed: { label: string, err: string }[], undo: { w: Want, prev: Learned | undefined }[] };
+let bulk: BulkState = { run: null, failed: [], undo: [] };
+const BULK_PARALLEL = 3;
+const pickOf = (i: number) => Math.min(chosen.get(wants[i].key) ?? 0, found[i].length - 1);
 
 // Also used by the To do > Places page (pages/places.ts): same suggestions, same one-tap pin, its own empty state
 export let storeSolo = false;
@@ -76,7 +86,7 @@ export async function suggestStores(groups: Group[] = allGroups, solo = storeSol
   allGroups = groups; storeSolo = solo;
   const box = document.getElementById('storeList'); if (!box) return;
   wants = wantedStores(allGroups).slice(0, 30);
-  if (!wants.length) { found = []; drawStores(); return; }
+  if (!wants.length) { found = []; ticked.clear(); drawStores(); return; }
   const anchors = spotsOf(allGroups).map(x => ({ lat: x.lat, lng: x.lng }));
   found = await Promise.all(wants.map(w => candidates(w, anchors).catch(() => [])));
   if (!document.body.contains(box)) return;       // moved on to another page meanwhile
@@ -86,9 +96,48 @@ function drawStores() {
   const box = document.getElementById('storeList'); if (!box) return;
   const hit = wants.map((w, i) => i).filter(i => found[i].length), miss = wants.length - hit.length, n = hit.reduce((a, i) => a + wants[i].groups.length, 0);
   box.hidden = !wants.length && !storeSolo;
+  for (const k of ticked) if (!hit.some(i => wants[i].key === k)) ticked.delete(k);
+  const nTick = ticked.size, nTickBuys = hit.filter(i => ticked.has(wants[i].key)).reduce((a, i) => a + wants[i].groups.length, 0), busy = !!bulk.run;
+  const bar = (hit.length > 1 || nTick || bulk.run || bulk.failed.length || bulk.undo.length) ? html`<div class="bulkbar" id="pinBar">${bulk.run ? html`<strong>Pinning ${bulk.run.done} of ${bulk.run.total}…</strong>` : html`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-onchange="App.pinAll(this.checked)"${nTick === hit.length && hit.length ? ' checked' : ''}${hit.length ? '' : ' disabled'} aria-label="Select all stores"> <strong>${nTick ? nTick + ' selected' : 'Select all'}</strong></label>${nTick ? html`<button type="button" class="btn primary small" data-onclick="App.pinSelected()">Pin ${nTick} store${nTick === 1 ? '' : 's'} · ${nTickBuys} purchase${nTickBuys === 1 ? '' : 's'}</button>` : ''}`}${bulk.undo.length && !bulk.run ? html`<span class="sub-s">Pinned ${bulk.undo.length} store${bulk.undo.length === 1 ? '' : 's'}. <button type="button" class="link" data-onclick="App.pinUndo()">Undo</button></span>` : ''}${bulk.failed.length && !bulk.run ? html`<span class="sub-s neg" style="flex-basis:100%">Firefly didn’t accept ${bulk.failed.length}: ${bulk.failed.map(f => f.label + ' (' + f.err + ')').join(', ')}. Still selected; tap Pin to retry.</span>` : ''}</div>` : '';
   if (!wants.length) { box.innerHTML = String(html`<div class="center-empty" style="padding:60px 20px"><div style="font-size:40px">✓</div><h2 style="font-size:18px;margin:10px 0 4px">No places to pin</h2>Purchases that name a store but have no location show up here.</div>`); return; }
-  box.innerHTML = String(html`${storeSolo ? '' : html`<h2 style="margin:0 0 2px">Stores found</h2>`}<p class="sub-s" style="margin:0 0 10px">${hit.length ? html`${n} purchase${n === 1 ? '' : 's'} name a store but have no place. Tap the right store to pin them; nothing is saved until you do.` : html`No match yet for the ${wants.length} store${wants.length === 1 ? '' : 's'} named in your purchases.`}</p>${htmlList(hit.map(i => { const w = wants[i];
-    return html`<div class="list" style="margin-bottom:10px"><p style="margin:0 0 4px"><b>${w.label} #${w.num}</b> <span class="sub-s">· ${w.groups.length} purchase${w.groups.length === 1 ? '' : 's'} · ${money(w.total)}</span></p>${htmlList(found[i].map((p, j) => html`<button type="button" class="row" style="width:100%;text-align:left" data-onclick="App.pinStore(${i},${j})"><span class="name">${p.addr || 'Address not listed'}<br><span class="sub-s">${srcText(p)}${awayText(p)}</span></span><span class="link">Pin</span></button>`))}</div>`; }))}${miss && !osmOn() ? html`<p class="sub-s" style="margin:0">${miss} more ha${miss === 1 ? 's' : 've'} no store in the bundled lists. <button type="button" class="link" data-onclick="App.storeOsm(true)">Look them up online</button> (sends only the chain and store number, through this server).</p>` : osmOn() ? html`<p class="sub-s" style="margin:0">Online lookup is on${miss ? ' · ' + miss + ' not found' : ''}. <button type="button" class="link" data-onclick="App.storeOsm(false)">Turn off</button></p>` : ''}`);
+  box.innerHTML = String(html`${storeSolo ? '' : html`<h2 style="margin:0 0 2px">Stores found</h2>`}<p class="sub-s" style="margin:0 0 10px">${hit.length ? html`${n} purchase${n === 1 ? '' : 's'} name a store but have no place. Tap the right store to pin them; nothing is saved until you do.` : html`No match yet for the ${wants.length} store${wants.length === 1 ? '' : 's'} named in your purchases.`}</p>${bar}${htmlList(hit.map(i => { const w = wants[i], pj = pickOf(i), many = found[i].length > 1;
+    return html`<div class="list" style="margin-bottom:10px"><p style="margin:0 0 4px;display:flex;gap:8px;align-items:center"><input type="checkbox" data-onchange="App.pinTick(${i},this.checked)"${ticked.has(w.key) ? ' checked' : ''}${busy ? ' disabled' : ''} aria-label="Select ${w.label} #${w.num}"><span><b>${w.label} #${w.num}</b> <span class="sub-s">· ${w.groups.length} purchase${w.groups.length === 1 ? '' : 's'} · ${money(w.total)}</span></span></p>${htmlList(found[i].map((p, j) => html`<button type="button" class="row" style="width:100%;text-align:left" data-onclick="App.pinStore(${i},${j})"><span class="name">${p.addr || 'Address not listed'}<br><span class="sub-s">${srcText(p)}${awayText(p)}${many && j === pj ? ' · used for the selection' : ''}</span></span><span class="link">Pin</span></button>${many && j !== pj ? html`<button type="button" class="link sub-s" style="padding:0 0 6px 16px" data-onclick="App.pinChoose(${i},${j})">Use this one when selecting</button>` : ''}`))}</div>`; }))}${miss && !osmOn() ? html`<p class="sub-s" style="margin:0">${miss} more ha${miss === 1 ? 's' : 've'} no store in the bundled lists. <button type="button" class="link" data-onclick="App.storeOsm(true)">Look them up online</button> (sends only the chain and store number, through this server).</p>` : osmOn() ? html`<p class="sub-s" style="margin:0">Online lookup is on${miss ? ' · ' + miss + ' not found' : ''}. <button type="button" class="link" data-onclick="App.storeOsm(false)">Turn off</button></p>` : ''}`);
+}
+function pinTick(i: number, on: boolean) { const w = wants[i]; if (!w) return; if (on) ticked.add(w.key); else ticked.delete(w.key); drawStores(); }
+function pinAll(on: boolean) { ticked.clear(); if (on) wants.forEach((w, i) => { if (found[i].length) ticked.add(w.key); }); drawStores(); }
+function pinChoose(i: number, j: number) { const w = wants[i]; if (!w || !found[i][j]) return; chosen.set(w.key, j); drawStores(); }
+// One confirm: writes every ticked store's chosen place (a few at a time), learns what worked, reports what didn't
+async function pinSelected() {
+  if (bulk.run) return;
+  const todo = wants.map((w, i) => i).filter(i => ticked.has(wants[i].key) && found[i].length); if (!todo.length) return;
+  bulk = { run: { done: 0, total: todo.length }, failed: [], undo: [] }; drawStores();
+  const next = todo.slice();
+  const worker = async () => {
+    for (let i = next.shift(); i !== undefined; i = next.shift()) {
+      const w = wants[i], p = found[i][pickOf(i)], prev = learned()[w.key];
+      try { await writePlace(w.groups, p.lat, p.lng); learn(w.key, p); ticked.delete(w.key); bulk.undo.push({ w, prev }); }
+      catch (e) { bulk.failed.push({ label: w.label + ' #' + w.num, err: (e as Error).message || 'try again' }); }
+      bulk.run!.done++; drawStores();
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(BULK_PARALLEL, todo.length) }, worker));
+  bulk.run = null;
+  const n = bulk.undo.reduce((a, u) => a + u.w.groups.length, 0);
+  if (bulk.undo.length) toast('Pinned ' + n + ' purchase' + (n === 1 ? '' : 's') + ' at ' + bulk.undo.length + ' store' + (bulk.undo.length === 1 ? '' : 's'));
+  if (bulk.undo.length) await route({ quiet: true }); else drawStores();
+}
+async function pinUndo() {
+  const done = bulk.undo; if (!done.length || bulk.run) return;
+  bulk.undo = []; bulk.run = { done: 0, total: done.length }; drawStores();
+  const left: typeof done = [];
+  for (const u of done) {
+    try { await clearPlace(u.w.groups); const all = { ...learned() }; if (u.prev) all[u.w.key] = u.prev; else delete all[u.w.key]; LS.set('stores', all); }
+    catch { left.push(u); }
+    bulk.run.done++;
+  }
+  bulk.run = null; bulk.undo = left;
+  toast(left.length ? 'Couldn’t undo ' + left.length + ' store' + (left.length === 1 ? '' : 's') : 'Unpinned');
+  await route({ quiet: true });
 }
 async function pinStore(i: number, j: number) {
   const w = wants[i], p = found[i]?.[j]; if (!w || !p) return;
@@ -154,7 +203,7 @@ async function fixUndo() {
 }
 function storeOsm(on: boolean) { LS.set('storeOsm', on); suggestStores(allGroups, storeSolo); }
 
-const methods = { pinStore, fixSpot, fixPick, fixCancel, fixSave, fixUndo, storeOsm };
+const methods = { pinStore, pinTick, pinAll, pinChoose, pinSelected, pinUndo, fixSpot, fixPick, fixCancel, fixSave, fixUndo, storeOsm };
 Object.assign(App, methods);
 type Methods = typeof methods;
 declare module '../core/base' { interface AppApi extends Methods {} }
