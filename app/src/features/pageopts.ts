@@ -24,7 +24,7 @@ export const PAGE_OPTS: Record<string, { title: string, opts: PageOpt[] }> = {
     on('weekday', 'Spending by weekday', false, 'Which days of the week you spend the most'),
     on('daily', 'Average day', false, 'What a typical day cost, and your biggest days'),
     on('cat', 'Spending by category'), on('bud', 'Spending by budget'), on('tag', 'Spending by tag'), on('inccat', 'Income by category'),
-    on('payee', 'Top payees'), on('src', 'Income by source'), on('balances', 'Account balances'),
+    on('payee', 'Top payees'), on('src', 'Income by source'), on('fees', 'Fees and interest', true, 'The last 12 months, whatever dates are picked'), on('balances', 'Account balances'),
   ] },
   recap: { title: 'Monthly recap', opts: [
     { id: 'usual', label: 'Compare with', hint: 'What “usual” means on this page', def: 3, choices: [[1, 'Last month'], [3, 'The 3 months before'], [6, 'The 6 months before'], [12, 'The 12 months before']] },

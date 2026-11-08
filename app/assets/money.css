@@ -2335,3 +2335,20 @@ html[data-theme="frosted"] .opill { background: var(--ink); }
   .bpace .lim { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 2 4; }
   .bpace .ahead { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 2 5; stroke-linecap: round; opacity: .7; }
   .bhist text.now { fill: var(--text); font-weight: 600; }
+  /* money health: runway, interest and payoff, fees and interest */
+  .mh { display: flex; flex-direction: column; gap: 14px; padding: 20px; min-width: 0; margin-bottom: 20px; }
+  .mh-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; min-width: 0; }
+  .mh-head > div { min-width: 0; }
+  .mh-head h2 { margin: 0; }
+  .mh-head .lead { margin: 2px 0 0; }
+  .mh-head .chip { margin: 0; flex: none; }
+  .mh-total { flex: none; font-size: 22px; }
+  .mh-big { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  .mh-big strong { font-size: 30px; line-height: 1.1; }
+  .mh-fund { display: flex; flex-direction: column; gap: 8px; }
+  .mh-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 600; min-width: 0; }
+  .mh-line label { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 400; flex: none; }
+  .mh-line .mh-sel { display: inline-block; width: auto; margin: 0; padding: 4px 28px 4px 10px; }
+  .mh .bi-chart { min-width: 0; }
+  .mh .bi-chart svg { max-width: 100%; height: auto; }
+  .flow > .mh { margin: 0; }

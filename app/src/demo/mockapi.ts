@@ -57,6 +57,7 @@ export function createMockApi(now = new Date()) {
   acc(144, 'Island Air', 'expense'); acc(145, 'Seaside Resort', 'expense');   // a trip every summer, paid from savings
   acc(146, 'Riverside Motors', 'expense'); acc(147, 'Riverside Auto Finance', 'expense');   // the car (and the loan's interest)
   acc(148, 'Savings interest', 'revenue');
+  acc(152, 'Everyday Bank', 'expense'); acc(153, 'Rewards Card issuer', 'expense');   // the fees below
   acc(149, 'Market gains', 'revenue'); acc(150, 'Market losses', 'expense'); acc(151, 'Design client', 'revenue');   // the brokerage's ups and downs, and some freelance work
   const PAYEES: [string, string, string | null, number, number][] = [  // name, category, budget, typical amount, per-month count
     ['Green Grocer', 'Groceries', 'Food', 64, 5], ['Corner Market', 'Groceries', 'Food', 48, 4], ['SQ *BEAN THERE COFFEE', 'Dining', 'Food', 7, 6],
@@ -70,7 +71,7 @@ export function createMockApi(now = new Date()) {
   ];
   const PID: Record<string, string> = {};
   PAYEES.forEach((p, i) => { PID[p[0]] = String(100 + i); acc(100 + i, p[0], 'expense'); });
-  const CATS = [...[...new Set([...PAYEES.map(p => p[1]), 'Salary', 'Travel', 'Rent'])].sort(), 'Hobbies', 'Car', 'Interest'];   // Hobbies: unused (for Clean up)
+  const CATS = [...[...new Set([...PAYEES.map(p => p[1]), 'Salary', 'Travel', 'Rent'])].sort(), 'Hobbies', 'Car', 'Interest', 'Fees'];   // Hobbies: unused (for Clean up)
   const CAT_ID = Object.fromEntries(CATS.map((c, i) => [c, String(i + 1)]));
   const BUDGETS: Record<string, string> = { Food: '1', Fun: '2', Transport: '3', Shopping: '4' };
   const ACC_BY = Object.fromEntries(ACC.map(a => [a.id, a]));
@@ -181,6 +182,11 @@ export function createMockApi(now = new Date()) {
       addTx(d - 30 * DAY, 'withdrawal', r2(uniform(900, 1400) * p), 'Island Air', '2', '144', 'Travel');
       addTx(d, 'withdrawal', r2(uniform(1800, 3000) * p), 'Seaside Resort', '2', '145', 'Travel');
     }
+    // Fees: an ATM fee now and then, the Rewards Card's annual fee, and a foreign transaction fee on each summer trip
+    if (day === 21 && m % 3 === 0) addTx(d, 'withdrawal', 3.5, 'ATM fee', '1', '152', 'Fees');
+    if (day === 10 && m === 1) addTx(d, 'withdrawal', 95, 'Rewards Card annual fee', '3', '153', 'Fees');
+    if (m === 6 && day === 9 + (y % 4) * 4 && y < ty) addTx(d, 'withdrawal', 48.6, 'Foreign transaction fee', '3', '153', 'Fees');
+    if ((TODAY - d) / DAY === 100) addTx(d, 'withdrawal', 35, 'Late payment fee', '4', '153', 'Fees');
     if (d === CAR) {
       addTx(d, 'withdrawal', 6000, 'Riverside Motors (down payment)', '2', '146', 'Car');
       addTx(d, 'withdrawal', LOAN, 'Riverside Motors', '5', '146', 'Car');

@@ -1,21 +1,33 @@
 import { Html, html, htmlList } from '../core/html';
 import { api, getAll } from '../core/api';
 import { busy } from '../core/auth';
-import { App, S, absDiff, arr, el, fmtDate, fmtDay, isoDate, money, money0, monthRange, num, period, today, todayIso, type Field, viewYM } from '../core/base';
+import { App, S, absDiff, arr, el, fmtDate, fmtDay, isoDate, money, money0, monthRange, nowMonth, num, period, sumDiff, today, todayIso, type Field, viewYM } from '../core/base';
 import { closeDrawer, confirmBox, formError, head, monthNav, openDrawer, opt, toast } from '../core/dom';
 import { type Group, nameAvatar, normGroup, signed, txRows } from '../core/feed';
 import { logoDomain, setLogoSite } from '../core/logo';
-import { addDays, daysBetween } from '../core/helpers';
+import { LS, addDays, daysBetween } from '../core/helpers';
 import { type Account, invalidate, isAsset, isCard, isLiab, lists, normAccount, planText, stripPlan, withPlan } from '../core/lists';
 import { VIEWS, hashWith, route } from '../core/router';
 import { loanHistory } from './loans';
+import { runway, runwayPanel } from '../features/moneyhealth';
+import { insight } from '../features/refunds';
 
 /* ================= Accounts ================= */
 const ROLE_LABEL: Record<string, string> = { defaultAsset: 'Checking / default', savingAsset: 'Savings', sharedAsset: 'Shared', cashWalletAsset: 'Cash wallet', ccAsset: 'Credit card' };
+// How long the cash and savings would last at the last three full months' spending. Nothing is shown if Firefly can't say.
+async function runwayCard(accts: Account[]) {
+  try {
+    const [y, m] = nowMonth();
+    const spent = await Promise.all([3, 2, 1].map(k => insight('/insight/expense/total', monthRange(y, m - k)).then(sumDiff)));
+    const r = runway(accts.filter(a => a.active && a.netWorth && isAsset(a) && !isCard(a)), spent, +LS.get('fundMonths', 6) || 6);
+    return r ? runwayPanel(r) : '';
+  } catch (e) { return ''; }
+}
+function fundMonths(v: string) { LS.set('fundMonths', +v || 6); route(); }
 VIEWS.accounts = async (r, paint) => {
   const L = await lists(true);
   const tab = r.q.tab || 'assets';
-  const prog = tab === 'liabilities' ? await loanHistory(L.accounts.filter(isLiab)) : {};
+  const [prog, runwayHtml] = await Promise.all([tab === 'liabilities' ? loanHistory(L.accounts.filter(isLiab)) : {}, tab === 'assets' ? runwayCard(L.accounts) : '']) as [Record<string, any>, Html | string];
   // Payees and income sources show how much went through each one in the period picked at the top
   const flow = tab === 'expense' || tab === 'revenue', cur = period(), sums: Record<string, number> = {};
   if (flow) for (const x of arr(await api(tab === 'expense' ? '/insight/expense/expense' : '/insight/income/revenue', { params: { start: cur.start, end: cur.end } }).catch(() => []))) sums[x.id] = (sums[x.id] || 0) + absDiff(x);
@@ -39,7 +51,8 @@ VIEWS.accounts = async (r, paint) => {
   } else if (tab === 'liabilities') {
     cols = html`<th>Name</th><th class="hide-s">Paid off</th><th class="hide-s">Interest</th><th class="r">Remaining</th>`;
     row = a => { const pr = prog[a.id] || {}; return html`<td class="desc"><span class="acct">${nameAvatar(a.name, 'sm')}<span class="nm">${a.name}</span></span><div class="sub-s" style="text-transform:capitalize">${a.liabType}</div></td><td class="hide-s" style="min-width:200px">${pr.pct != null ? html`<div class="track" style="max-width:220px"><div class="fill good" style="width:${(a.debt ? pr.pct : 100).toFixed(1)}%"></div></div><div class="sub-s">${a.debt ? pr.pct.toFixed(0) + '% · ' + money0(pr.repaid) + ' of ' + money0(pr.borrowed) : 'Paid off'}</div>` : html`<span class="neutral">—</span>`}</td><td class="hide-s neutral">${num(a.interest) ? num(a.interest) + '% ' + a.interestPeriod : '—'}</td><td class="amt">${money(a.debt)}</td>`; };
-    total = money(items.reduce((s, a) => s + a.debt, 0)) + ' owed in total';
+    const paid = items.reduce((t, a) => t + ((prog[a.id] || {}).interest || 0), 0);
+    total = money(items.reduce((s, a) => s + a.debt, 0)) + ' owed in total' + (paid >= 1 ? ' · ' + money0(paid) + ' interest paid so far' : '');
   } else {
     const used = items.filter(a => sums[a.id]).length, when = cur.all ? 'all time' : 'in ' + cur.label;
     cols = html`<th>Name</th><th class="r">${tab === 'expense' ? 'Spent' : 'Received'} ${cur.all ? 'all time' : 'in ' + cur.short}</th>`;
@@ -47,7 +60,7 @@ VIEWS.accounts = async (r, paint) => {
     total = money(items.reduce((s, a) => s + (sums[a.id] || 0), 0)) + (tab === 'expense' ? ' spent at ' + used + ' of ' + items.length + ' payees ' : ' received from ' + used + ' of ' + items.length + ' income sources ') + when;
   }
   const body = items.length ? html`<table class="tbl"><thead><tr>${cols}</tr></thead><tbody>${htmlList(items.sort((a, b) => (sums[b.id] || 0) - (sums[a.id] || 0) || a.name.localeCompare(b.name)).map(a => html`<tr class="click" data-onclick="App.go('#/account/${a.id}')"${a.active ? '' : html` style="opacity:.5"`}>${row(a)}</tr>`))}</tbody></table>` : html`<div class="center-empty">Nothing here yet.</div>`;
-  paint(html`${head('Accounts', total, html`${flow ? monthNav() : ''}<button class="btn primary" data-onclick="App.accountForm(null,'${tab === 'assets' ? 'asset' : tab === 'cards' ? 'card' : tab === 'liabilities' ? 'liability' : tab}')">+ New account</button>`)}<div class="tabs">${tabLink('assets', 'Bank accounts')}${tabLink('cards', 'Credit cards')}${tabLink('liabilities', 'Loans & debts')}${tabLink('expense', 'Payees')}${tabLink('revenue', 'Income sources')}</div><section class="panel flush">${body}</section>${inactiveCount ? html`<p style="margin-top:14px"><a class="link" href="${hashWith({ inactive: show ? '' : '1' })}">${show ? 'Hide' : 'Show'} ${inactiveCount} inactive</a></p>` : ''}`);
+  paint(html`${head('Accounts', total, html`${flow ? monthNav() : ''}<button class="btn primary" data-onclick="App.accountForm(null,'${tab === 'assets' ? 'asset' : tab === 'cards' ? 'card' : tab === 'liabilities' ? 'liability' : tab}')">+ New account</button>`)}<div class="tabs">${tabLink('assets', 'Bank accounts')}${tabLink('cards', 'Credit cards')}${tabLink('liabilities', 'Loans & debts')}${tabLink('expense', 'Payees')}${tabLink('revenue', 'Income sources')}</div>${runwayHtml}<section class="panel flush">${body}</section>${inactiveCount ? html`<p style="margin-top:14px"><a class="link" href="${hashWith({ inactive: show ? '' : '1' })}">${show ? 'Hide' : 'Show'} ${inactiveCount} inactive</a></p>` : ''}`);
 };
 VIEWS.account = async (r, paint) => {
   await lists();
@@ -217,6 +230,7 @@ const methods = {
   accountForm,
   saveAccount,
   deleteAccount,
+  fundMonths,
 };
 Object.assign(App, methods);
 type Methods = typeof methods;
