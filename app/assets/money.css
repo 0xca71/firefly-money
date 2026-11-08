@@ -2177,26 +2177,6 @@ html:not(#_) .head .actions .month .round { width: var(--ctl); }
   .head > .actions { width: 100%; }
 }
 
-/* ================= Overview live strip (features/live.ts) ================= */
-.live { --ff: var(--muted); display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; margin: -12px 0 18px; font-size: 12.5px; line-height: 20px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.live[data-ff="ok"] { --ff: var(--good); }
-.live[data-ff="down"] { --ff: var(--spend); }
-.live[data-ff="auth"] { --ff: var(--warn); }
-.live-sync, .live-ring { display: inline-flex; align-items: center; gap: 7px; min-width: 0; white-space: nowrap; }
-.live-sync { color: var(--ff); font-weight: 600; }
-.live-sync > i { position: relative; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ff); }
-.live-sync > i::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--ff); opacity: 0; transform: scale(1); pointer-events: none; }
-.live[data-ff="ok"] .live-sync > i::after { animation: live-pulse 2.4s ease-out infinite; }
-@keyframes live-pulse { 0% { opacity: .5; transform: scale(1); } 70%, 100% { opacity: 0; transform: scale(2.8); } }
-.live-ring b { color: var(--text); font-weight: 600; }
-.live-ring svg { flex: none; width: 20px; height: 20px; transform: rotate(-90deg); fill: none; stroke-width: 3; }
-.live-ring .b { stroke: var(--faint); }
-.live-ring .s { stroke: var(--accent); stroke-linecap: round; }
-@media (prefers-reduced-motion: reduce) { .live-sync > i::after { animation: none !important; } }
-@media print { .live { display: none !important; } }
-@media (max-width: 600px) { .live { margin-top: -8px; } }
-@media (max-width: 340px) { .live { gap: 6px 6px; font-size: 12px; } .live-sync, .live-ring { gap: 5px; } .live-ring svg { width: 18px; height: 18px; } }
-
 /* ================= Getting started card (new installs) ================= */
 .started { margin-bottom: 20px; }
 .started .panel-head { align-items: flex-start; }
