@@ -1,0 +1,36 @@
+# Refreshes the offline store lists the Map page matches purchases against (app/assets/stores/*.json), from
+# AllThePlaces (https://www.alltheplaces.xyz) and, for Walmart, a public store-number list geocoded by the US Census. Weekly, and on demand. Opens a pull request only when a list changed.
+# If the source is down, or a chain's data is missing that week, dev/update_stores.py keeps the files as they are.
+name: Refresh store lists
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh-stores
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60       # the first run geocodes every Walmart address; later runs only new ones
+    steps:
+      - uses: actions/checkout@v7
+
+      - run: python3 dev/update_stores.py
+
+      - id: pr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: automation/store-lists
+          delete-branch: true
+          commit-message: Refresh store lists
+          title: Refresh store lists
+          body: |
+            Weekly refresh of `app/assets/stores/*.json` from [AllThePlaces](https://www.alltheplaces.xyz) (CC0), by `dev/update_stores.py`. Chains whose data was missing this week keep their previous file. Merging is safe: the size limit is checked by the tests.
+          add-paths: app/assets/stores/*.json
