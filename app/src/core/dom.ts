@@ -33,10 +33,10 @@ export const icon = (k: string) => html`<svg viewBox="0 0 24 24" fill="none" str
 export const NAV = [['', 'Overview', 'overview'], ['forecast', 'Forecast', 'forecast'], ['transactions', 'Transactions', 'transactions'], ['review', 'To do', 'review'],
   ['accounts', 'Accounts', 'accounts'], ['loans', 'Loan planner', 'loans'],
   ['budgets', 'Budgets', 'budgets'], ['categories', 'Categories & tags', 'categories'], ['bills', 'Bills', 'bills'], ['recurring', 'Recurring', 'recurring'],
-  ['piggy', 'Piggy banks', 'piggy'], ['rules', 'Rules', 'rules'], ['recap', 'Monthly recap', 'recap'], ['year', 'Year in Money', 'year'], ['timeline', 'Timeline', 'timeline'], ['ask', 'Ask', 'spark'], ['map', 'Map', 'map'], ['reports', 'Reports', 'reports'], ['settings', 'Settings', 'settings']];
+  ['piggy', 'Piggy banks', 'piggy'], ['rules', 'Rules', 'rules'], ['recap', 'Monthly recap', 'recap'], ['year', 'Year in Money', 'year'], ['timeline', 'Timeline', 'timeline'], ['ask', 'Ask', 'spark'], ['unusual', 'Unusual', 'eye'], ['map', 'Map', 'map'], ['reports', 'Reports', 'reports'], ['settings', 'Settings', 'settings']];
 // How the sidebar and the phone's More menu group the pages (Settings sits at the bottom of the sidebar)
 export const NAV_GROUPS: [string, string[]][] = [['', ['', 'transactions', 'review']],
-  ['Plan', ['budgets', 'bills', 'recurring', 'piggy', 'forecast', 'loans']], ['Insights', ['reports', 'timeline', 'recap', 'year', 'ask', 'map']],
+  ['Plan', ['budgets', 'bills', 'recurring', 'piggy', 'forecast', 'loans']], ['Insights', ['reports', 'timeline', 'recap', 'year', 'unusual', 'ask', 'map']],
   ['Manage', ['accounts', 'categories', 'rules']]];
 export const navItem = (r: string) => NAV.find(n => n[0] === r)!;
 // To do: Review (new transactions to look over) and Categorize (ones without a category), as two tabs of one page

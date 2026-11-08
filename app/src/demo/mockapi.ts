@@ -57,6 +57,7 @@ export function createMockApi(now = new Date()) {
   acc(144, 'Island Air', 'expense'); acc(145, 'Seaside Resort', 'expense');   // a trip every summer, paid from savings
   acc(146, 'Riverside Motors', 'expense'); acc(147, 'Riverside Auto Finance', 'expense');   // the car (and the loan's interest)
   acc(148, 'Savings interest', 'revenue');
+  acc(152, 'Dental Care Associates', 'expense'); acc(153, 'Sunrise Bakery', 'expense');   // first seen this month (Unusual)
   acc(149, 'Market gains', 'revenue'); acc(150, 'Market losses', 'expense'); acc(151, 'Design client', 'revenue');   // the brokerage's ups and downs, and some freelance work
   const PAYEES: [string, string, string | null, number, number][] = [  // name, category, budget, typical amount, per-month count
     ['Green Grocer', 'Groceries', 'Food', 64, 5], ['Corner Market', 'Groceries', 'Food', 48, 4], ['SQ *BEAN THERE COFFEE', 'Dining', 'Food', 7, 6],
@@ -203,6 +204,12 @@ export function createMockApi(now = new Date()) {
     if (last && d < TODAY) addTx(d, 'deposit', r2(BAL['2'] * APY(d) / 1200), 'Interest', '148', '2', 'Interest');
   }
   addTx(TODAY - Math.min(9, td - 1) * DAY, 'withdrawal', 312.40, 'Airline tickets', '3', PID['Online Store'], 'Travel');
+  // For Unusual: a lunch charged twice, a pharmacy bill far above the usual, a large first-time merchant, and a new bakery
+  const back = (n: number) => TODAY - Math.min(n, td - 1) * DAY;
+  addTx(back(2), 'withdrawal', 18.5, 'Burrito Bar', '3', PID['Burrito Bar'], 'Dining', 'Food'); addTx(back(2), 'withdrawal', 18.5, 'Burrito Bar', '3', PID['Burrito Bar'], 'Dining', 'Food');
+  addTx(back(6), 'withdrawal', 189, 'Pharmacy Plus', '1', PID['Pharmacy Plus'], 'Health');
+  addTx(back(3), 'withdrawal', 420, 'Dental Care Associates', '1', '152', 'Health');
+  addTx(back(1), 'withdrawal', 9.75, 'Sunrise Bakery', '3', '153', 'Dining', 'Food');
   // A refund of part of them, linked to them the way Money makes one (Reports and Budgets take it off spending)
   const LINKS: { id: string, type: string, attributes: { link_type_id: string, inward_id: string, outward_id: string } }[] = [];
   addTx(TODAY - Math.min(3, td - 1) * DAY, 'deposit', 80, 'Refund: Airline tickets', '142', '3', 'Travel');

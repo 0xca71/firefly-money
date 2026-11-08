@@ -58,6 +58,7 @@ import './pages/forecast';
 import './pages/ask';
 import './pages/inbox';
 import './pages/review';
+import './pages/unusual';
 import './features/pwa';
 import './features/ffstatus';
 import './features/loadbar';
