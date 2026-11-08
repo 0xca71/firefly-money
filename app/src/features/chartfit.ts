@@ -4,7 +4,7 @@
    the drawing is magnified across and down, so money.css can give text and lines their true size back, whatever the
    card, the sidebar fold, the window or Customize make of it. A resize observer keeps it current.
    ===================================================================== */
-const SEL = '#view :is(svg.lines, svg.barchart, svg.flowchart, .chart > svg)';
+const SEL = '#view :is(svg.lines, svg.barchart, svg.flowchart, svg.sbars, .chart > svg)';
 const seen = new WeakSet<Element>();
 const ro = 'ResizeObserver' in window ? new ResizeObserver(es => es.forEach(e => fit(e.target as SVGSVGElement))) : null;
 
