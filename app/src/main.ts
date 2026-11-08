@@ -60,6 +60,7 @@ import './pages/inbox';
 import './pages/review';
 import './features/pwa';
 import './features/ffstatus';
+import './features/live';
 import './features/loadbar';
 import './features/insights';
 import './features/prefs';
