@@ -27,6 +27,20 @@ describe('barChart', () => {
   it('copes with every month at zero', () => { clean(barChart([{ label: 'A', v: 0 }, { label: 'B', v: 0 }], v => v + '%', 'x')); });
 });
 
+describe('spent card bars', () => {
+  const css = readFileSync('app/assets/money.css', 'utf8');
+  it('never stretch with the card: fixed height, foot-aligned, round corners', () => {
+    const rules = css.split('\n').filter(l => /\.cards\.bento \.panel\.stat \.sbars \{/.test(l));
+    expect(rules.length).toBeGreaterThan(0);
+    rules.forEach(l => { expect(l).not.toMatch(/flex:\s*1/); expect(l).toMatch(/clamp\(56px, 26cqi, 130px\)/); });
+    expect(css).toMatch(/\.sbars\[style\*="--sx"\] \.bar \{ rx: calc\(2px \/ var\(--sx, 1\)\)/);
+  });
+  it('are measured from zero', () => {
+    const s = clean(sparkBars([10, 20], 20));
+    expect(s).toContain('height="13.0"'); expect(s).toContain('height="26.0"');
+  });
+});
+
 describe('sparkBars', () => {
   it('marks the last month and survives all zeros', () => {
     expect(clean(sparkBars([5, 10, 0, 20], 20))).toContain('class="bar now"');
