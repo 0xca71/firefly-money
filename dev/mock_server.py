@@ -115,6 +115,12 @@ def season(cat, m):
     if cat == 'Dining': return 1.15 if 6 <= m <= 8 else 1.3 if m == 12 else 1
     if cat == 'Utilities': return [1.35, 1.3, 1.1, 1, .9, .95, 1.15, 1.25, 1, .9, 1, 1.3][m - 1]
     return 1
+# Everyday spending has a rhythm (weekends, the week after each payday, a quiet month end) and creeps up over the last year
+WEEKEND = {'Dining', 'Entertainment', 'Shopping', 'Gifts'}; EVERYDAY = WEEKEND | {'Personal care', 'Home', 'Pets'}
+def rhythm(cat, d):
+    if cat not in EVERYDAY: return 1
+    return (1.7 if d.weekday() >= 5 else .8 if cat in WEEKEND else 1) * (1.2 if d.day <= 7 or 15 <= d.day <= 21 else .7 if d.day >= 26 else 1)
+def creep_up(cat, d): return 1 + .4 * max(0, 1 - ago(d)) if cat in EVERYDAY else 1
 def apy(d): a = ago(d); return 1.0 if a > 7 else .5 if a > 5 else 1.2 if a > 3.5 else 4.2   # savings rate, %
 # The car: bought a little over four years ago, part cash from savings and a 6-year loan at 5.9%
 _cm = TODAY.month - 3
@@ -152,9 +158,9 @@ while d <= TODAY:
                 add_tx(d, 'withdrawal', round(price, 2), name, '3', PID[name], cat, bud)
             continue
         # Early in the month the days so far get more of it, so this month's charts are never empty (on the 1st, about a week's worth)
-        odds = per / 30 * (max(1, 8 / TODAY.day) if this_month else season(cat, d.month))
+        odds = per / 30 * (max(1, 8 / TODAY.day) if this_month else season(cat, d.month)) * rhythm(cat, d)
         for _ in range(int(odds) + (random.random() < odds % 1)):
-            mult = 1.0 if this_month else mood[cat]
+            mult = 1.0 if this_month else mood[cat] * creep_up(cat, d)
             if cat == 'Dining' and this_month: mult = 1.9          # dining spike this month
             if cat == 'Groceries' and this_month: mult = 0.45     # groceries down
             src = random.choice(['1', '3', '3', '4'])
