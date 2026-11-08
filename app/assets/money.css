@@ -1021,6 +1021,7 @@
   .tabs { width: fit-content; max-width: 100%; gap: 2px; padding: 4px; border: 0; border-radius: 999px; background: var(--faint); box-shadow: inset 0 0 0 1px var(--line); scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
   .tabs a { padding: 7px 14px; margin: 0; border: 0; border-radius: 999px; line-height: 1.2; }
+  @media (max-width: 360px) { .tabs a { padding: 7px 10px; } }   /* three To do tabs fit at 320 */
   .tabs a.on .neutral { color: inherit; opacity: .7; }
   @media (min-width: 901px) {
     .side { margin: 14px 0 14px 14px; height: calc(100vh - 28px); top: 14px; border: 1px solid var(--line); border-radius: 26px; background: var(--panel); box-shadow: var(--shadow); }
