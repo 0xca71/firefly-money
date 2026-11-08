@@ -27,7 +27,10 @@ describe('Overview activity grid', () => {
     const h = String(activityPanel(buys, '2026-10-08', '2026-11-07', { range: '1m' }));
     expect(h).toContain('aria-pressed="true"');
     expect(h).toContain("App.dashOpt('activity','range','all')");
-    expect(h).toContain('Show as table');
+    expect(h).not.toContain('Show as table');
+    expect(h).not.toContain('<h2>Activity</h2>');
+    expect(h).toContain('class="sr-only"');
+    expect(h).toContain('role="img" aria-label="Spending each day');
     expect(h).toContain('--agm:14px');
     expect(activityCell(5)).toBe(activityCell(53));
   });
@@ -51,10 +54,9 @@ describe('Reports layout', () => {
     expect(css).toMatch(/\.ag-range \.btn \{ flex: 1 1 0; min-width: 0; min-height: 44px/);
   });
   it('every range has the same fixed-height grid, so switching chips shifts nothing', () => {
-    expect(css).toMatch(/\.ag-scroll \{ height: 150px/);
-    expect(css).toMatch(/\.ag-blank \{ height: 150px/);
-    expect(css).toMatch(/\.panel \.ag-lead \{ min-height: 2\.6em; margin-bottom: 8px/);
-    expect(css).toMatch(/\.panel:has\(\.ag-scroll, \.ag-blank\) \{ padding: 18px 20px 12px/);
+    expect(css).toMatch(/\.ag-scroll \{ height: 134px/);
+    expect(css).toMatch(/\.ag-none \{ height: 134px/);
+    expect(css).toMatch(/\.panel\.ag-card \{ padding: 12px 16px 12px/);
     for (const r of ['1m', 'year', 'all']) expect(String(activityPanel(buys, '2019-01-01', '2026-11-07', { range: r }))).toContain('--agm:14px');
   });
   it('a chip press redraws only the Activity card, not the page', () => {
