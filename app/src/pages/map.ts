@@ -2,7 +2,7 @@ import { html, htmlList } from '../core/html';
 import { api, getAll } from '../core/api';
 import { App, el, fmtDay, money, money0, period } from '../core/base';
 import { head, monthNav, toast } from '../core/dom';
-import { type Group, avatarHtml, groupUpdate, normGroup, payeeOf } from '../core/feed';
+import { type Group, avatarHtml, groupUpdate, normGroup, payeeOf, placeFields } from '../core/feed';
 import { LS } from '../core/helpers';
 import { lists } from '../core/lists';
 import { VIEWS, route } from '../core/router';
@@ -66,7 +66,7 @@ const srcText = (p: Place) => p.src === 'learned' ? 'Confirmed before' : p.src =
 
 // Writes the place to every part of these purchases. Firefly keeps latitude/longitude per part.
 async function writePlace(groups: Group[], lat: number, lng: number) {
-  await Promise.all(groups.map(g => api('/transactions/' + g.id, { method: 'PUT', body: groupUpdate(g, () => ({ latitude: lat, longitude: lng })) })));
+  await Promise.all(groups.map(g => api('/transactions/' + g.id, { method: 'PUT', body: groupUpdate(g, () => placeFields(lat, lng)) })));
 }
 const keyOf = (gs: Group[]) => { for (const g of gs) { const p = parseDescriptor(g.splits[0]?.description) || parseDescriptor(String(payeeOf(g).name)); if (p) return p; } return null; };
 
