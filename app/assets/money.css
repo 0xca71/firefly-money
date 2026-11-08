@@ -803,7 +803,31 @@
   .hm-cell.pad { background: none; }
   .hm-cell.fut { background: none; box-shadow: inset 0 0 0 1px var(--line); opacity: .6; }
   .hm-cell.today { box-shadow: inset 0 0 0 2px var(--accent); }
-  .cc .hm, .cc .hm-foot, .cc-key { max-width: 640px; margin-left: auto; margin-right: auto; }
+  /* Narrow: one column, capped so cells stay a sensible size. Wide (card >= 840px): the month grid takes the card and a side column holds the key and totals. */
+  .cc { container-type: inline-size; }
+  .cc-amt { display: none; }
+  .cc-body { display: grid; gap: 14px 32px; }
+  .cc .cc-main { max-width: 640px; width: 100%; margin: 0 auto; }
+  .cc .cc-side { max-width: 640px; width: 100%; margin: 0 auto; }
+  @container (min-width: 840px) {
+    .cc-body { grid-template-columns: minmax(0, 1fr) clamp(240px, 22cqi, 340px); align-items: start; }
+    .cc .cc-main, .cc .cc-side { max-width: none; margin: 0; }
+    .cc-main .hm-cell { aspect-ratio: 4 / 3; min-width: 0; font-size: 14px; place-items: start; padding: 10px 12px; }
+    .cc-n { font-weight: 600; color: var(--text); }
+    .cc-cell:not(.risk) .cc-n { color: color-mix(in srgb, var(--text) 85%, transparent); }
+    .cc .cc-dots { display: none; }
+    .cc-amt { position: absolute; left: 12px; right: 12px; bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; font-size: 12px; line-height: 1.25; pointer-events: none; }
+    .cc-amt em { font-style: normal; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .cc-amt em.in { color: var(--good); } .cc-amt em.out { color: var(--spend); }
+    .cc-main .hm-dow span { font-size: 12.5px; }
+    .cc-main :is(.hm-dow, .hm-grid) { gap: 8px; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .cc-main .hm { gap: 8px; }
+    .cc b, .cc-key b { width: 7px; height: 7px; }
+    .cc-side { display: grid; gap: 18px; padding-top: 24px; }
+    .cc-side .cc-key { flex-direction: column; margin: 0; gap: 10px; font-size: 13px; }
+    .cc-side .hm-foot { flex-direction: column; margin: 0; padding-top: 16px; border-top: 1px solid var(--line); gap: 8px; font-size: 14px; }
+  }
+  @container (min-width: 1280px) { .cc-main .hm-cell { aspect-ratio: 5 / 3; } }
   .cc-cell { position: relative; }
   .cc-cell.risk { color: var(--text); }
   .cc-cell.tight { box-shadow: inset 0 0 0 2px var(--warn); }
@@ -2321,7 +2345,7 @@ html[data-theme="frosted"] .opill { background: var(--ink); }
 /* The pinned page head's subtitle eases back as you scroll (opacity only, so nothing shifts); browsers without scroll timelines keep it as is */
 @supports (animation-timeline: scroll()) { @media (prefers-reduced-motion: no-preference) {
   html.pinhead #view > .head .sub { animation: subEase linear both; animation-timeline: scroll(root block); animation-range: 0 100px; }
-  @keyframes subEase { to { opacity: .35; } }
+  @keyframes subEase { to { opacity: .65; } }
 } }
 
   /* ---------- Budget insights: a card per budget under the Budgets list ---------- */
