@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { barChart, paceChart, shareChart, sparkBars } from '../app/src/features/charts';
+import { barChart, paceChart, twoLines, shareChart, sparkBars } from '../app/src/features/charts';
 
 const clean = (h: unknown) => { const s = String(h); expect(s).not.toMatch(/NaN|Infinity|undefined/); return s; };
 
@@ -77,5 +77,25 @@ describe('bento ring cards', () => {
       expect(css).toContain('.cards.bento .w:is([data-w="spending"], [data-w="payees"], [data-w="income"]) ' + sel);
     expect(css).toContain('.cards.bento .w[data-w="safe"] > .panel { display: flex;');
     expect(css).toMatch(/\.w:is\(\[data-w="spending"\], \[data-w="payees"\], \[data-w="income"\], \[data-w="goals"\], \[data-w="cash"\]/);
+  });
+});
+
+describe('legend swatches match the plotted series', () => {
+  const css = readFileSync('app/assets/money.css', 'utf8'), src = readFileSync('app/src/features/budgetinsight.ts', 'utf8');
+  it('budget pace legend: current solid accent, projection dotted, usual dashed muted, budget dashed warn', () => {
+    expect(css).toMatch(/\.bpace \.lim \{ stroke: var\(--warn\); stroke-width: 1\.5; stroke-dasharray: 2 4/);
+    expect(css).toMatch(/\.bpace \.ahead \{ stroke: var\(--accent\); stroke-width: 2; stroke-dasharray: 2 5/);
+    expect(css).toMatch(/\.legend i\.lg-ln \{[^}]*border-top: var\(--w, 2px\) var\(--s, solid\) var\(--c\)/);
+    expect(src).toContain('--c:var(--accent);--w:2.6px');                                  // solid line, as drawn (2.6)
+    expect(src).toContain('--c:var(--accent);--w:2px;--s:dotted');                         // projection
+    expect(src).toContain('--c:var(--muted);--w:2px;--s:dashed');                          // usual
+    expect(src).toContain('--c:var(--warn);--w:1.5px;--s:dashed');                         // budget
+    expect(src).not.toContain('lg-dash');
+  });
+  it('line-chart legends use line swatches with the drawn widths', () => {
+    const t = twoLines([{ label: 'a', a: 1, b: 2 }, { label: 'b', a: 2, b: 3 }] as never, ['A', 'B'], ['#111', '#222'], 'x');
+    expect(String(t)).toContain('class="lg-ln" style="--c:#111;--w:2.6px"'); expect(String(t)).toContain('class="lg-ln" style="--c:#222;--w:2.2px"');
+    const p = String(paceChart([1, 2, 3], [1, 2, 3], 30, ['This', 'Last']));
+    expect(p).toContain('--c:var(--accent);--w:2.6px'); expect(p).toContain('--c:var(--muted);--w:2px;--o:.7');
   });
 });

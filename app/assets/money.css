@@ -2330,6 +2330,7 @@ html[data-theme="frosted"] .opill { background: var(--ink); }
   .bi-chart h3 { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
   .bi-chart .legend { flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
   .bi-chart .legend i.lg-lim { width: 12px; height: 0; border-radius: 0; background: none; border-top: 2px solid var(--text); vertical-align: 3px; }
+  .legend i.lg-ln { width: 16px; height: 0; border-radius: 0; background: none; border-top: var(--w, 2px) var(--s, solid) var(--c); opacity: var(--o, 1); vertical-align: 3px; }
   .bi-chart .legend i.lg-dash { width: 12px; height: 0; border-radius: 0; border-top: 2px dashed var(--muted); vertical-align: 3px; }
   .lines .lim { stroke: var(--text); stroke-width: 2; stroke-linecap: round; }
   .bpace .lim { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 2 4; }
