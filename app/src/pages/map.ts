@@ -1,10 +1,12 @@
 import { html, htmlList } from '../core/html';
-import { getAll } from '../core/api';
-import { el, fmtDay, money, money0, period } from '../core/base';
-import { head, monthNav } from '../core/dom';
-import { type Group, avatarHtml, normGroup, payeeOf } from '../core/feed';
+import { api, getAll } from '../core/api';
+import { App, el, fmtDay, money, money0, period } from '../core/base';
+import { head, monthNav, toast } from '../core/dom';
+import { type Group, avatarHtml, groupUpdate, normGroup, payeeOf } from '../core/feed';
+import { LS } from '../core/helpers';
 import { lists } from '../core/lists';
-import { VIEWS } from '../core/router';
+import { VIEWS, route } from '../core/router';
+import { type Place, type Want, away, candidates, learn, learned, osmOn, parseDescriptor, wantedStores } from '../features/stores';
 import type * as Leaflet from 'leaflet';
 
 /* ================= Map: where the money went =================
@@ -45,19 +47,122 @@ function loadLeaflet() {
 let map: Leaflet.Map | null = null, pins: Leaflet.Marker[] = [], spots: Spot[] = [];
 function showSpot(i: number) {
   const s = spots[i]; if (!s) return;
+  fix = null;
   pins.forEach((m, j) => { m.getElement()?.classList.toggle('on', i === j); m.setZIndexOffset(i === j ? 1000 : 0); });
-  el('mapList').innerHTML = String(spotList(s));
+  el('mapList').innerHTML = String(spotList(s, i));
 }
-const spotList = (s: Spot) => html`<h2 style="margin:0 0 2px">${s.name}</h2><p class="sub-s" style="margin:0 0 10px">${money(s.total)} in ${s.groups.length} purchase${s.groups.length === 1 ? '' : 's'} · <a class="link" href="https://maps.apple.com/?ll=${s.lat},${s.lng}&amp;q=${encodeURIComponent(s.name)}" target="_blank" rel="noopener">Open in Maps ↗</a></p><div class="list">${htmlList(s.groups.map(g => html`<button type="button" class="row" style="width:100%;text-align:left" data-onclick="App.editTx('${g.id}')"><span class="name" style="display:flex;gap:10px;align-items:center">${avatarHtml(g)}<span>${g.splits[0].description}<br><span class="sub-s">${fmtDay(g.date)}</span></span></span><span class="num neg">${money(-g.total)}</span></button>`))}</div>`;
+const spotList = (s: Spot, i: number) => html`<h2 style="margin:0 0 2px">${s.name}</h2><p class="sub-s" style="margin:0 0 10px">${money(s.total)} in ${s.groups.length} purchase${s.groups.length === 1 ? '' : 's'} · <a class="link" href="https://maps.apple.com/?ll=${s.lat},${s.lng}&amp;q=${encodeURIComponent(s.name)}" target="_blank" rel="noopener">Open in Maps ↗</a> · <button type="button" class="link" data-onclick="App.fixSpot(${i})">Correct location</button></p><div class="list">${htmlList(s.groups.map(g => html`<button type="button" class="row" style="width:100%;text-align:left" data-onclick="App.editTx('${g.id}')"><span class="name" style="display:flex;gap:10px;align-items:center">${avatarHtml(g)}<span>${g.splits[0].description}<br><span class="sub-s">${fmtDay(g.date)}</span></span></span><span class="num neg">${money(-g.total)}</span></button>`))}</div>`;
+
+/* ---------- Which store was it? (features/stores.ts) ---------- */
+// Purchases without a place whose payee names a chain and a store number ("WAL-MART #3826") get suggested stores,
+// from stores you confirmed before, the bundled lists, and (if you turned it on) OpenStreetMap. Nothing is written
+// to Firefly until you tap a suggestion.
+let wants: Want[] = [], found: Place[][] = [], allGroups: Group[] = [], fix: { i: number, marker: Leaflet.Marker, at: Leaflet.LatLng, key: string, want: Want | null, alts: Place[] } | null = null;
+let moved: { groups: Group[], from: { lat: number, lng: number }, key: string, prev: Learned | undefined, name: string } | null = null;
+type Learned = ReturnType<typeof learned>[string];
+const miles = /^en-(US|LR|MM)\b/i.test(navigator.language || 'en-US');
+const awayText = (p: Place) => { const km = away(p); return km == null ? '' : ' · ' + (miles ? (km / 1.609).toFixed(km < 16 ? 1 : 0) + ' mi' : km.toFixed(km < 10 ? 1 : 0) + ' km') + ' from your other pins'; };
+const srcText = (p: Place) => p.src === 'learned' ? 'Confirmed before' : p.src === 'dataset' ? 'Store list' : 'OpenStreetMap';
+
+// Writes the place to every part of these purchases. Firefly keeps latitude/longitude per part.
+async function writePlace(groups: Group[], lat: number, lng: number) {
+  await Promise.all(groups.map(g => api('/transactions/' + g.id, { method: 'PUT', body: groupUpdate(g, () => ({ latitude: lat, longitude: lng })) })));
+}
+const keyOf = (gs: Group[]) => { for (const g of gs) { const p = parseDescriptor(g.splits[0]?.description) || parseDescriptor(String(payeeOf(g).name)); if (p) return p; } return null; };
+
+async function suggestStores() {
+  const box = document.getElementById('storeList'); if (!box) return;
+  wants = wantedStores(allGroups).slice(0, 30);
+  if (!wants.length) { box.hidden = true; return; }
+  const anchors = spots.map(x => ({ lat: x.lat, lng: x.lng }));
+  found = await Promise.all(wants.map(w => candidates(w, anchors).catch(() => [])));
+  if (!document.body.contains(box)) return;       // moved on to another page meanwhile
+  drawStores();
+}
+function drawStores() {
+  const box = document.getElementById('storeList'); if (!box) return;
+  const hit = wants.map((w, i) => i).filter(i => found[i].length), miss = wants.length - hit.length, n = hit.reduce((a, i) => a + wants[i].groups.length, 0);
+  box.hidden = !wants.length;
+  box.innerHTML = String(html`<h2 style="margin:0 0 2px">Stores found</h2><p class="sub-s" style="margin:0 0 10px">${hit.length ? html`${n} purchase${n === 1 ? '' : 's'} name a store but have no place. Tap the right store to pin them; nothing is saved until you do.` : html`No match yet for the ${wants.length} store${wants.length === 1 ? '' : 's'} named in your purchases.`}</p>${htmlList(hit.map(i => { const w = wants[i];
+    return html`<div class="list" style="margin-bottom:10px"><p style="margin:0 0 4px"><b>${w.label} #${w.num}</b> <span class="sub-s">· ${w.groups.length} purchase${w.groups.length === 1 ? '' : 's'} · ${money(w.total)}</span></p>${htmlList(found[i].map((p, j) => html`<button type="button" class="row" style="width:100%;text-align:left" data-onclick="App.pinStore(${i},${j})"><span class="name">${p.addr || 'Address not listed'}<br><span class="sub-s">${srcText(p)}${awayText(p)}</span></span><span class="link">Pin</span></button>`))}</div>`; }))}${miss && !osmOn() ? html`<p class="sub-s" style="margin:0">${miss} more ha${miss === 1 ? 's' : 've'} no store in the bundled lists. <button type="button" class="link" data-onclick="App.storeOsm(true)">Look them up online</button> (sends only the chain and store number, through this server).</p>` : osmOn() ? html`<p class="sub-s" style="margin:0">Online lookup is on${miss ? ' · ' + miss + ' not found' : ''}. <button type="button" class="link" data-onclick="App.storeOsm(false)">Turn off</button></p>` : ''}`);
+}
+async function pinStore(i: number, j: number) {
+  const w = wants[i], p = found[i]?.[j]; if (!w || !p) return;
+  try { await writePlace(w.groups, p.lat, p.lng); } catch (e) { toast('Firefly didn’t accept it: ' + ((e as Error).message || 'try again')); return; }
+  learn(w.key, p);
+  toast('Pinned ' + w.groups.length + ' purchase' + (w.groups.length === 1 ? '' : 's') + ' at ' + w.label + ' #' + w.num);
+  route({ quiet: true });
+}
+
+/* ---------- Correct a pin ---------- */
+async function fixSpot(i: number) {
+  const s = spots[i], m = pins[i]; if (!s || !m || !map) return;
+  const p = keyOf(s.groups), at = m.getLatLng();
+  const want: Want | null = p ? { key: p.key, label: p.label, num: p.num, chain: p.chain, osm: p.osm, groups: s.groups, total: s.total } : null;
+  pins.forEach((x, j) => { if (j !== i) x.setOpacity(.35); });
+  m.dragging?.enable();
+  fix = { i, marker: m, at, key: p?.key || '', want, alts: [] };
+  drawFix();
+  map.on('click', fixTap); m.on('dragend', fixDrag);
+  if (want) {                      // other stores with this number to choose from, besides the bundled/learned one
+    const anchors = spots.filter((_, j) => j !== i).map(x => ({ lat: x.lat, lng: x.lng }));
+    const alts = (await candidates(want, anchors, { skipLearned: true }).catch(() => [])).filter(c => Math.abs(c.lat - at.lat) + Math.abs(c.lng - at.lng) > 1e-4);
+    if (fix && fix.i === i) { fix.alts = alts; drawFix(); }
+  }
+}
+const fixTap = (e: Leaflet.LeafletMouseEvent) => { if (!fix) return; fix.marker.setLatLng(e.latlng); fix.at = e.latlng; drawFix(); };
+const fixDrag = () => { if (fix) { fix.at = fix.marker.getLatLng(); drawFix(); } };
+function drawFix() {
+  if (!fix) return;
+  const s = spots[fix.i], f = fix, n = s.groups.length;
+  el('mapList').innerHTML = String(html`<h2 style="margin:0 0 2px">Correct location</h2><p class="sub-s" style="margin:0 0 10px">Drag the pin or tap the map where ${s.name} really is. Saving moves its ${n} purchase${n === 1 ? '' : 's'} here${f.key ? ' and remembers it for this store' : ''}.</p>${f.alts.length ? html`<div class="list" style="margin-bottom:10px">${htmlList(f.alts.map((p, j) => html`<button type="button" class="row" style="width:100%;text-align:left" data-onclick="App.fixPick(${j})"><span class="name">${p.addr || 'Address not listed'}<br><span class="sub-s">${srcText(p)}${awayText(p)}</span></span><span class="link">Use</span></button>`))}</div>` : ''}<div class="btns" style="display:flex;gap:8px"><button type="button" class="btn" data-onclick="App.fixCancel()">Cancel</button><button type="button" class="btn primary" data-onclick="App.fixSave()">Save location</button></div>`);
+}
+function fixPick(j: number) {
+  const p = fix?.alts[j]; if (!fix || !p || !map) return;
+  fix.marker.setLatLng([p.lat, p.lng]); fix.at = fix.marker.getLatLng();
+  map.panTo(fix.at); drawFix();
+}
+function endFix(restore: boolean) {
+  if (!fix || !map) return;
+  map.off('click', fixTap); fix.marker.off('dragend', fixDrag);
+  fix.marker.dragging?.disable();
+  const s = spots[fix.i]; if (restore) fix.marker.setLatLng([s.lat, s.lng]);
+  pins.forEach(x => x.setOpacity(1));
+  const i = fix.i; fix = null; showSpot(i);
+}
+const fixCancel = () => endFix(true);
+async function fixSave() {
+  if (!fix) return;
+  const f = fix, s = spots[f.i], to = f.at, prev = f.key ? learned()[f.key] : undefined;
+  try { await writePlace(s.groups, to.lat, to.lng); } catch (e) { toast('Firefly didn’t accept it: ' + ((e as Error).message || 'try again')); return; }
+  if (f.key) learn(f.key, { lat: to.lat, lng: to.lng, addr: '', src: 'learned' });
+  moved = { groups: s.groups, from: { lat: s.lat, lng: s.lng }, key: f.key, prev, name: s.name };
+  endFix(false);
+  await route({ quiet: true });
+  if (moved) { const box = document.getElementById('mapList'); if (box) box.insertAdjacentHTML('afterbegin', String(html`<p class="sub-s" style="margin:0 0 10px">Moved ${moved.groups.length} purchase${moved.groups.length === 1 ? '' : 's'} at ${moved.name}. <button type="button" class="link" data-onclick="App.fixUndo()">Undo</button></p>`)); }
+}
+async function fixUndo() {
+  const m = moved; if (!m) return; moved = null;
+  try { await writePlace(m.groups, m.from.lat, m.from.lng); } catch (e) { toast('Couldn’t undo: ' + ((e as Error).message || 'try again')); moved = m; return; }
+  if (m.key) { const all = { ...learned() }; if (m.prev) all[m.key] = m.prev; else delete all[m.key]; LS.set('stores', all); }
+  toast('Moved back');
+  route({ quiet: true });
+}
+function storeOsm(on: boolean) { LS.set('storeOsm', on); suggestStores(); }
+
+const methods = { pinStore, fixSpot, fixPick, fixCancel, fixSave, fixUndo, storeOsm };
+Object.assign(App, methods);
+type Methods = typeof methods;
+declare module '../core/base' { interface AppApi extends Methods {} }
 
 VIEWS.map = async (r, paint) => {
   await lists();
   const p = period();
   const groups = (await getAll('/transactions', { start: p.start, end: p.end, type: 'withdrawal' })).map(normGroup);
-  spots = spotsOf(groups);
+  allGroups = groups; spots = spotsOf(groups); fix = null;
   const placed = spots.reduce((n, s) => n + s.groups.length, 0), spent = spots.reduce((n, s) => n + s.total, 0);
   const sub = placed ? placed + ' of ' + groups.length + ' purchases have a place · ' + money0(spent) : 'No purchases with a place in ' + p.label;
-  paint(html`${head('Map', sub, monthNav())}<section class="panel" style="padding:0;overflow:hidden"><div id="map" class="map"></div></section><section class="panel" id="mapList">${spots.length ? html`<p class="sub-s" style="margin:0">Tap a pin to see what you bought there. Bigger pins are where you spent more.</p>` : html`<div class="center-empty">Purchases get a place when the Apple Pay shortcut sends your location. See <a class="link" href="https://github.com/Muffy0906/firefly-money/blob/main/docs/apple-pay.md" target="_blank" rel="noopener">Optional extras</a>.</div>`}</section>`);
+  paint(html`${head('Map', sub, monthNav())}<section class="panel" style="padding:0;overflow:hidden"><div id="map" class="map"></div></section><section class="panel" id="mapList">${spots.length ? html`<p class="sub-s" style="margin:0">Tap a pin to see what you bought there. Bigger pins are where you spent more.</p>` : html`<div class="center-empty">Purchases get a place when the Apple Pay shortcut sends your location. See <a class="link" href="https://github.com/Muffy0906/firefly-money/blob/main/docs/apple-pay.md" target="_blank" rel="noopener">Optional extras</a>.</div>`}</section><section class="panel" id="storeList" hidden></section>`);
   const L = await loadLeaflet().catch(() => null), box = document.getElementById('map');
   if (map) { map.remove(); map = null; }
   if (!box) return;
@@ -72,4 +177,5 @@ VIEWS.map = async (r, paint) => {
   });
   if (spots.length) map.fitBounds(L.latLngBounds(spots.map(s => [s.lat, s.lng] as [number, number])), { padding: [40, 40], maxZoom: 16 });
   else map.setView([39.8, -98.6], 3);
+  suggestStores();
 };
