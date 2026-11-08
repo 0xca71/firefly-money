@@ -7,6 +7,7 @@ import { normGroup } from '../core/feed';
 import { LS, daysBetween } from '../core/helpers';
 import { type Account, isCard, isLiab, lists, withPlan } from '../core/lists';
 import { VIEWS, route } from '../core/router';
+import { INTEREST_RE, debtInsight, debtPanel, interestPaid } from '../features/moneyhealth';
 
 /* ---------- Loan history (payments into each loan) ---------- */
 export async function loanHistory(loans: Account[]) {
@@ -14,10 +15,10 @@ export async function loanHistory(loans: Account[]) {
   await Promise.all(loans.map(async l => {
     const groups = (await getAll('/accounts/' + l.id + '/transactions').catch(() => [])).map(normGroup);
     const pays: { d: string, a: number, from: string, bill: string }[] = [];
-    let borrowed = Math.abs(l.opening), repaid = 0;
+    let borrowed = Math.abs(l.opening), repaid = 0, charged = 0;
     groups.forEach(g => g.splits.forEach(s => {
       if (s.type === 'opening balance') return;
-      if (s.source_id === l.id) borrowed += s.amount;
+      if (s.source_id === l.id) { borrowed += s.amount; if (INTEREST_RE.test(s.description) || INTEREST_RE.test(s.destination_name)) charged += s.amount; }
       else if (s.destination_id === l.id) { repaid += s.amount; pays.push({ d: String(s.date).slice(0, 10), a: s.amount, from: s.source_id, bill: s.bill_id }); }
     }));
     pays.sort((a, b) => a.d.localeCompare(b.d));
@@ -27,7 +28,7 @@ export async function loanHistory(loans: Account[]) {
     // Typical monthly payment: the latest payment if it was recent, otherwise the 3-month average.
     const detected = last && daysBetween(last.d, todayIso()) <= 45 ? Math.round(last.a) : Math.round(recent / 3);
     const monthly = l.plan && l.plan.amount > 0 ? l.plan.amount : detected;   // the loan's own monthly payment, if set
-    out[l.id] = { borrowed, repaid, pays, last, monthly,
+    out[l.id] = { borrowed, repaid, pays, last, monthly, interest: interestPaid(borrowed, repaid, l.debt, charged),
       pct: borrowed > 0 ? Math.min(100, Math.max(0, repaid / borrowed * 100)) : null };
   }));
   return out;
@@ -78,6 +79,10 @@ VIEWS.loans = async (r, paint) => {
   const model: LoanModel[] = loans.map(l => ({ id: l.id, name: l.name, debt: l.debt, rate: monthlyRate(l), interest: l.interest, period: l.interestPeriod, planned: !!(l.plan && l.plan.amount), pay: (hist[l.id] || {}).monthly || 0, fixed: isFixed(l, hist[l.id], plan.fixed || {}, L) }));
   S.loanModel = model;
   const base = simulate(model, 0, 'now'), sim = simulate(model, +plan.extra || 0, plan.strategy);
+  // Interest paid so far on every loan (paid-off ones too), and what a little more each month would do
+  const paid = L.own.filter(isLiab).reduce((t, a) => t + ((hist[a.id] || {}).interest || 0), 0);
+  const plus = simulate(model, (plan.strategy === 'now' ? 0 : +plan.extra || 0) + 100, plan.strategy === 'now' ? 'snowball' : plan.strategy);
+  const insight = model.length ? debtPanel(debtInsight(paid, base, sim, plus, 100), sim.totals, base.totals, monthLabel, sim.months === null ? '' : monthLabel(sim.months)) : '';
   const maxM = Math.min(120, Math.max(12, ...sim.loans.map(l => l.paidOff || 120)));
   const rows = htmlList(sim.loans.sort((a, b) => (a.paidOff ?? 9999) - (b.paidOff ?? 9999)).map(l => {
     const b0 = base.loans.find(x => x.id === l.id)!, h = hist[l.id] || {};
@@ -86,7 +91,7 @@ VIEWS.loans = async (r, paint) => {
   }));
   const totalDebt = model.reduce((s, l) => s + l.debt, 0), totalPay = model.reduce((s, l) => s + l.pay, 0) + (plan.strategy === 'now' ? 0 : +plan.extra || 0);
   const strat = (v: string, label: string, sub: string) => html`<button type="button" class="${plan.strategy === v ? 'on' : ''}" data-onclick="App.loanSet('strategy', '${v}')" title="${sub}">${label}</button>`;
-  paint(html`${head('Loan planner', 'See when each loan is paid off, and how to get there sooner', '')}<div class="kpis"><div class="kpi"><div class="eyebrow">Owed</div><div class="val num">${money0(totalDebt)}</div></div><div class="kpi"><div class="eyebrow">Paying per month</div><div class="val num">${money0(totalPay)}</div></div><div class="kpi"><div class="eyebrow">Debt-free</div><div class="val num ${sim.months === null ? 'neg' : 'pos'}">${sim.months === null ? 'Not yet' : monthLabel(sim.months)}</div><div class="sub-s">${sim.months === null ? 'some loans have no payment' : sim.loans.some(rollsOnly) ? 'depends on payments rolling onto ' + sim.loans.filter(rollsOnly).map(l => l.name).join(', ') + ', which ' + (sim.loans.filter(rollsOnly).length === 1 ? 'has' : 'have') + ' no payment of ' + (sim.loans.filter(rollsOnly).length === 1 ? 'its' : 'their') + ' own' : sim.months + ' months' + (base.months && base.months > sim.months ? ' · ' + (base.months - sim.months) + ' sooner than now' : '')}</div></div><div class="kpi"><div class="eyebrow">Interest to pay</div><div class="val num">${money0(sim.interest)}</div></div></div><section class="panel" style="margin-bottom:20px"><div class="grid2 stack-s" style="align-items:end"><div><div class="eyebrow">When a loan is paid off, put its payment toward…</div><div class="seg" style="margin:8px 0 0">${strat('snowball', 'Smallest balance next', 'Snowball: quick wins first')}${strat('avalanche', 'Highest interest next', 'Avalanche: least interest overall')}${strat('now', 'Nothing — keep payments as they are', 'No rollover')}</div></div><label style="margin:0">Extra each month on top<input type="number" min="0" step="25" value="${+plan.extra || 0}" data-onchange="App.loanSet('extra', this.value)"${plan.strategy === 'now' ? ' disabled' : ''}></label></div></section><section class="panel flush"><table class="tbl"><thead><tr><th>Loan</th><th class="r hide-s">Owed</th><th class="r">Pay / month</th><th class="r">Paid off</th><th class="hide-s">Timeline to ${monthLabel(maxM)}</th></tr></thead><tbody>${rows}</tbody></table></section><p class="sub-s" style="margin-top:14px">Changing a “Pay / month” amount saves it as that loan’s monthly payment in Firefly. Loans without one use what you actually paid recently. Strategy and extra amount are only a what-if and aren’t saved. <button class="link" data-onclick="App.loanReset()">Reset strategy &amp; extra</button></p>`);
+  paint(html`${head('Loan planner', 'See when each loan is paid off, and how to get there sooner', '')}<div class="kpis"><div class="kpi"><div class="eyebrow">Owed</div><div class="val num">${money0(totalDebt)}</div></div><div class="kpi"><div class="eyebrow">Paying per month</div><div class="val num">${money0(totalPay)}</div></div><div class="kpi"><div class="eyebrow">Debt-free</div><div class="val num ${sim.months === null ? 'neg' : 'pos'}">${sim.months === null ? 'Not yet' : monthLabel(sim.months)}</div><div class="sub-s">${sim.months === null ? 'some loans have no payment' : sim.loans.some(rollsOnly) ? 'depends on payments rolling onto ' + sim.loans.filter(rollsOnly).map(l => l.name).join(', ') + ', which ' + (sim.loans.filter(rollsOnly).length === 1 ? 'has' : 'have') + ' no payment of ' + (sim.loans.filter(rollsOnly).length === 1 ? 'its' : 'their') + ' own' : sim.months + ' months' + (base.months && base.months > sim.months ? ' · ' + (base.months - sim.months) + ' sooner than now' : '')}</div></div><div class="kpi"><div class="eyebrow">Interest to pay</div><div class="val num">${money0(sim.interest)}</div></div></div>${insight}<section class="panel" style="margin-bottom:20px"><div class="grid2 stack-s" style="align-items:end"><div><div class="eyebrow">When a loan is paid off, put its payment toward…</div><div class="seg" style="margin:8px 0 0">${strat('snowball', 'Smallest balance next', 'Snowball: quick wins first')}${strat('avalanche', 'Highest interest next', 'Avalanche: least interest overall')}${strat('now', 'Nothing — keep payments as they are', 'No rollover')}</div></div><label style="margin:0">Extra each month on top<input type="number" min="0" step="25" value="${+plan.extra || 0}" data-onchange="App.loanSet('extra', this.value)"${plan.strategy === 'now' ? ' disabled' : ''}></label></div></section><section class="panel flush"><table class="tbl"><thead><tr><th>Loan</th><th class="r hide-s">Owed</th><th class="r">Pay / month</th><th class="r">Paid off</th><th class="hide-s">Timeline to ${monthLabel(maxM)}</th></tr></thead><tbody>${rows}</tbody></table></section><p class="sub-s" style="margin-top:14px">Changing a “Pay / month” amount saves it as that loan’s monthly payment in Firefly. Loans without one use what you actually paid recently. Strategy and extra amount are only a what-if and aren’t saved. <button class="link" data-onclick="App.loanReset()">Reset strategy &amp; extra</button></p>`);
 };
 async function loanPay(id: string, v: string) {
   const L = await lists(), a = L.byId[id]; if (!a) return;
