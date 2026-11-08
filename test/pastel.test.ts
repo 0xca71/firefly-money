@@ -87,7 +87,7 @@ describe('Activity grid', () => {
     expect(String(activityPanel([], '2026-11-01', '2026-11-30'))).toBe('');
     const h = String(activityPanel(buys, '2026-11-01', '2026-11-30'));
     expect(h).toContain('role="img"');
-    expect(h).toContain('<details class="sk-table">');
+    expect(h).toContain('class="sr-only"');
     expect(h).toContain('data-tip="');
     expect(css).toMatch(/\.ag-grid \{[^}]*grid-auto-flow: column[^}]*repeat\(7, auto\)/);
     expect(css).toMatch(/\.ag-grid \{[^}]*grid-auto-columns: var\(--agm\)/);
