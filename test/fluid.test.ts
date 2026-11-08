@@ -29,3 +29,15 @@ describe('fluid motion', () => {
     expect(block).not.toMatch(/height|margin|top:|transform/);
   });
 });
+
+describe('pill sits behind the active choice', () => {
+  it('is a chip for segments and tab rows alike, restored without a glide after resize, theme switch or late fonts', () => {
+    expect(pill).not.toMatch(/tabs \? 2|height:\s*2/);
+    expect(pill).toMatch(/p\.style\.cssText = 'left:' \+ r\.x \+ 'px;top:' \+ r\.y \+ 'px;width:' \+ r\.w \+ 'px;height:' \+ r\.h/);
+    expect(pill).toMatch(/document\.fonts\.ready/);
+    expect(pill).toMatch(/data-theme/);
+    expect(pill).toMatch(/ResizeObserver/);
+    expect(css).not.toMatch(/\.tabs > \.opill \{[^}]*height/);
+    expect(css).toMatch(/\.opill \{[^}]*border-radius: 999px/);
+  });
+});
