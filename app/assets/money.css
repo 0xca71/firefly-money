@@ -1885,9 +1885,9 @@
   .nw-tl { display: inline-flex; align-items: center; gap: 1px; color: var(--muted); text-decoration: none; }
   .nw-tl svg { width: 13px; height: 13px; }
   @media (hover: hover) { .nw-tl:hover { color: var(--text); } }
-  /* ---------- Hover: things lean toward the mouse (mouse and trackpad only, never with Reduce motion) ---------- */
+  /* ---------- Hover: the sidebar swells toward the mouse (mouse and trackpad only, never with Reduce motion) ---------- */
   /* Nothing with text in it moves by CSS transition or by a part of a pixel: Chrome on Windows draws text that's
-     animating (or sitting between pixels) blurred until it settles. So dock.ts and magnet.ts move text in whole device
+     animating (or sitting between pixels) blurred until it settles. So dock.ts moves text in whole device
      pixels themselves, and only icons (SVG, which stays sharp) scale with transitions. */
   /* The sidebar swells like the macOS Dock: dock.ts sets --dock (0 to 1) on each link by how near the pointer is, and
      --dock-x, the label's nudge in whole pixels. The rows and the hover pill stay where they are. */
@@ -1897,8 +1897,6 @@
     html.side-mini .side .nav a svg { scale: calc(1 + var(--dock, 0) * .42); }
     .side-search svg, .side-tg svg { transition: scale .2s var(--ease-out), transform .34s var(--ease-glide); }
     .side-search:hover svg, .side-tg:hover svg { scale: 1.14; }
-    /* Magnetic hover (magnet.ts, off unless turned on in Settings) writes its lean straight into the element's
-       `translate` while .mag is set, and removes it once it's home, since any translate makes a stacking context. */
   }
   /* Collapsed sidebar: the name of the icon under the mouse (dock.ts), in the chart tooltip's style, pointing at it */
   .side-tip { z-index: 60; padding: 6px 11px; font-size: 13px; font-weight: 500; line-height: 1.35; white-space: nowrap; opacity: 0; visibility: hidden; }
@@ -2082,43 +2080,6 @@
     }
   }
 
-  /* ---------- Edge glow (glass themes, mouse and trackpad only): rims near the pointer light up (features/edge.ts) ---------- */
-  /* edge.ts writes the pointer's spot inside the element as --ex/--ey. They don't inherit, so moving the mouse restyles only
-     the lit element and its ring, not everything inside the card. Every rim gets the same 1px line, the same reach and the
-     same falloff, whatever its size. */
-  @property --ex { syntax: '<length>'; inherits: false; initial-value: -9999px; }
-  @property --ey { syntax: '<length>'; inherits: false; initial-value: -9999px; }
-  @property --es { syntax: '<length>'; inherits: false; initial-value: 0px; }
-  @property --edge-in { syntax: '<length>'; inherits: false; initial-value: -1px; }
-  @media (hover: hover) and (pointer: fine) {
-    html:is([data-theme="glass"], [data-theme="frosted"]) { --edge-r: 140px; }
-    html[data-theme="glass"] { --edge-c: color-mix(in srgb, color-mix(in srgb, var(--accent) 65%, #fff) 60%, transparent); --edge-c2: color-mix(in srgb, var(--accent) 18%, transparent); }
-    /* white vanishes on the pale frosted cards, so a warm light in the theme's accent */
-    html[data-theme="frosted"] { --edge-c: color-mix(in srgb, var(--accent) 45%, transparent); --edge-c2: color-mix(in srgb, var(--accent) 14%, transparent); }
-    /* :where() so any rule that already places the element (absolute, fixed, sticky) wins */
-    :where(html:is([data-theme="glass"], [data-theme="frosted"]) .edge) { position: relative; }
-    /* The ring lies on the element's own 1px border. Card grids keep their painting inside (contain: paint) and day cards clip
-       (overflow: clip), which would cut that off, so a lit element lets its painting reach the border (overflow-clip-margin).
-       edge.ts sets --edge-in: minus the border width, or 0 where the ring has to sit just inside (boxes that scroll, like the
-       sidebar, and clipping boxes in Safari). */
-    html:is([data-theme="glass"], [data-theme="frosted"]) .edge { overflow-clip-margin: border-box; }
-    /* overflow: hidden ignores overflow-clip-margin; clip looks the same and honours it (edge.ts only does this where it's supported) */
-    html:is([data-theme="glass"], [data-theme="frosted"]) .edge.edge-h { overflow: clip; }
-    html:is([data-theme="glass"], [data-theme="frosted"]) .edge::before { content: ''; position: absolute; z-index: 1; border-radius: inherit; padding: 1px; pointer-events: none;
-      --ex: inherit; --ey: inherit; --es: inherit; --edge-in: inherit;
-      /* in a box that scrolls, the ring is held in place against the scroll (--es) */
-      left: var(--edge-in, -1px); right: var(--edge-in, -1px); top: calc(var(--es) + var(--edge-in, -1px)); bottom: calc(var(--edge-in, -1px) - var(--es));
-      background: radial-gradient(var(--edge-r) circle at calc(var(--ex) - var(--edge-in, -1px) - 1px) calc(var(--ey) - var(--edge-in, -1px) - 1px),
-        var(--edge-c), var(--edge-c) 15%, var(--edge-c2) 50%, transparent) border-box;
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
-      mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-      /* Only the part near the pointer is ever visible, so only that part is painted (clip-path), on a layer of its own
-         (will-change) so a move repaints this ring and not the card under it: a fraction of the painting of a full-card gradient. */
-      clip-path: circle(calc(var(--edge-r) + 10px) at calc(var(--ex) - var(--edge-in, -1px)) calc(var(--ey) - var(--edge-in, -1px))); will-change: transform; }
-    /* form fields can't hold the ring: their border brightens as a whole, by the same falloff (--eg), drawn as an outline
-       over the border so the field's own focus look is untouched */
-    html:is([data-theme="glass"], [data-theme="frosted"]) .edge-f:not(:focus) { outline: 1px solid color-mix(in srgb, var(--edge-c) calc(var(--eg, 0) * 65%), transparent); outline-offset: -1px; }
-  }
 
 /* ---------- Touch targets: small controls get a larger invisible hit area on touch screens (about 44px), with no change to how they look ---------- */
 @media (pointer: coarse) {

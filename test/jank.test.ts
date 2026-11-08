@@ -14,11 +14,6 @@ describe('frame drops', () => {
     expect((morph.match(/\bdrop\(v\)/g) || []).length).toBe(2);
     expect(css).toMatch(/\.odo-s \{[^}]*will-change: transform/);
   });
-  it('the edge glow paints only near the pointer and on its own layer', () => {
-    const ring = css.slice(css.indexOf('.edge::before {'), css.indexOf('.edge-f:not(:focus)'));
-    expect(ring).toMatch(/clip-path: circle\(calc\(var\(--edge-r\) \+ 10px\) at calc\(var\(--ex\)/);
-    expect(ring).toMatch(/will-change: transform/);
-  });
   it('a redraw measures everything before it changes anything (amounts roll in batches)', () => {
     expect(morph).toMatch(/function rollAll\(/);
     expect(morph).not.toMatch(/\bfunction roll\(/);
