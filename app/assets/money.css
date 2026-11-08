@@ -2292,15 +2292,12 @@ html[data-theme="glass"] .ag-c.l3, html[data-theme="glass"] .ag-c.l4 { box-shado
 
 /* Sliding pill under the active choice of segmented controls and tab rows (pill.ts); moves with transform only */
 .seg, .tabs { position: relative; }
-.opill { position: absolute; z-index: 0; pointer-events: none; border-radius: 9px; }
-.seg > .opill { background: var(--panel); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-.tabs > .opill { border-radius: 2px; background: var(--accent); }
-.seg > :is(button, a) { position: relative; z-index: 1; }
-.pilled > :is(button, a).on { background: none !important; box-shadow: none !important; }
-.tabs.pilled > a.on { border-color: transparent !important; }
-html[data-theme="frosted"] .seg > .opill { background: var(--ink); }
-html[data-theme="frosted"] .tabs > .opill { display: none; }
-html[data-theme="frosted"] .tabs.pilled > a.on { background: var(--ink) !important; }
+.opill { position: absolute; z-index: 0; pointer-events: none; border-radius: 999px; background: var(--accent); }
+.seg > :is(button, a), .tabs > :is(button, a) { position: relative; z-index: 1; }
+.pilled > :is(button, a).on { background: none !important; box-shadow: none !important; border-color: transparent !important; }
+html[data-theme="carbon"] .opill { box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 45%, transparent); }
+html[data-theme="glass"] .opill { background: rgba(255, 255, 255, .14); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2); }
+html[data-theme="frosted"] .opill { background: var(--ink); }
 /* A soft press on tappable cards, desktop and phone alike; it springs back on release */
 .insight, .list a.row, .hm-cell { transition: transform .22s var(--ease-out), opacity var(--t-hover); }
 @media (hover: hover) { .insight:active { transform: scale(.992); } }
