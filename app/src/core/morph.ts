@@ -7,7 +7,7 @@
    - Rows (transactions, by id) glide from where they were to where they are now; new rows fade in.
    Used for redraws of the page you're on (after an edit, a refresh) and for a month change on pages whose layout
    doesn't depend on the month (Overview, Budgets, Reports…), which redraw in place instead of sliding.
-   A month change spreads out from the arrow you pressed: cards nearest it change first (see The wave below).
+   A month change redraws everything at once (see Another month below).
    Text that moves (odometer strips, rows) is placed in whole device pixels by JS, never by a CSS transition or
    between pixels: Chrome on Windows draws text that is mid-transition blurred until it settles. */
 
@@ -374,53 +374,11 @@ export function glideRows(root: HTMLElement, old: Map<string, number>, at?: (e: 
   }));
 }
 
-/* ---------- The wave (another month, redrawn in place) ---------- */
-// A month change spreads out from the button you pressed: each card's numbers and chart change as the wave reaches
-// it, nearest first. Nothing moves or is drawn over the page (a ring would cost Glass a lot of blur work, and a card
-// nudge repainted every card).
-const WAVE_STEP = 60, WAVE_MAX = 480;                    // ms between cards, on average; the farthest card starts by then
+/* ---------- Another month, redrawn in place ---------- */
+// Everything changes at once (no ripple from the arrow, no stagger between cards, nothing nudged): each card's numbers,
+// chart and words move from last month's to this month's together.
 const CARD = '[data-w], .kpi, section.panel, .hero, .card';
-let tap: { x: number, y: number, t: number } | null = null;
-if (!RM) addEventListener('pointerdown', ev => {
-  const b = (ev.target as Element | null)?.closest?.('.month button');
-  if (b) { const r = b.getBoundingClientRect(); tap = { x: r.left + r.width / 2, y: r.top + r.height / 2, t: performance.now() }; }
-}, { capture: true, passive: true });
-// Where the wave starts: the button just pressed, or (keyboard, swipe) the arrow for that way on screen
-function origin(dir: string) {
-  if (tap && performance.now() - tap.t < 5000) return tap;
-  const lab = dir === 'next' ? 'Next month' : 'Previous month';
-  for (const b of document.querySelectorAll<HTMLElement>('.month button[aria-label="' + lab + '"]')) {
-    const r = b.getBoundingClientRect();
-    if (r.width && r.bottom > 0 && r.top < innerHeight) return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-  }
-  return { x: dir === 'next' ? innerWidth : 0, y: 0 };
-}
-// How long each element waits for the wave: by its card's distance from where it started
-function waveDelays(root: HTMLElement, dir: string) {
-  const o = origin(dir); tap = null;
-  const dist = new Map<Element, number>();
-  root.querySelectorAll(CARD).forEach(c => {
-    if (c.parentElement?.closest(CARD)) return;
-    const r = c.getBoundingClientRect(); if (!near(r)) return;
-    // the nearest point of the card, so a wide card next to the button starts right away
-    const dx = Math.max(r.left - o.x, 0, o.x - r.right), dy = Math.max(r.top - o.y, 0, o.y - r.bottom);
-    dist.set(c, Math.hypot(dx, dy));
-  });
-  const far = Math.max(1, ...dist.values()), spread = Math.min(WAVE_MAX, Math.max(0, dist.size - 1) * WAVE_STEP);
-  // Outside any card (a list of transactions): by the element's own distance, over the same time the cards take,
-  // so a long list fills in from the arrow down without its far rows waiting long
-  const span = Math.hypot(innerWidth, innerHeight), rowSpread = Math.max(spread, 260);
-  return (e: Element) => {
-    let c: Element | null = e.closest(CARD);
-    while (c && c.parentElement?.closest(CARD)) c = c.parentElement.closest(CARD);
-    const d = c ? dist.get(c) : undefined;
-    if (d != null) return Math.round(d / far * spread);
-    if (c) return 0;
-    const r = e.getBoundingClientRect();
-    const dx = Math.max(r.left - o.x, 0, o.x - r.right), dy = Math.max(r.top - o.y, 0, o.y - r.bottom);
-    return Math.round(Math.min(1, Math.hypot(dx, dy) / span) * rowSpread);
-  };
-}
+const noDelay = (_e?: Element) => 0;
 
 /* ---------- The month label ---------- */
 // The month's name slides out one way and the new one in from the other, the way the month went. Both are copies
@@ -450,7 +408,7 @@ export function slideLabel(root: Element, was: string | null, dir?: string) {
 // month), the changes ripple out from the month arrows.
 export function morph(root: HTMLElement, s: Snap, dir = '') {
   if (RM) return;
-  const wave = dir === 'next' || dir === 'prev' ? waveDelays(root, dir) : null;
+  const wave = dir === 'next' || dir === 'prev' ? noDelay : null;
   const at = (e: Element) => wave ? wave(e) : 0;
   // What's on screen is measured once, here, before anything below changes the page: reading a box after a write
   // makes the browser lay everything out again, and doing that per card or per amount cost a frame or two

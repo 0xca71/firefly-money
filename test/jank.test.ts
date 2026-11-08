@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 const morph = readFileSync('app/src/core/morph.ts', 'utf8'), pill = readFileSync('app/src/features/pill.ts', 'utf8'), css = readFileSync('app/assets/money.css', 'utf8');
 
 describe('frame drops', () => {
-  it('the month wave does not move or scale the cards (no nudge)', () => {
+  it('a month change has no wave: no stagger between cards, no nudge', () => {
+    expect(morph).not.toMatch(/waveDelays|WAVE_STEP|function origin/);
     expect(morph).not.toMatch(/composite:/);
     expect(morph).not.toMatch(/scale: \.985|translate: dx/);
   });
