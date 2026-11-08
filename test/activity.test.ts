@@ -23,11 +23,13 @@ describe('Overview activity grid', () => {
     expect(activityDays(buys, '2019-01-01', '2026-11-07', '2026-11-07').length).toBe(371);
     expect(activityDays(buys, '2019-01-01', '2026-11-07', '2026-11-07', 2000).length).toBe(2868);
   });
-  it('the tile has no range chips (the range is set in Customize) and keeps the legend and table alternative', () => {
+  it('the tile has no range chips (the range is set in Customize) and has no legend row and keeps the table alternative', () => {
     const h = String(activityPanel(buys, '2026-10-08', '2026-11-07', { range: '1m' }));
     expect(h).not.toContain('aria-pressed');
     expect(h).not.toContain('ag-range');
-    expect(h).toContain('class="ag-legend"');
+    expect(h).not.toContain('ag-legend');
+    expect(h).not.toContain('ag-head');
+    expect(h).not.toContain('Less');
     expect(h).not.toContain('Show as table');
     expect(h).not.toContain('<h2>Activity</h2>');
     expect(h).toContain('class="sr-only"');
@@ -52,9 +54,9 @@ describe('Reports layout', () => {
     expect(reports).toContain('class="report-gap"');
   });
   it('every range has the same fixed-height grid, so changing the range in settings shifts nothing', () => {
-    expect(css).toMatch(/\.ag-scroll \{ height: 134px/);
-    expect(css).toMatch(/\.ag-none \{ height: 134px/);
-    expect(css).toMatch(/\.panel\.ag-card \{ padding: 12px 16px 12px/);
+    expect(css).toMatch(/\.ag-scroll \{ height: 131px/);
+    expect(css).toMatch(/\.ag-none \{ height: 131px/);
+    expect(css).toMatch(/\.panel\.ag-card \{ padding: 10px 12px/);
     for (const r of ['1m', 'year', 'all']) expect(String(activityPanel(buys, '2019-01-01', '2026-11-07', { range: r }))).toContain('--agm:14px');
   });
   it('a range change in settings redraws only the Activity card, not the page', () => {
