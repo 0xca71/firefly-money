@@ -109,6 +109,12 @@ describe('store data files and server', () => {
     }
     expect(total).toBeLessThan(8_000_000);
   });
+  it('Walmart #3826 is Lubbock, TX', () => {
+    const w = parseDataset(JSON.parse(readFileSync(dir + '/walmart.json', 'utf8'))).get('3826')!;
+    expect(w).toHaveLength(1);
+    expect(w[0].addr).toContain('Lubbock');
+    expect(Math.abs(w[0].lat - 33.59)).toBeLessThan(0.1);
+  });
   it('the OSM proxy is rate-limited, read-only and only takes a chain pattern and a number', () => {
     const conf = readFileSync('app/default.conf.template', 'utf8'), at = conf.indexOf('location ~ "^/osm/');
     const block = conf.slice(at, conf.indexOf('\n    }', at));

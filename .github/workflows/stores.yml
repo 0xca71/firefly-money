@@ -1,5 +1,5 @@
 # Refreshes the offline store lists the Map page matches purchases against (app/assets/stores/*.json), from
-# AllThePlaces (https://www.alltheplaces.xyz). Weekly, and on demand. Opens a pull request only when a list changed.
+# AllThePlaces (https://www.alltheplaces.xyz) and, for Walmart, a public store-number list geocoded by the US Census. Weekly, and on demand. Opens a pull request only when a list changed.
 # If the source is down, or a chain's data is missing that week, dev/update_stores.py keeps the files as they are.
 name: Refresh store lists
 on:
@@ -18,6 +18,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    timeout-minutes: 60       # the first run geocodes every Walmart address; later runs only new ones
     steps:
       - uses: actions/checkout@v7
 
