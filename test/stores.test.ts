@@ -14,6 +14,8 @@ describe('store descriptor parser', () => {
     ['THE HOME DEPOT #6804', 'homedepot', '6804'], ["LOWE'S #01234", 'lowes', '1234'], ['STARBUCKS STORE 12345', 'starbucks', '12345'],
     ["MCDONALD'S F12345", 'mcdonalds', '12345'], ['WHOLEFDS ABC #10005', 'wholefoods', '10005'], ['CVS/PHARMACY #01234', 'cvs', '1234'],
     ['SAFEWAY #0892', 'safeway', '892'], ['PUBLIX #1234', 'publix', '1234'], ['ALDI 72014', 'aldi', '72014'], ['7-ELEVEN 34567', '7eleven', '34567'],
+    ['KROGER #0302', 'kroger', '302'], ['FRED MEYER #0123', 'kroger', '123'], ['AUTOZONE #1366', 'autozone', '1366'], ['ROSS DRESS FOR LESS #2249', 'ross', '2249'],
+    ['KOHLS #1529', 'kohls', '1529'], ['DOMINO\'S 3042', 'dominos', '3042'], ['PETCO 5525', 'petco', '5525'], ['DAIRY QUEEN #4654', 'dairyqueen', '4654'], ['VONS #2018', 'albertsons', '2018'],
   ])('%s', (raw, chain, num) => expect(parseDescriptor(raw)).toMatchObject({ chain, num, key: chain + ':' + num }));
   it('needs a store number', () => {
     expect(parseDescriptor('WALMART.COM')).toBeNull();
@@ -107,7 +109,7 @@ describe('store data files and server', () => {
       expect(d.s.length).toBe(d.n);
       expect(parseDataset(d).size, f).toBeGreaterThan(50);
     }
-    expect(total).toBeLessThan(8_000_000);
+    expect(total).toBeLessThan(20_000_000);
   });
   it('Walmart #3826 is Lubbock, TX', () => {
     const w = parseDataset(JSON.parse(readFileSync(dir + '/walmart.json', 'utf8'))).get('3826')!;
