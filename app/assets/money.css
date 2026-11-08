@@ -2070,8 +2070,9 @@
   html.pinhead #view > .head::before, html.pinhead #view > .head::after { content: ''; position: absolute; z-index: -1; pointer-events: none;
     top: calc(-1 * var(--head-top) - 2px); left: calc(-1 * var(--head-l)); right: calc(-1 * var(--head-r));
     --hx: linear-gradient(#000, #000);
-    }
+    will-change: transform; transform: translateZ(0); }      /* its own layer from the start, so the blur is live on the first scrolled frame */
   html.pinhead #view > .head::before { bottom: calc(-1 * var(--head-hold) - 12px);
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 62%, transparent), color-mix(in srgb, var(--bg) 22%, transparent));   /* a frosted tint, so the band reads at rest too, when nothing is under it to blur */
     -webkit-backdrop-filter: blur(20px) saturate(1.5); backdrop-filter: blur(20px) saturate(1.5);
     --fy: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); }
   html.pinhead #view > .head::after { bottom: calc(-1 * var(--head-fade));
@@ -2084,6 +2085,7 @@
   /* Always on, and edge to edge: on desktop it also reaches left over the sidebar's top so the band reads as one */
   @media (min-width: 901px) {
     html.pinhead #view > .head::before, html.pinhead #view > .head::after { left: calc(-1 * (var(--head-l) + 224px)); }
+    html.pinhead .side { z-index: 13; }     /* the blur runs behind the sidebar's top, never over it */
   }
   /* the day headings on Transactions and the bulk bar stick just below it */
   html.pinhead .tbl.feed tr.dayhead { top: calc(var(--head-top) + var(--head-h, 0px) + 4px) !important; z-index: 13; }
