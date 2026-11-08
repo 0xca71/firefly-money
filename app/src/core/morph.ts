@@ -170,72 +170,97 @@ export function sameLayout(old: Snap, next: DocumentFragment, dir = '') {
 
 /* ---------- Odometer ---------- */
 const DIG = /\d/;
-function roll(e: HTMLElement, from: string, to: string, delay = 0, dur = 700): boolean {
-  if (from === to || !DIG.test(to) || !DIG.test(from) || e.children.length) return false;
-  // Only between figures of the same shape ($1,334 → $1,076): from $1,000 to $778 the first frame would read $000
-  if (from.replace(/\d/g, '0') !== to.replace(/\d/g, '0')) return false;
-  const cs = getComputedStyle(e);
-  if (!/tabular/.test(cs.fontVariantNumeric) || cs.display === 'none') return false;
-  const val = (s: string) => parseFloat(s.replace(/[^\d.-]/g, '')) || 0;
-  const up = val(to) * (/^[^\d]*-|−|\(/.test(to) ? -1 : 1) >= val(from) * (/^[^\d]*-|−|\(/.test(from) ? -1 : 1);
-  // One line's height, as the text itself lays it out
-  const w0 = e.getBoundingClientRect().width;
-  const probe = document.createElement('span'); probe.style.display = 'inline-block'; probe.textContent = '0';
-  e.textContent = ''; e.appendChild(probe);
-  const H = probe.getBoundingClientRect().height; probe.remove();
-  if (!H) { e.textContent = to; return false; }
-  e.dataset.odo = to;
-  // The window is a line tall plus a thin margin above and below (see .odo), and digits are a window apart, so at
-  // rest only the one digit shows. While it spins, the window's top and bottom fade out (deeper the faster it
-  // goes, like a speedometer drum), so digits come and go through a soft edge instead of a hard cut.
-  const P = Math.max(2, Math.round(H * .14)), S = H + 2 * P, F = H * .3;
-  const cols: { col: HTMLElement, strip: HTMLElement, n: number }[] = [];
-  const f = [...from], t = [...to], off = f.length - t.length;
-  t.forEach((ch, i) => {
-    if (!DIG.test(ch)) { e.append(ch); return; }
-    const o = f[i + off], a = o && DIG.test(o) ? +o : 0, b = +ch;
-    if (a === b) { e.append(ch); return; }
-    const seq: number[] = []; for (let d = a; ; d = (d + (up ? 1 : 9)) % 10) { seq.push(d); if (d === b) break; }
-    if (!up) seq.reverse();
-    const col = document.createElement('span'); col.className = 'odo'; col.style.height = S + 'px'; col.style.setProperty('--odo-p', P + 'px');
-    const strip = document.createElement('span'); strip.className = 'odo-s'; strip.style.lineHeight = S + 'px';
-    strip.textContent = seq.join('\n');
-    col.appendChild(strip); e.appendChild(col);
-    cols.push({ col, strip, n: seq.length - 1 });
+type Roll = { e: HTMLElement, from: string, to: string, delay: number, dur: number };
+// Several amounts at once. Each step reads (or writes) for all of them before the next step does the opposite, so the
+// browser lays the page out three times however many amounts there are, not three times per amount (that made a
+// month change stall for a frame or two: each read after a write redid the layout of the whole card grid).
+// Returns, per amount, whether it is rolling.
+function rollAll(list: Roll[]): boolean[] {
+  type St = Roll & { cs: CSSStyleDeclaration, up: boolean, w0: number, probe: HTMLElement, H: number, cols: { col: HTMLElement, strip: HTMLElement, n: number }[], P: number, S: number, F: number };
+  const ok: boolean[] = list.map(() => false), sts: (St | null)[] = list.map(() => null);
+  const val = (v: string) => parseFloat(v.replace(/[^\d.-]/g, '')) || 0;
+  // 1. read: which amounts can roll, how wide each is
+  list.forEach((r, i) => {
+    const { e, from, to } = r;
+    if (from === to || !DIG.test(to) || !DIG.test(from) || e.children.length) return;
+    // Only between figures of the same shape ($1,334 → $1,076): from $1,000 to $778 the first frame would read $000
+    if (from.replace(/\d/g, '0') !== to.replace(/\d/g, '0')) return;
+    const cs = getComputedStyle(e);
+    if (!/tabular/.test(cs.fontVariantNumeric) || cs.display === 'none') return;
+    const up = val(to) * (/^[^\d]*-|−|\(/.test(to) ? -1 : 1) >= val(from) * (/^[^\d]*-|−|\(/.test(from) ? -1 : 1);
+    sts[i] = { ...r, cs, up, w0: e.getBoundingClientRect().width, probe: document.createElement('span'), H: 0, cols: [], P: 0, S: 0, F: 0 };
   });
-  // Split into columns, a digit loses its kerning with what's next to it (a % sign): if that moves anything, don't roll
-  if (Math.abs(e.getBoundingClientRect().width - w0) > .3) { e.textContent = to; delete e.dataset.odo; return false; }
-  // Gradient-filled amounts (background-clip: text, as the big hero figures in most themes): the parent's clip
-  // draws its columns' digits where they'd be unmoved, so while it rolls each piece (columns and the unchanged
-  // characters between them) carries its own copy of the gradient, lined up with the whole, and the parent none
-  const grad = /text/.test(cs.backgroundClip || cs.getPropertyValue('-webkit-background-clip')) && cs.backgroundImage !== 'none';
-  if (grad) {
-    const r = e.getBoundingClientRect(), bg = cs.backgroundImage;
-    const paint = (n: HTMLElement, at: HTMLElement) => {
-      const st = n.style, x = at.getBoundingClientRect().left - r.left;
-      st.backgroundImage = bg; st.backgroundSize = r.width + 'px 100%'; st.backgroundPosition = -x + 'px 0';
-      st.setProperty('-webkit-background-clip', 'text'); st.backgroundClip = 'text'; st.color = 'transparent';
-    };
-    [...e.childNodes].forEach(n => { if (n.nodeType === 3) { const sp = document.createElement('span'); n.replaceWith(sp); sp.appendChild(n); paint(sp, sp); } });
-    cols.forEach(c => paint(c.strip, c.col));
-    e.style.backgroundImage = 'none';
-  }
-  const done = () => { e.textContent = to; delete e.dataset.odo; if (grad) e.style.removeProperty('background-image'); };
-  const set = (q: number) => {
-    const p = ease(q), f = Math.min(1, q * 10) * (1 - q) * (1 - q);            // how fast it's turning, 0…1
-    cols.forEach(c => {
-      const y = (up ? p : 1 - p) * c.n * S; c.strip.style.transform = 'translateY(' + -px(y) + 'px)';
-      c.col.style.setProperty('--odo-f', (P + f * F).toFixed(1) + 'px');
+  const live = sts.filter((x): x is St => !!x);
+  // 2. write: one line's height, as the text itself lays it out (a probe digit in each)
+  live.forEach(t => { t.probe.style.display = 'inline-block'; t.probe.textContent = '0'; t.e.textContent = ''; t.e.appendChild(t.probe); });
+  // 3. read
+  live.forEach(t => { t.H = t.probe.getBoundingClientRect().height; });
+  // 4. write: the columns
+  live.forEach(t => {
+    const { e, from, to, up, H } = t;
+    t.probe.remove();
+    if (!H) { e.textContent = to; t.H = 0; return; }
+    e.dataset.odo = to;
+    // The window is a line tall plus a thin margin above and below (see .odo), and digits are a window apart, so at
+    // rest only the one digit shows. While it spins, the window's top and bottom fade out (deeper the faster it
+    // goes, like a speedometer drum), so digits come and go through a soft edge instead of a hard cut.
+    const P = Math.max(2, Math.round(H * .14)), S = H + 2 * P, F = H * .3;
+    t.P = P; t.S = S; t.F = F;
+    const f = [...from], tt = [...to], off = f.length - tt.length;
+    tt.forEach((ch, i) => {
+      if (!DIG.test(ch)) { e.append(ch); return; }
+      const o = f[i + off], a = o && DIG.test(o) ? +o : 0, b = +ch;
+      if (a === b) { e.append(ch); return; }
+      const seq: number[] = []; for (let d = a; ; d = (d + (up ? 1 : 9)) % 10) { seq.push(d); if (d === b) break; }
+      if (!up) seq.reverse();
+      const col = document.createElement('span'); col.className = 'odo'; col.style.height = S + 'px'; col.style.setProperty('--odo-p', P + 'px');
+      const strip = document.createElement('span'); strip.className = 'odo-s'; strip.style.lineHeight = S + 'px';
+      strip.textContent = seq.join('\n');
+      col.appendChild(strip); e.appendChild(col);
+      t.cols.push({ col, strip, n: seq.length - 1 });
     });
-  };
-  set(0);
-  const t0 = performance.now() + delay;
-  own(e, 'roll', now => {
-    const p = e.isConnected ? Math.min(1, Math.max(0, now - t0) / dur) : 1;      // (a page put away mid-roll comes back finished)
-    if (p >= 1) { done(); return false; }
-    set(p); return true;
   });
-  return true;
+  // 5. read: split into columns, a digit loses its kerning with what's next to it (a % sign): if that moves anything, don't roll
+  const moved = live.map(t => !!t.H && Math.abs(t.e.getBoundingClientRect().width - t.w0) > .3);
+  live.forEach((t, k) => {
+    const { e, to } = t;
+    if (!t.H) return;
+    if (moved[k]) { e.textContent = to; delete e.dataset.odo; return; }
+    // Gradient-filled amounts (background-clip: text, as the big hero figures in most themes): the parent's clip
+    // draws its columns' digits where they'd be unmoved, so while it rolls each piece (columns and the unchanged
+    // characters between them) carries its own copy of the gradient, lined up with the whole, and the parent none
+    const cs = t.cs, cols = t.cols;
+    const grad = /text/.test(cs.backgroundClip || cs.getPropertyValue('-webkit-background-clip')) && cs.backgroundImage !== 'none';
+    if (grad) {
+      const r = e.getBoundingClientRect(), bg = cs.backgroundImage;
+      const paint = (n: HTMLElement, at: HTMLElement) => {
+        const st = n.style, x = at.getBoundingClientRect().left - r.left;
+        st.backgroundImage = bg; st.backgroundSize = r.width + 'px 100%'; st.backgroundPosition = -x + 'px 0';
+        st.setProperty('-webkit-background-clip', 'text'); st.backgroundClip = 'text'; st.color = 'transparent';
+      };
+      [...e.childNodes].forEach(n => { if (n.nodeType === 3) { const sp = document.createElement('span'); n.replaceWith(sp); sp.appendChild(n); paint(sp, sp); } });
+      cols.forEach(c => paint(c.strip, c.col));
+      e.style.backgroundImage = 'none';
+    }
+    const { S, P, F, up, delay, dur } = t;
+    const done = () => { e.textContent = to; delete e.dataset.odo; if (grad) e.style.removeProperty('background-image'); };
+    const set = (q: number) => {
+      const p = ease(q), f = Math.min(1, q * 10) * (1 - q) * (1 - q);            // how fast it's turning, 0…1
+      cols.forEach(c => {
+        const y = (up ? p : 1 - p) * c.n * S; c.strip.style.transform = 'translateY(' + -px(y) + 'px)';
+        c.col.style.setProperty('--odo-f', (P + f * F).toFixed(1) + 'px');
+      });
+    };
+    set(0);
+    const t0 = performance.now() + delay;
+    own(e, 'roll', now => {
+      const p = e.isConnected ? Math.min(1, Math.max(0, now - t0) / dur) : 1;      // (a page put away mid-roll comes back finished)
+      if (p >= 1) { done(); return false; }
+      set(p); return true;
+    });
+    ok[sts.indexOf(t)] = true;
+  });
+  return ok;
 }
 // Text that can't roll (a word, a figure of another shape) keeps showing what it said until the wave reaches it,
 // then the new words fade in, so a card never shows this month's labels on last month's chart
@@ -251,6 +276,10 @@ function later(e: Element, from: Said, to: Said, delay: number, kind = 'roll') {
 }
 
 /* ---------- Chart geometry ---------- */
+// A chart that is redrawn every frame gets a layer of its own while it moves, so each frame repaints the chart
+// and not the whole card around it (its glass, border and large soft shadow)
+const lift = (v: Element) => { (v as unknown as SVGElement).style.willChange = 'transform'; };
+const drop = (v: Element) => { (v as unknown as SVGElement).style.removeProperty('will-change'); };
 const NUMS = /-?\d*\.?\d+(?:e[-+]?\d+)?/gi;
 function tweenAttr(a: string, b: string): ((p: number) => string) | null {
   if (a === b) return null;
@@ -281,8 +310,10 @@ function morphKeyed(v: SVGSVGElement, old: NonNullable<SvgSnap['keyed']>, delay:
     g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, delay, easing: 'ease', fill: 'forwards' }).finished.catch(() => {}).then(() => g.remove());
   });
   tw.forEach(([k, a, f]) => k.setAttribute(a, f(0)));
+  lift(v);
   own(v, 'svg', now => {
     const p = v.isConnected ? Math.min(1, Math.max(0, now - t0) / dur) : 1, e = glide(p);
+    if (p >= 1) drop(v);
     if (words.length && (now >= t0 || !v.isConnected)) { words.forEach(([k, ns]) => { k.replaceChildren(...ns); if (v.isConnected) k.animate([{ opacity: .25 }, { opacity: 1 }], { duration: 220, easing: 'ease' }); }); words.length = 0; }
     tw.forEach(([k, a, f]) => k.setAttribute(a, f(e)));
     if (p >= 1) gone.forEach(g => g.remove());
@@ -308,8 +339,10 @@ function morphSvg(v: SVGSVGElement, old: SvgSnap, delay = 0, dur = 560) {
   if (!tw.length) return;
   tw.forEach(([k, a, f]) => k.setAttribute(a, f(0)));
   const t0 = performance.now() + delay;
+  lift(v);
   own(v, 'svg', now => {
     const p = v.isConnected ? Math.min(1, Math.max(0, now - t0) / dur) : 1, e = glide(p);
+    if (p >= 1) drop(v);
     tw.forEach(([k, a, f]) => k.setAttribute(a, f(e)));
     return p < 1;
   });
@@ -377,9 +410,11 @@ function waveDelays(root: HTMLElement, dir: string) {
   // The nudge: each card dips a little and moves a few pixels away from where the wave started, then settles
   dist.forEach((d, c) => {
     const r = c.getBoundingClientRect(), vx = r.left + r.width / 2 - o.x, vy = r.top + r.height / 2 - o.y, l = Math.hypot(vx, vy) || 1;
-    const push = 'translate(' + (vx / l * 4).toFixed(1) + 'px,' + (vy / l * 4).toFixed(1) + 'px) scale(.985)';
-    c.animate([{ transform: 'none' }, { transform: push, offset: .35 }, { transform: 'none' }],
-      { duration: 460, delay: Math.round(d / far * spread), easing: 'cubic-bezier(.3,.7,.3,1)', composite: 'add' });
+    // translate and scale are their own properties, so this runs on the compositor and sits on top of whatever
+    // transform the card has (an additive transform animation can't: it repaints the whole card every frame)
+    const dx = (vx / l * 4).toFixed(1) + 'px ' + (vy / l * 4).toFixed(1) + 'px';
+    c.animate([{ translate: '0 0', scale: 1 }, { translate: dx, scale: .985, offset: .35 }, { translate: '0 0', scale: 1 }],
+      { duration: 460, delay: Math.round(d / far * spread), easing: 'cubic-bezier(.3,.7,.3,1)' });
   });
   // Outside any card (a list of transactions): by the element's own distance, over the same time the cards take,
   // so a long list fills in from the arrow down without its far rows waiting long
@@ -426,18 +461,24 @@ export function morph(root: HTMLElement, s: Snap, dir = '') {
   if (RM) return;
   const wave = dir === 'next' || dir === 'prev' ? waveDelays(root, dir) : null;
   const at = (e: Element) => wave ? wave(e) : 0;
+  // What's on screen is measured once, here, before anything below changes the page: reading a box after a write
+  // makes the browser lay everything out again, and doing that per card or per amount cost a frame or two
+  const seen = new Map<Element, boolean>();
+  const vis = (e: Element) => seen.get(e) ?? false;
+  const measured = [...topCards(root), ...root.querySelectorAll(NUM), ...root.querySelectorAll(TEXT), ...root.querySelectorAll('svg')];
+  measured.forEach(e => seen.set(e, near(e.getBoundingClientRect())));
   glideRows(root, s.rows, wave || undefined);
   if (wave) {
     // a card this month has that the last one didn't (a budget, a recap note) grows in when the wave reaches it
     topCards(root).forEach(c => {
-      if (s.cards.has(keyOf(c, root)) || c.matches(SELF) || !near(c.getBoundingClientRect())) return;
+      if (s.cards.has(keyOf(c, root)) || c.matches(SELF) || !vis(c)) return;
       c.animate([{ opacity: 0, transform: 'scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 360, delay: at(c), easing: 'cubic-bezier(.32,.72,0,1)', fill: 'backwards' });
     });
     // In each card the words wait for the wave with the chart: the old ones stay until it arrives, then the new
     // ones fade in (new ones with nothing before them just fade in then)
     let n = 0;
     topCards(root).forEach(card => {
-      if (card.matches(SELF) || !near(card.getBoundingClientRect())) return;
+      if (card.matches(SELF) || !vis(card)) return;
       const d = at(card), hold = s.shapes.get(keyOf(card, root)) === shape(card);
       leaves(card, root).forEach(e => {
         if (n >= 1500) return;
@@ -451,7 +492,7 @@ export function morph(root: HTMLElement, s: Snap, dir = '') {
     });
     root.querySelectorAll<HTMLElement>(TEXT).forEach(e => {
       const was = s.texts.get(keyOf(e, root));
-      if (was == null || was === e.textContent || !ours(e, root) || !near(e.getBoundingClientRect())) return;
+      if (was == null || was === e.textContent || !ours(e, root) || !vis(e)) return;
       if (e.closest(CARD) && !e.children.length) return;      // (a card's words: above)
       e.animate([{ opacity: .25 }, { opacity: 1 }], { duration: 260, delay: at(e), easing: 'ease', fill: 'backwards' });
     });
@@ -459,14 +500,21 @@ export function morph(root: HTMLElement, s: Snap, dir = '') {
   // in a wave each card's move is a little quicker, so the last one settles soon after the first
   const D = wave ? .8 : 1;
   let c = 0;
-  if (s.nums.size) root.querySelectorAll<HTMLElement>(NUM).forEach(e => {
-    if (c >= 60 || e.children.length) return;
-    const was = s.nums.get(keyOf(e, root)), now = e.textContent || '';
-    if (was == null || was === now || !near(e.getBoundingClientRect())) return;
-    c++;
-    const d = at(e);
-    if (!roll(e, was, now, d, 700 * D) && (d > 0 || wave) && e.isConnected && !e.children.length && e.textContent === now) later(e, was, now, d);
-  });
+  if (s.nums.size) {
+    const rolls: Roll[] = [];
+    root.querySelectorAll<HTMLElement>(NUM).forEach(e => {
+      if (c >= 60 || e.children.length) return;
+      const was = s.nums.get(keyOf(e, root)), now = e.textContent || '';
+      if (was == null || was === now || !vis(e)) return;
+      c++;
+      rolls.push({ e, from: was, to: now, delay: at(e), dur: 700 * D });
+    });
+    const ok = rollAll(rolls);
+    rolls.forEach((r, i) => {
+      const { e, from, to, delay } = r;
+      if (!ok[i] && (delay > 0 || wave) && e.isConnected && !e.children.length && e.textContent === to) later(e, from, to, delay);
+    });
+  }
   if (s.fills.size) root.querySelectorAll<HTMLElement>('.fill').forEach(e => {
     const was = s.fills.get(keyOf(e, root)), now = parseFloat(e.style.width);
     if (was == null || !isFinite(now) || now <= 0 || Math.abs(was - now) < .2) return;
@@ -478,10 +526,11 @@ export function morph(root: HTMLElement, s: Snap, dir = '') {
   const cells = s.tints.size ? [...root.querySelectorAll<HTMLElement>(TINT)] : [];
   const blank = wave ? cells.find(e => !e.style.getPropertyValue('--p') && !e.classList.contains('fut')) : null;
   const base = blank ? getComputedStyle(blank).backgroundColor : '';
-  cells.forEach(e => {
-    const now = getComputedStyle(e).backgroundColor;
+  const shades = cells.map(e => getComputedStyle(e).backgroundColor);     // (all read before the first animation starts)
+  cells.forEach((e, i) => {
+    const now = shades[i];
     const was = wave ? (e.style.getPropertyValue('--p') ? base : '') : s.tints.get(keyOf(e, root));
     if (was && was !== now) e.animate([{ backgroundColor: was }, { backgroundColor: now }], { duration: 520 * D, delay: at(e), fill: 'backwards', easing: 'ease' });
   });
-  if (s.svgs.size) root.querySelectorAll<SVGSVGElement>('svg').forEach(v => { const was = s.svgs.get(keyOf(v, root)); if (was && near(v.getBoundingClientRect())) morphSvg(v, was, at(v), 560 * D); });
+  if (s.svgs.size) root.querySelectorAll<SVGSVGElement>('svg').forEach(v => { const was = s.svgs.get(keyOf(v, root)); if (was && vis(v)) morphSvg(v, was, at(v), 560 * D); });
 }
