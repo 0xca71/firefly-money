@@ -208,7 +208,7 @@ export function activityRange(key: string, today: string, first: string) {
 }
 export function activityPanel(buys: { date: string, amount: number }[], start: string, end: string, tile?: { range: string, weeks?: number }) {
   const days = activityDays(buys, start, end, todayIso(), tile ? 2000 : AG_WEEKS);
-  if (!days.length || !buys.length) return tile ? html`<section class="panel chart ag-card" aria-label="Activity"><div class="ag-head">${rangeChips(tile.range)}</div><p class="ag-none">No spending in this range.</p></section>` : '';
+  if (!days.length || !buys.length) return tile ? html`<section class="panel chart ag-card" aria-label="Activity"><div class="ag-head"></div><p class="ag-none">No spending in this range.</p></section>` : '';
   const lead = leadDays(new Date(days[0].iso + 'T12:00:00'));    // blank cells before the first day, so each row is one weekday
   const t = todayIso();
   let cells: Html | string = '';
@@ -232,12 +232,8 @@ export function activityPanel(buys: { date: string, amount: number }[], start: s
   const summary = active + ' of ' + days.length + ' days with spending' + (top && top.v ? '; the biggest was ' + fmtDay(top.iso) + ' at ' + money0(top.v) : '');
   const rows = htmlList([...byMonth].map(([m, x]) => html`<tr><td><a href="${txHref({ type: 'withdrawal' }, { start: m + '-01', end: days.filter(d => d.iso.startsWith(m)).pop()!.iso })}">${fmtD(m + '-01', { month: 'long', year: 'numeric' })}</a></td><td class="num">${x.d}</td><td class="num">${x.n}</td><td class="num">${money0(x.v)}</td></tr>`));
   const legend = html`<div class="ag-legend" aria-hidden="true">Less ${htmlList([0, 1, 2, 3, 4].map(l => html`<span class="ag-c l${l}"></span>`))} More</div>`;
-  const head = html`<div class="ag-head">${tile ? rangeChips(tile.range) : ''}${legend}</div>`;
+  const head = html`<div class="ag-head">${legend}</div>`;
   return html`<section class="panel chart ag-card" aria-label="Activity">${head}<div class="ag-scroll"><div class="ag-wrap" style="--agm:${activityCell(cols)}px"><div class="ag-months" aria-hidden="true">${months}</div><div class="ag-grid" role="img" aria-label="Spending each day: ${summary}">${cells}</div></div></div><div class="sr-only"><p>${summary}</p><table class="tbl"><caption>Spending by month</caption><thead><tr><th scope="col">Month</th><th scope="col">Days</th><th scope="col">Purchases</th><th scope="col">Spent</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
-}
-
-function rangeChips(cur: string) {
-  return html`<div class="ag-range" role="group" aria-label="Range">${htmlList(Object.entries(ACTIVITY_RANGES).map(([k, l]) => html`<button type="button" class="btn small${k === cur ? ' primary' : ''}" aria-pressed="${k === cur}" data-onclick="App.dashOpt('activity','range','${k}')">${l}</button>`))}</div>`;
 }
 
 /* ---------- Daily spending heatmap ---------- */
