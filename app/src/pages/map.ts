@@ -124,7 +124,8 @@ async function pinSelected() {
   bulk.run = null;
   const n = bulk.undo.reduce((a, u) => a + u.w.groups.length, 0);
   if (bulk.undo.length) toast('Pinned ' + n + ' purchase' + (n === 1 ? '' : 's') + ' at ' + bulk.undo.length + ' store' + (bulk.undo.length === 1 ? '' : 's'));
-  if (bulk.undo.length) await route({ quiet: true }); else drawStores();
+  drawStores();
+  if (bulk.undo.length) await route({ quiet: true });
 }
 async function pinUndo() {
   const done = bulk.undo; if (!done.length || bulk.run) return;
@@ -137,6 +138,7 @@ async function pinUndo() {
   }
   bulk.run = null; bulk.undo = left;
   toast(left.length ? 'Couldn’t undo ' + left.length + ' store' + (left.length === 1 ? '' : 's') : 'Unpinned');
+  drawStores();
   await route({ quiet: true });
 }
 async function pinStore(i: number, j: number) {

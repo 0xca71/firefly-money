@@ -57,7 +57,7 @@ describe('places tab: pin several stores in one go', () => {
     learn('walmart:1111', { lat: 1, lng: 1, addr: 'One St', src: 'learned' });
     learn('walmart:2222', { lat: 2, lng: 2, addr: 'Two St', src: 'learned' });
     learn('walmart:3333', { lat: 3, lng: 3, addr: 'Three St', src: 'learned' });
-    document.body.innerHTML = '<section id="storeList" hidden></section>';
+    document.body.innerHTML = '<div id="toast"></div><section id="storeList" hidden></section>';
     await suggestStores([wm('a', '1111'), wm('b', '2222'), wm('c', '3333')], true);
     return document.getElementById('storeList')!;
   };
