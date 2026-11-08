@@ -36,6 +36,8 @@ describe('frame drops', () => {
     expect(css).not.toMatch(/head-pinned/);
     const rule = css.match(/html\.pinhead #view > \.head::before, html\.pinhead #view > \.head::after \{ content[^}]*\}/)![0];
     expect(rule).not.toMatch(/opacity: 0|visibility: hidden/);
+    expect(rule).toMatch(/will-change: transform/);
+    expect(css).toMatch(/html\.pinhead \.side \{ z-index: 13/);
     expect(css).toMatch(/\.head::after \{ left: calc\(-1 \* \(var\(--head-l\) \+ 224px\)\)/);
   });
 });
