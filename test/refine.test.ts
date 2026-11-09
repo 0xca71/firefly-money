@@ -53,14 +53,3 @@ describe('chart scrubbing', () => {
     expect(block).toContain('.lines { touch-action: pan-y; }');
   });
 });
-
-describe('tap for details', () => {
-  it('folds small print only while the setting is on and the card is not open', () => {
-    expect(block).toContain('html.fold :is(.kpi, .panel.stat):has(.sub-s):not(.open) .sub-s { display: none; }');
-  });
-  it('has a Settings switch wired to App.toggleFold', () => {
-    const s = readFileSync('app/src/pages/settings.ts', 'utf8');
-    expect(s).toContain('data-pref="fold"');
-    expect(s).toContain('App.toggleFold()');
-  });
-});

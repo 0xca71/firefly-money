@@ -9,16 +9,14 @@ function applyPrefs() {
   const r = document.documentElement;
   r.classList.toggle('privacy', !!LS.get('privacy', false));
   r.classList.toggle('compact', !!LS.get('compact', false));
-  r.classList.toggle('fold', !!LS.get('fold', false));
-  if (!LS.get('fold', false)) document.querySelectorAll('.kpi.open, .panel.stat.open').forEach(n => n.classList.remove('open'));
   drawToggles();
 }
 export function drawToggles() {
-  const p = !!LS.get('privacy', false), c = !!LS.get('compact', false), f = !!LS.get('fold', false);
+  const p = !!LS.get('privacy', false), c = !!LS.get('compact', false);
   document.querySelectorAll<HTMLElement>('[data-tg=privacy]').forEach(b => { b.classList.toggle('on', p); b.innerHTML = String(html`${icon(p ? 'eyeoff' : 'eye')}<span>${p ? 'Show amounts' : 'Hide amounts'}</span>`); b.title = 'Hide or show amounts (P)'; });
   document.querySelectorAll<HTMLElement>('[data-tg=compact]').forEach(b => { b.classList.toggle('on', c); b.innerHTML = String(html`${icon('density')}<span>${c ? 'Comfortable view' : 'Compact view'}</span>`); });
   // the switches on the Settings page
-  document.querySelectorAll<HTMLInputElement>('input[data-pref]').forEach(i => { i.checked = i.dataset.pref === 'privacy' ? p : i.dataset.pref === 'fold' ? f : c; });
+  document.querySelectorAll<HTMLInputElement>('input[data-pref]').forEach(i => { i.checked = i.dataset.pref === 'privacy' ? p : c; });
 }
 export function togglePrivacy() {
   const on = !LS.get('privacy', false); LS.set('privacy', on);
@@ -49,7 +47,6 @@ export function toggleSide() {
     dispatchEvent(new Event('resize'));
   }, 360);
 }
-function toggleFold() { LS.set('fold', !LS.get('fold', false)); vt('prefs', applyPrefs); buzz(8); }
 function toggleDensity() { LS.set('compact', !LS.get('compact', false)); vt('prefs', applyPrefs); buzz(8); }
 applyPrefs();
 
@@ -65,7 +62,6 @@ const methods = {
   togglePrivacy,
   toggleSide,
   toggleDensity,
-  toggleFold,
   drawToggles,
 };
 Object.assign(App, methods);

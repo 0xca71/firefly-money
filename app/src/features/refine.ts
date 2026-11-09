@@ -51,12 +51,3 @@ document.addEventListener('pointermove', e => { if (svg && e.pointerType !== 'mo
 const end = () => { if (svg) { clearTimeout(hideT); hideT = setTimeout(stop, 1800); } };
 document.addEventListener('pointerup', end, true);
 document.addEventListener('pointercancel', stop, true);
-
-/* ---------- Settings → "Tap for details": a card's small print stays folded until the card is tapped ---------- */
-const foldable = (n: Element) => document.documentElement.classList.contains('fold') && !!n.querySelector('.sub-s');
-document.addEventListener('click', e => {
-  const k = e.target instanceof Element ? e.target.closest('.kpi, .panel.stat') : null;
-  if (!k || !foldable(k)) return;
-  if ((e.target as Element).closest('a[href], button, input, select, label, [data-go]')) return;
-  const open = k.classList.toggle('open'); buzz(open ? 5 : 3);
-});
