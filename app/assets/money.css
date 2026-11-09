@@ -2493,8 +2493,3 @@ html[data-theme="dark"] { --e1: var(--rim), var(--lift); --e2: 0 1px 0 rgba(0,0,
 .lines { touch-action: pan-y; }
 .lines .scrub-line { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 4; pointer-events: none; }
 
-/* Density: "Tap for details" folds a card's small print until the card is tapped */
-html.fold :is(.kpi, .panel.stat):has(.sub-s):not(.open) .sub-s { display: none; }
-html.fold :is(.kpi, .panel.stat):has(.sub-s) { cursor: pointer; position: relative; }
-html.fold :is(.kpi, .panel.stat):has(.sub-s)::after { content: ""; position: absolute; right: 12px; bottom: 12px; width: 6px; height: 6px; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); opacity: .6; pointer-events: none; }
-html.fold :is(.kpi, .panel.stat).open::after { transform: translateY(1px) rotate(-135deg); }
