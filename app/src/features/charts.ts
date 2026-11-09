@@ -110,13 +110,13 @@ export function paceChart(days: number[], before: number[], dim: number, label: 
 
 /* ---------- Bars: one value a month (the savings rate), below the line when negative ---------- */
 // size: a narrower drawing for a small card (its text then stays readable when the card scales it down)
-export function barChart(pts: { label: string, v: number | null, go?: string }[], fmt: (v: number) => string, label: string, size?: { w: number, h: number }) {
+export function barChart(pts: { label: string, v: number | null, go?: string, part?: boolean }[], fmt: (v: number) => string, label: string, size?: { w: number, h: number }) {
   const W = size ? size.w : innerWidth < 600 ? 360 : 640, H = size ? size.h : 200, pt = 18, n = pts.length, vals = pts.map(p => p.v || 0);
   const hi = Math.max(0, ...vals), lo = Math.min(0, ...vals), rng = hi - lo || 1, pb = lo < 0 ? 42 : 26;     // room under a bar below zero for its amount
   const y = (v: number) => pt + (H - pb - pt) * (hi - v) / rng, zero = y(0), slot = W / n, bw = Math.min(38, slot * .5);
   const bars = htmlList(pts.map((p, i) => {
     const cx = slot * i + slot / 2, v = p.v, top = v == null ? zero : Math.min(y(v), zero), h = v == null ? 0 : Math.max(2, Math.abs(y(v) - zero));
-    return html`<g data-tip="${p.label + ' · ' + (v == null ? 'no income' : fmt(v))}"${p.go ? html` data-go="${p.go}"` : ''}><rect x="${slot * i}" y="0" width="${slot}" height="${H}" fill="transparent"></rect>${v == null ? '' : html`<rect class="bar${v < 0 ? ' neg' : ''}" style="--j:${i};transform-origin:50% ${v < 0 ? '0' : '100'}%" x="${(cx - bw / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${Math.min(8, bw / 3).toFixed(1)}"></rect><text class="bv" x="${cx.toFixed(1)}" y="${(v < 0 ? top + h + 13 : top - 6).toFixed(1)}" text-anchor="middle">${fmt(v)}</text>`}<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle">${p.label}</text></g>`;
+    return html`<g data-tip="${p.label + ' · ' + (v == null ? 'no income' : fmt(v) + (p.part ? ' so far' : ''))}"${p.go ? html` data-go="${p.go}"` : ''}><rect x="${slot * i}" y="0" width="${slot}" height="${H}" fill="transparent"></rect>${v == null ? '' : html`<rect class="bar${v < 0 ? ' neg' : ''}${p.part ? ' part' : ''}" style="--j:${i};transform-origin:50% ${v < 0 ? '0' : '100'}%" x="${(cx - bw / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${Math.min(8, bw / 3).toFixed(1)}"></rect><text class="bv${p.part ? ' part' : ''}" x="${cx.toFixed(1)}" y="${(v < 0 ? top + h + 13 : top - 6).toFixed(1)}" text-anchor="middle">${fmt(v)}</text>`}<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle">${p.label}</text></g>`;
   }));
   return html`<svg class="barchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}"><line x1="0" x2="${W}" y1="${zero.toFixed(1)}" y2="${zero.toFixed(1)}" stroke="var(--line)"/>${bars}</svg>`;
 }
@@ -217,7 +217,8 @@ const AG_WEEKS = 53;
 // quartiles of the days that had spending, so one huge day can't wash the rest out
 export function activityDays(buys: { date: string, amount: number }[], start: string, end: string, today = todayIso(), weeks = AG_WEEKS) {
   const last = end > today ? today : end, by = new Map<string, { v: number, n: number }>();
-  buys.forEach(b => { const d = b.date.slice(0, 10), x = by.get(d) || { v: 0, n: 0 }; x.v += b.amount; x.n++; by.set(d, x); });
+  buys.forEach(b => { const d = b.date.slice(0, 10), x = by.get(d) || { v: 0, n: 0 }; x.v += b.amount; if (b.amount > 0) x.n++; by.set(d, x); });
+  by.forEach(x => { if (x.v < 0) x.v = 0; });     // refunds came off the day's spending (never below nothing)
   if (last < start) return [] as AgDay[];
   const floor = addDays(last, -(weeks * 7 - 1)), first = start < floor ? floor : start;
   const vals = [...by.values()].map(x => x.v).filter(v => v > 0).sort((a, b) => a - b);
@@ -278,7 +279,8 @@ export function activityPanel(buys: { date: string, amount: number }[], start: s
 /* ---------- Daily spending heatmap ---------- */
 function heatmapPanel(cur: Period, groups: Group[]) {
   const by: Record<string, number> = {}, cnt: Record<string, number> = {};
-  groups.forEach(g => { const d = String(g.date).slice(0, 10); by[d] = (by[d] || 0) + g.total; cnt[d] = (cnt[d] || 0) + 1; });
+  groups.forEach(g => { const d = String(g.date).slice(0, 10); by[d] = (by[d] || 0) + g.total; if (g.total > 0) cnt[d] = (cnt[d] || 0) + 1; });     // a refund (negative) comes off the day, it isn't a purchase
+  for (const d of Object.keys(by)) if (by[d] <= 0) delete by[d];
   const dim = new Date(cur.y!, cur.m! + 1, 0).getDate(), lead = leadDays(new Date(cur.y!, cur.m!, 1)), t = todayIso();
   const max = Math.max(1, ...Object.values(by)), days = Object.keys(by).length;
   let cells: Html | string = '';

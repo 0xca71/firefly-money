@@ -1,6 +1,7 @@
 import { api, getAll } from '../core/api';
 import { S, arr, num, type ApiData } from '../core/base';
 import { normGroup } from '../core/feed';
+import { LS } from '../core/helpers';
 
 /* ================= Refunds =================
    A refund is an income transaction (deposit) tagged "Refund", into the account the purchase was paid from, with the
@@ -10,7 +11,7 @@ import { normGroup } from '../core/feed';
    purchase it's linked to. */
 export const REFUND_TAG = 'Refund';
 export const isRefundTag = (t: string) => t.trim().toLowerCase() === REFUND_TAG.toLowerCase();
-export type Refund = { jid: string, date: string, amount: number, category: string, payee: string, budgetId: string, budget: string, known: boolean };
+export type Refund = { jid: string, date: string, amount: number, category: string, payee: string, budgetId: string, budget: string, known: boolean, oneOff?: boolean };
 
 // Firefly's "Refund" link type (it comes with Firefly; it can be renamed or deleted)
 export async function refundLinkType(): Promise<ApiData | null> {
@@ -35,8 +36,21 @@ function originalOf(jid: string) {
   })().catch(() => { ORIGINAL.delete(jid); return { budgetId: '', budget: '', known: false }; }));
   return ORIGINAL.get(jid)!;
 }
-// The refunds dated start..end
+// Big one-off purchases (a laptop, a flight) can be left out of Spent, the trends and the pace: tag them "One-off" and
+// switch "Leave out one-offs" on in Settings. They come off spending the way refunds do, but never off income.
+export const ONEOFF_TAG = 'One-off';
+export const skipOneOffs = () => !!LS.get('skipOneOffs', false);
+async function oneOffsIn(start: string, end: string): Promise<Refund[]> {
+  const gs = await getAll('/tags/' + encodeURIComponent(ONEOFF_TAG) + '/transactions', { start, end, type: 'withdrawal' }).catch(() => []);
+  return gs.map(normGroup).flatMap(g => g.splits).filter(s => s.type === 'withdrawal' && s.tags.some(t => t.trim().toLowerCase() === ONEOFF_TAG.toLowerCase()))
+    .map(s => ({ jid: s.jid, date: String(s.date).slice(0, 10), amount: Math.abs(s.amount), category: s.category, payee: s.destination_name, budgetId: s.budget_id, budget: s.budget_name, known: true, oneOff: true }));
+}
+// The refunds dated start..end (and the one-offs, when they're left out)
 export async function refundsIn(start: string, end: string): Promise<Refund[]> {
+  const [rs, one] = await Promise.all([refundsOnly(start, end), skipOneOffs() ? oneOffsIn(start, end) : []]);
+  return [...rs, ...one];
+}
+async function refundsOnly(start: string, end: string): Promise<Refund[]> {
   const gs = await getAll('/tags/' + encodeURIComponent(REFUND_TAG) + '/transactions', { start, end, type: 'deposit' }).catch(() => []);
   const splits = gs.map(normGroup).flatMap(g => g.splits).filter(s => s.type === 'deposit' && s.tags.some(isRefundTag));
   return Promise.all(splits.map(async s => ({ jid: s.jid, date: String(s.date).slice(0, 10), amount: Math.abs(s.amount), category: s.category, payee: s.source_name, ...await originalOf(s.jid) })));
@@ -79,12 +93,15 @@ export function netted(path: string, range: { start: string, end: string }, res:
   rs = rs.filter(r => r.date >= range.start && r.date <= range.end);
   if (!rs.length) return res;
   switch (path) {
-    case '/insight/expense/total': case '/insight/income/total': return lessTotal(res, refundTotal(rs));
-    case '/insight/expense/category': case '/insight/income/category': return lessRefunds(res, refundsBy(rs, r => r.category));
+    case '/insight/expense/total': return lessTotal(res, refundTotal(rs));
+    case '/insight/income/total': return lessTotal(res, refundTotal(rs.filter(r => !r.oneOff)));
+    case '/insight/expense/category': return lessRefunds(res, refundsBy(rs, r => r.category));
+    case '/insight/income/category': return lessRefunds(res, refundsBy(rs.filter(r => !r.oneOff), r => r.category));
     case '/insight/expense/no-category': return lessTotal(res, refundTotal(rs.filter(r => !r.category)));
     case '/insight/expense/budget': return lessRefunds(res, refundsBy(rs, r => r.budget));
     case '/insight/expense/no-budget': return lessTotal(res, refundTotal(rs.filter(r => r.known && !r.budgetId)));
-    case '/insight/expense/expense': case '/insight/income/revenue': return lessRefunds(res, refundsBy(rs, r => r.payee));
+    case '/insight/expense/expense': return lessRefunds(res, refundsBy(rs, r => r.payee));
+    case '/insight/income/revenue': return lessRefunds(res, refundsBy(rs.filter(r => !r.oneOff), r => r.payee));
     default: return res;
   }
 }
@@ -92,4 +109,13 @@ export function netted(path: string, range: { start: string, end: string }, res:
 export async function insight(path: string, range: { start: string, end: string }, rs?: Promise<Refund[]>) {
   const [res, r] = await Promise.all([api(path, { params: range }), rs || refundsIn(range.start, range.end)]);
   return netted(path, range, res, r);
+}
+
+// Withdrawals (raw /transactions groups) with the refunds in rs taken off, as one negative "withdrawal" per refund dated
+// on its day, so the day-by-day views (heatmap, pace, activity) add up to the same Spent as the insight totals.
+// null (Firefly not answering) stays null.
+export const REFUND_ROW = 'refund-net';
+export function lessRefundTx(tx: ApiData[] | null, rs: Refund[]): ApiData[] | null {
+  if (!tx || !rs.length) return tx;
+  return [...tx, ...rs.map(r => ({ id: REFUND_ROW, attributes: { transactions: [{ transaction_journal_id: r.jid, type: 'withdrawal', date: r.date, amount: String(-r.amount), description: r.oneOff ? 'One-off' : 'Refund', category_name: r.category }] } }))];
 }
