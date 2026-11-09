@@ -19,12 +19,30 @@ export type TxForm = { id: string, type: string, date: string, title: string, ma
   nlBase?: ApiData, nl?: string, nlChips?: Html | '',   // quick add: what was typed and the chips it was read as
   refundOf?: { jid: string, label: string },              // a refund made from this purchase: linked to it when saved
   draft?: string,
+  catPre?: string,                                        // a category filled in from the last transaction: a payee's own category replaces it
   maybeSaved?: boolean };                              // a save got no answer: check for a copy in Firefly before saving again                                    // the draft this form was opened from (see drafts below)
 export function blankSplit(): SplitForm { return { jid: '', description: '', amount: '', counter: '', category: '', budget: '', bill: '', tags: '', notes: '', fa: '', fc: '', orig: {} }; }
+/* ---------- Last used: a new transaction starts from the account and category you used last (this device) ---------- */
+export type LastTx = { acc?: Record<string, string>, src?: string, dst?: string, cat?: Record<string, string> };
+export function lastUsed(): LastTx { const v = LS.get('lastTx', {}) as LastTx; return v && typeof v === 'object' ? v : {}; }
+export function rememberTx(f: TxForm) {
+  const l = lastUsed(), cat = f.splits[0] ? f.splits[0].category.trim() : '';
+  if (f.type === 'transfer') { l.src = f.src; l.dst = f.dst; }
+  else { l.acc = { ...l.acc, [f.type]: f.main }; if (cat) l.cat = { ...l.cat, [f.type]: cat }; }
+  LS.set('lastTx', l);
+}
+// Fills the account and category from the last transaction, unless the caller already chose them
+export function prefillLast(f: TxForm, last: LastTx, ownIds: Set<string>, preset: { account?: string, category?: string, description?: string }) {
+  const t = f.type;
+  if (t === 'transfer') return;
+  if (!preset.account && last.acc && last.acc[t] && ownIds.has(last.acc[t])) f.main = f.src = last.acc[t];
+  if (!preset.category && !preset.description && last.cat && last.cat[t]) f.splits[0].category = f.catPre = last.cat[t];
+}
 export function newTx(preset: { type?: string, date?: string, account?: string, description?: string, amount?: string, counter?: string, category?: string, budget?: string, bill?: string } = {}) {
   const L = S.lists!; S.drawerHero = null;
   const firstAsset = (L.own.find(a => isAsset(a) && !isCard(a)) || L.own[0] || {}).id || '';
   S.form = { id: '', type: preset.type || 'withdrawal', date: preset.date || todayIso(), title: '', main: preset.account || firstAsset, src: preset.account || firstAsset, dst: '', rules: true, splits: [blankSplit()] };
+  prefillLast(S.form, lastUsed(), new Set(L.own.map(a => a.id)), preset);
   if (preset.description) S.form.splits[0].description = preset.description;
   if (preset.amount) S.form.splits[0].amount = preset.amount;
   for (const k of ['counter', 'category', 'budget', 'bill'] as const) if (preset[k]) S.form.splits[0][k] = preset[k]!;
@@ -207,6 +225,30 @@ async function alreadySaved(body: ReturnType<typeof buildTxPayload>): Promise<bo
   try { return looksSaved(arr(await api('/transactions', { params: { start: day, end: day, type: 'all', limit: 50 }, fresh: true })), body); }
   catch (e) { if (e instanceof AuthError) throw e; return false; }      // can't tell: let the save go ahead
 }
+/* ---------- Same one already there? (a duplicate warning before saving) ----------
+   A new transaction with the same payee (or description), amount and day as one already in Firefly asks first.
+   Firefly's own duplicate check stays off: two coffees at the same price are real, so the call is yours. */
+export type DupWant = { type: string, day: string, parts: { payee: string, description: string, amount: number }[] };
+export function duplicateOf(groups: ApiData[], want: DupWant): { description: string, amount: number } | null {
+  if (want.type === 'transfer') return null;
+  for (const g of groups) {
+    const have: ApiData[] = (g && g.attributes && g.attributes.transactions) || [];
+    for (const h of have) {
+      if (h.type !== want.type || String(h.date || '').slice(0, 10) !== want.day) continue;
+      const payee = String((want.type === 'deposit' ? h.source_name : h.destination_name) || ''), desc = String(h.description || '');
+      const hit = want.parts.some(p => Math.abs(num(h.amount) - p.amount) < 0.005 && ((p.payee && payee && sameName(p.payee, payee)) || sameName(p.description, desc)));
+      if (hit) return { description: desc, amount: num(h.amount) };
+    }
+  }
+  return null;
+}
+async function findDuplicate(f: TxForm): Promise<{ description: string, amount: number } | null> {
+  if (f.id || f.type === 'transfer' || !f.date) return null;
+  try {
+    const groups = arr(await api('/transactions', { params: { start: f.date, end: f.date, type: 'all', limit: 50 }, fresh: true }));
+    return duplicateOf(groups, { type: f.type, day: f.date, parts: f.splits.map(s => ({ payee: s.counter.trim(), description: s.description.trim(), amount: Math.abs(num(s.amount)) })) });
+  } catch (e) { if (e instanceof AuthError) throw e; return null; }      // can't tell: let the save go ahead
+}
 async function saveTx(formEl: HTMLFormElement) {
   collectTx();
   const f: TxForm = S.form;
@@ -225,6 +267,10 @@ async function saveTx(formEl: HTMLFormElement) {
     let saved = false;
     try { saved = await alreadySaved(body); } catch (e) { if (e instanceof AuthError) return showLogin(e.message); }
     if (saved && !await confirmBox('This looks already saved', 'A transaction with the same description, amount and date was added a moment ago. Save anyway?', 'Save anyway')) return;
+  } else if (!f.id) {
+    let dup = null as Awaited<ReturnType<typeof findDuplicate>>;
+    try { dup = await findDuplicate(f); } catch (e) { if (e instanceof AuthError) return showLogin(e.message); }
+    if (dup && !await confirmBox('Already in Firefly?', '“' + dup.description + '” for ' + money(dup.amount) + ' on ' + fmtDate(f.date) + ' is already there. Add it again?', 'Add again')) return;
   }
   const row = f.id && document.querySelector<HTMLElement>('#view tr[data-gid="' + f.id + '"]');
   closeDrawer();
@@ -241,6 +287,7 @@ async function saveTx(formEl: HTMLFormElement) {
       if (f.refundOf && f.type === 'deposit') await linkRefund(res, f.refundOf.jid);
     }
     if (f.draft) dropDraft(f.draft);
+    if (!f.id && !f.refundOf) rememberTx(f);
     buzz(BUZZ_SAVE); invalidate(); toast(f.id ? 'Transaction updated' : 'Transaction added'); route();
   } catch (e) {
     if (e instanceof AuthError) return showLogin(e.message);

@@ -62,7 +62,7 @@ describe('Pre-release audit: contrast and labels', () => {
     expect(ratio('#d99278', '#2e3440')).toBeGreaterThanOrEqual(4.5);   // Nord spend
     expect(ratio('#ff5c95', '#2a2a30')).toBeGreaterThanOrEqual(4.5);   // Carbon spend
     expect(ratio('#ffffff', '#c9431d')).toBeGreaterThanOrEqual(4.5);   // Frosted accent
-    for (const c of ['#a85a38', '#4f7260', '#6d4cf5', '#d99278', '#ff5c95', '#c9431d', '#5c5047']) expect(css).toContain(c);
+    for (const c of ['#a85a38', '#4f7260', '#6d4cf5', '#d99278', '#ff5c95', '#c9431d', '#4b4037']) expect(css).toContain(c);
   });
   it('labels every Forecast field for screen readers', () => {
     const src = readFileSync('app/src/pages/forecast.ts', 'utf8');

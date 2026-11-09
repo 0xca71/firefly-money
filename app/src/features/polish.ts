@@ -175,7 +175,7 @@ export async function payeeFill(i: number, name: string) {
     const s = mine.find(x => x.category) || mine[0];       // most recent one that was categorized
     if (!s || !S.form || S.form !== f) return;
     const card = document.querySelector<HTMLElement>('#txForm .split[data-i="' + i + '"]'); if (!card) return;
-    const set = (k: string, v: string) => { const inp = card.querySelector<HTMLInputElement>('[data-k="' + k + '"]'); if (inp && !inp.value && v) { inp.value = v; inp.classList.add('filled'); f.splits[i][k] = v; } };
+    const set = (k: string, v: string) => { const inp = card.querySelector<HTMLInputElement>('[data-k="' + k + '"]'); if (inp && (!inp.value || (k === 'category' && inp.value === f.catPre)) && v) { inp.value = v; inp.classList.add('filled'); f.splits[i][k] = v; } };
     set('category', s.category);
     if (f.type === 'withdrawal') set('budget', s.budget_id);
     if (!card.querySelector<HTMLInputElement>('[data-k="description"]')!.value) set('description', s.description);

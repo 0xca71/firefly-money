@@ -28,13 +28,13 @@
     --good: #34d399; --spend: #fb7185; --income: #38bdf8; --warn: #fbbf24; --accent: #6d4cf5; --on-accent: #ffffff;
     --hero-grad: linear-gradient(90deg, #a78bfa, #38bdf8); --shadow: 0 18px 50px rgba(0,0,0,.6); color-scheme: dark; }
   html[data-theme="neon"] { --bg: #0d0221; --panel: #170838; --line: #2c1860; --text: #f6f2ff; --muted: #a79bd6; --faint: #221049;
-    --good: #2ef2b4; --spend: #ff4d9d; --income: #00e0ff; --warn: #ffd166; --accent: #ff2e97; --on-accent: #ffffff;
+    --good: #2ef2b4; --spend: #ff4d9d; --income: #00e0ff; --warn: #ffd166; --accent: #ff2e97; --on-accent: #0d0221;
     --hero-grad: linear-gradient(90deg, #ff2e97, #ffb347 55%, #00e0ff); --shadow: 0 18px 60px rgba(255,46,151,.15); color-scheme: dark; }
   html[data-theme="ocean"] { --bg: #041318; --panel: #0a2029; --line: #15343f; --text: #e2f5f8; --muted: #7ea5ae; --faint: #0f2b35;
     --good: #2dd4bf; --spend: #ff8a4c; --income: #3b9eff; --warn: #facc15; --accent: #14b8a6; --on-accent: #032126;
     --hero-grad: linear-gradient(90deg, #5eead4, #3b9eff); --shadow: 0 18px 50px rgba(0,0,0,.55); color-scheme: dark; }
   html[data-theme="sunrise"] { --bg: #fff7ee; --panel: #ffffff; --line: #f3e2cf; --text: #221a14; --muted: #725d4c; --faint: #fdecd9;
-    --good: #0f9d6b; --spend: #e8452c; --income: #2f7ff0; --warn: #d98b00; --accent: #e8452c; --on-accent: #ffffff;
+    --good: #0f9d6b; --spend: #e8452c; --income: #2f7ff0; --warn: #d98b00; --accent: #d33a22; --on-accent: #ffffff;
     --hero-grad: linear-gradient(90deg, #e8452c, #f59e0b); --shadow: 0 18px 50px rgba(232,69,44,.12); color-scheme: light; }
   html[data-theme="forest"] { --bg: #0e1612; --panel: #15211b; --line: #233429; --text: #e7f0e9; --muted: #8aa596; --faint: #1b2a22;
     --good: #6fcf97; --spend: #f2994a; --income: #56ccf2; --warn: #f2c94c; --accent: #6fcf97; --on-accent: #08130d;
@@ -43,7 +43,7 @@
     --good: #a3be8c; --spend: #d99278; --income: #88c0d0; --warn: #ebcb8b; --accent: #88c0d0; --on-accent: #242933;
     --hero-grad: linear-gradient(90deg, #88c0d0, #b48ead); --shadow: 0 18px 50px rgba(0,0,0,.45); color-scheme: dark; }
   html[data-theme="rose"] { --bg: #fdf6f7; --panel: #ffffff; --line: #f1dfe3; --text: #2a1b20; --muted: #72525b; --faint: #f9e8ec;
-    --good: #2f9e72; --spend: #d6456e; --income: #6b7fe0; --warn: #c98a1b; --accent: #d6456e; --on-accent: #ffffff;
+    --good: #2f9e72; --spend: #d6456e; --income: #6b7fe0; --warn: #c98a1b; --accent: #c93e64; --on-accent: #ffffff;
     --hero-grad: linear-gradient(90deg, #d6456e, #9b6bdf); --shadow: 0 18px 50px rgba(214,69,110,.12); color-scheme: light; }
   html[data-theme="carbon"] { --bg: #161618; --panel: #1f1f23; --line: #2f2f36; --text: #f3f3f5; --muted: #9b9ba6; --faint: #2a2a30;
     --good: #39ff9f; --spend: #ff5c95; --income: #19e3ff; --warn: #ffe14d; --accent: #39ff9f; --on-accent: #0b0b0c;
@@ -907,6 +907,7 @@
   /* Privacy: blur money everywhere (hover to peek on desktop) */
   html.privacy .num, html.privacy .amt, html.privacy .big, html.privacy .val, html.privacy .total, html.privacy .insight .d, html.privacy .tip, html.privacy .hm-foot strong,
   html.privacy .dhero .sub-s, html.privacy .cat .sub, html.privacy .sub-s, html.privacy .kpi .val { filter: blur(7px); transition: filter var(--t-hover); }
+  html.priv-snap .num, html.priv-snap .amt, html.priv-snap .big, html.priv-snap .val, html.priv-snap .total, html.priv-snap .insight .d, html.priv-snap .tip, html.priv-snap .hm-foot strong, html.priv-snap .dhero .sub-s, html.priv-snap .cat .sub, html.priv-snap .sub-s, html.priv-snap .kpi .val { transition: none; }
   html.privacy .settings .sub-s { filter: none; }   /* Settings hints hold no amounts */
   html.privacy .amtx { visibility: hidden; }
   html.privacy .spark { opacity: .5; }
@@ -928,8 +929,8 @@
   html.compact .kpi { padding: 12px 14px; }
 
   /* ---------- Theme: Liquid glass neon ---------- */
-  html[data-theme="glass"] { --bg: #07060f; --panel: rgba(24, 20, 48, .52); --line: rgba(255, 255, 255, .13); --text: #f5f3ff; --muted: #aaa4cc; --faint: rgba(255, 255, 255, .07);
-    --good: #3dffb5; --spend: #ff4fd8; --income: #37f5ff; --warn: #ffd84d; --accent: #37f5ff; --on-accent: #04121a;
+  html[data-theme="glass"] { --bg: #07060f; --panel: rgba(24, 20, 48, .52); --line: rgba(255, 255, 255, .13); --text: #f5f3ff; --muted: #c4bee3; --faint: rgba(255, 255, 255, .07);
+    --good: #3dffb5; --spend: #ff4fd8; --income: #37f5ff; --warn: #ffd84d; --spend-t: #ffa3ee; --accent: #37f5ff; --on-accent: #04121a;
     --hero-grad: linear-gradient(90deg, #37f5ff, #b86bff 50%, #ff4fd8); --shadow: 0 20px 60px rgba(0, 0, 0, .55); --radius: 22px; color-scheme: dark;
     --glass: linear-gradient(150deg, rgba(255,255,255,.11), rgba(255,255,255,.035) 42%, rgba(255,255,255,.06));
     --glass-edge: inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(255,255,255,.05), inset 1px 0 0 rgba(255,255,255,.06);
@@ -1049,12 +1050,12 @@
     .undo button { padding: 10px 18px; font-size: 14.5px; }
   }
   /* ---------- Theme: Frosted glass (warm light glass over a soft-focus room) ---------- */
-  html[data-theme="frosted"] { --bg: #d9c7b3; --panel: rgba(255, 250, 244, .5); --line: rgba(255, 255, 255, .55); --text: #1d1915; --muted: #5c5047; --faint: rgba(255, 255, 255, .35);
-    --good: #2a9163; --spend: #d94f27; --income: #2a9163; --warn: #c98a12; --accent: #c9431d; --on-accent: #ffffff;
+  html[data-theme="frosted"] { --bg: #d9c7b3; --panel: rgba(255, 250, 244, .5); --line: rgba(255, 255, 255, .55); --text: #1d1915; --muted: #4b4037; --faint: rgba(255, 255, 255, .35);
+    --good: #2a9163; --spend: #d94f27; --income: #2a9163; --warn: #c98a12; --good-t: #17593b; --spend-t: #8c2c13; --warn-t: #6b4700; --accent: #c9431d; --on-accent: #ffffff;
     --shadow: 0 18px 50px rgba(60, 35, 15, .18); --radius: 22px; color-scheme: light;
     --ink: #17130f; --frost-edge: inset 0 1px 0 rgba(255, 255, 255, .75), inset 0 0 0 1px rgba(255, 255, 255, .35);
     /* what Settings → Appearance → Customize can change (themevars.ts sets these on <html>): the room's colors and the glass */
-    --glow1: #8a5a3c; --glow2: #f1e4d3; --glow3: #5f6b4a; --glass-base: #fffaf4; --glass-tint: 22%; --glass-blur: 28px;
+    --glow1: #8a5a3c; --glow2: #f1e4d3; --glow3: #5f6b4a; --glass-base: #fffaf4; --glass-tint: 50%; --glass-blur: 28px;
     background: var(--bg); }
   html[data-theme="frosted"] body { background: transparent; }
   /* the room: wood, a bright window, a dark screen, a plant, a rug */
@@ -1113,7 +1114,7 @@
       radial-gradient(90vmax 30vmax at 15% 100%, var(--glow1), transparent 70%),
       radial-gradient(80vmax 26vmax at 90% 95%, color-mix(in srgb, var(--glow1) 70%, var(--glow2)), transparent 70%),
       linear-gradient(180deg, var(--glow3), var(--bg)); }
-  html[data-theme="frosted"][data-scene="garden"] { --bg: #cfd8bf; --glow1: #5f8050; --glow2: #fffbe6; --glow3: #a9bf8e; --accent: #d9662f; }
+  html[data-theme="frosted"][data-scene="garden"] { --bg: #cfd8bf; --glow1: #5f8050; --glow2: #fffbe6; --glow3: #a9bf8e; --accent: #b85625; }
   html[data-theme="frosted"][data-scene="garden"] body::after { background:
       radial-gradient(50vmax 34vmax at 55% 8%, var(--glow2), transparent 70%),
       radial-gradient(26vmax 34vmax at 6% 30%, var(--glow1), transparent 70%),
@@ -1121,14 +1122,14 @@
       radial-gradient(40vmax 26vmax at 80% 80%, var(--glow3), transparent 70%),
       radial-gradient(44vmax 24vmax at 18% 92%, color-mix(in srgb, var(--glow1) 65%, var(--glow3)), transparent 70%),
       linear-gradient(180deg, color-mix(in srgb, var(--glow2) 60%, var(--bg)), var(--bg)); }
-  html[data-theme="frosted"][data-scene="coast"] { --bg: #e8d8bd; --glow1: #3f87a3; --glow2: #f2f8fb; --glow3: #9ccbd8; --accent: #e0612f; }
+  html[data-theme="frosted"][data-scene="coast"] { --bg: #e8d8bd; --glow1: #3f87a3; --glow2: #f2f8fb; --glow3: #9ccbd8; --accent: #be5225; }
   html[data-theme="frosted"][data-scene="coast"] body::after { background:
       radial-gradient(60vmax 20vmax at 50% 0%, var(--glow2), transparent 70%),
       radial-gradient(18vmax 14vmax at 78% 18%, #fff, transparent 70%),
       radial-gradient(100vmax 22vmax at 50% 52%, var(--glow1), transparent 70%),
       radial-gradient(70vmax 12vmax at 30% 44%, var(--glow3), transparent 70%),
       linear-gradient(180deg, var(--glow3) 0%, var(--glow2) 30%, color-mix(in srgb, var(--glow1) 60%, var(--glow3)) 48%, var(--glow1) 58%, var(--bg) 72%, var(--bg)); }
-  html[data-theme="frosted"][data-scene="blossom"] { --bg: #f1d3df; --glow1: #d47fa8; --glow2: #fff4f8; --glow3: #a596e0; --accent: #d9467a; }
+  html[data-theme="frosted"][data-scene="blossom"] { --bg: #f1d3df; --glow1: #d47fa8; --glow2: #fff4f8; --glow3: #a596e0; --accent: #cb4072; }
   html[data-theme="frosted"][data-scene="blossom"] body::after { background:
       radial-gradient(36vmax 30vmax at 15% 15%, var(--glow1), transparent 70%),
       radial-gradient(44vmax 30vmax at 70% 10%, var(--glow2), transparent 70%),
@@ -1139,8 +1140,8 @@
   /* Your photo, softened like the scenes */
   html[data-theme="frosted"][data-scene="photo"] body::after { inset: -60px; background: var(--photo) center / cover no-repeat; filter: blur(22px) saturate(115%); }
   /* Night city: the same glass, dark */
-  html[data-theme="frosted"][data-scene="night"] { --bg: #120f1c; --glow1: #ff7a3d; --glow2: #3b2a6b; --glow3: #2bb3c9; --text: #f4efe9; --muted: #aba2b6; --faint: rgba(255, 255, 255, .08); --panel: rgba(29, 24, 40, .6);
-    --line: rgba(255, 255, 255, .14); --glass-base: #1d1828; --glass-tint: 45%; --accent: #ff7a3d; --on-accent: #1a0d05; --ink: #f4efe9; --good: #47d18c; --income: #47d18c; --spend: #ff7a3d; color-scheme: dark;
+  html[data-theme="frosted"][data-scene="night"] { --bg: #120f1c; --glow1: #ff7a3d; --glow2: #3b2a6b; --glow3: #2bb3c9; --text: #f4efe9; --muted: #c3bbce; --faint: rgba(255, 255, 255, .08); --panel: rgba(29, 24, 40, .6);
+    --line: rgba(255, 255, 255, .14); --glass-base: #1d1828; --glass-tint: 45%; --accent: #ff7a3d; --on-accent: #1a0d05; --ink: #f4efe9; --good: #47d18c; --income: #47d18c; --spend: #ff7a3d; --good-t: #47d18c; --spend-t: #ff9a66; --warn-t: #ffd36b; color-scheme: dark;
     --frost-edge: inset 0 1px 0 rgba(255, 255, 255, .16), inset 0 0 0 1px rgba(255, 255, 255, .05); }
   html[data-theme="frosted"][data-scene="night"] body::after { background:
       /* soft, dim city lights: bright spots behind text made it hard to read */
@@ -2398,3 +2399,10 @@ html[data-theme="frosted"] .opill { background: var(--ink); }
 .tr-stats dd { margin: 2px 0 0; font-size: 15px; font-weight: 600; }
 .tr-stats dd.up { color: var(--spend-t); } .tr-stats dd.down { color: var(--good-t); }
 .tr-card > svg { flex: 1 1 auto; min-height: 0; }
+
+/* Categorize inbox: the card follows a sideways drag; green to accept, grey to skip */
+.ib-card { transition: transform .2s, box-shadow var(--t-hover); touch-action: pan-y; }
+.ib-card[data-sw=accept] { box-shadow: 0 0 0 2px var(--good); }
+.ib-card[data-sw=skip] { box-shadow: 0 0 0 2px var(--muted); }
+@media (prefers-reduced-motion: reduce) { .ib-card { transition: none; } }
+.ib-accept { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

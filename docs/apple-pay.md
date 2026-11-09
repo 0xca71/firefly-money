@@ -59,6 +59,7 @@ A test payment from a throwaway shortcut with `amount` `0.01`, `merchant` `Money
 - A negative amount (a refund) is logged as income from the merchant.
 - With the extras: where you paid, the category you picked, and the foreign amount and currency.
 - If the same payment is sent twice, Firefly spots the duplicate and Money answers `Already logged.`
+- If a payment with the same merchant and amount is already in that account from the last 12 hours (a double tap, or two automations), Money does not log it again and answers `Not logged: … is already there`. To log it anyway, add `"force": true` to the request.
 
 Apple runs the automation when you tap, before the bank approves the payment, so a declined payment is logged as well. Delete it in Money if that happens. To check everything logged this way, search for the tag `Apple Pay`.
 
