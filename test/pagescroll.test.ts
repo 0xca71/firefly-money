@@ -33,3 +33,10 @@ describe('fixed title row, scrolling content', () => {
     expect(css).toMatch(/main#view \{ padding-top: 0 !important; \}/);
   });
 });
+
+describe('iPhone Home Screen edges', () => {
+  it('the app fills the tallest viewport and the backdrop reaches under the home indicator', () => {
+    expect(css).toMatch(/\.app \{ height: 100vh; height: max\(100dvh, 100lvh\)/);
+    expect(css).toMatch(/html\.ios-web body::after[^{]*\{ bottom: calc\(-1 \* env\(safe-area-inset-bottom, 0px\)\); \}/);
+  });
+});
