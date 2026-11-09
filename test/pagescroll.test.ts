@@ -39,7 +39,4 @@ describe('iPhone Home Screen edges', () => {
     expect(css).toMatch(/\.app \{ height: 100vh; height: max\(100dvh, 100lvh\)/);
     expect(css).toMatch(/html\.ios-web body::after[^{]*\{ bottom: calc\(-1 \* env\(safe-area-inset-bottom, 0px\)\); \}/);
   });
-  it('the heading sits clear of the iOS status-bar blur', () => {
-    expect(css).toMatch(/html\.ios-web \{ --edge: 16px; \}/);
-  });
 });

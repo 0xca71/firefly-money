@@ -1236,7 +1236,7 @@
   /* iOS 26 draws its own blur under the status bar in a Home Screen app. It only blurs what scrolls under it, so the title bar, search field and
      other top controls sit just --edge (kept small, so the page heading is not pushed far down) below the safe area. Landscape phones hide the status bar. */
   :root { --edge: 0px; }
-  @media (orientation: portrait) { html.ios-web { --edge: 16px; } }
+  @media (orientation: portrait) { html.ios-web { --edge: 10px; } }
   /* No fixed strip behind the status bar: Safari 26 paints the colour of a fixed element at the top edge as a solid band there,
      which hid the page (see .scrim too). Without one, Safari and the Home Screen app show the page through their own blur. */
   html.native { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
