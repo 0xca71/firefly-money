@@ -717,8 +717,8 @@
   .dh-txt { min-width: 0; }
   /* ---------- Insight cards ---------- */
   main#view { min-width: 0; }
-  .insights { min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 1fr); gap: 14px; margin: -14px 0 24px; overflow-x: auto; scroll-snap-type: x mandatory;
-    scrollbar-width: none; padding: 2px; }
+  .insights { min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 1fr); gap: 14px; margin: -14px -8px 24px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 8px;
+    scrollbar-width: none; padding: 8px; }
   .insights::-webkit-scrollbar { display: none; }
   .insight { --tone: var(--muted); position: relative; scroll-snap-align: start; display: flex; gap: 12px; align-items: flex-start; text-decoration: none;
     background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 36px 14px 14px; transition: border-color var(--t-hover), transform var(--t-hover); }
@@ -755,7 +755,7 @@
   .cards.free { columns: auto; }
   /* The insight strip uses the same columns and gutters as the cards, so their edges line up (it still scrolls sideways
      when there are more insights than columns; on phones it keeps its peek-at-the-next-card width) */
-  .dash-wrap:not([data-n="1"]) .insights { grid-auto-columns: calc((100% - (var(--n) - 1) * var(--gap)) / var(--n)); gap: var(--gap); padding: 2px 0; margin-bottom: calc(var(--gap) - 2px); }
+  .dash-wrap:not([data-n="1"]) .insights { grid-auto-columns: calc((100% - (var(--n) - 1) * var(--gap)) / var(--n)); gap: var(--gap); padding: 2px 0; margin-inline: 0; margin-bottom: calc(var(--gap) - 2px); }
   .dash-wrap .insight { border-radius: var(--radius); }
   .cards.free .band { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: var(--gap); align-items: start; margin-bottom: var(--gap); }
   .cards.free .dcol { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
@@ -2336,7 +2336,7 @@ html[data-theme="sakura"] .panel,html[data-theme="mint"] .panel,html[data-theme=
 
 /* ---------- Activity grid: a year of days, a week to a column, darker = more spent ---------- */
 html { --ag: var(--spend); }
-.ag-scroll { height: 131px; overflow-y: hidden; box-sizing: border-box; align-items: flex-start; display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.ag-scroll { height: 143px; margin: -6px; overflow-y: hidden; box-sizing: border-box; align-items: flex-start; display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 6px; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px); mask-image: linear-gradient(to right, transparent 0, #000 14px); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .ag-wrap { --agm: 14px; flex: none; margin-right: auto; min-width: 0; display: grid; gap: 3px; }
 .ag-months { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: var(--agm); gap: 3px; height: 12px; line-height: 12px; font-size: 11px; color: var(--muted); }
 .ag-months span { white-space: nowrap; overflow: visible; }
