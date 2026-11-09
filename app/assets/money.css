@@ -1458,9 +1458,7 @@
     .search-btn svg { width: 18px; height: 18px; }
     html.shell .search-btn { top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 4px); right: calc(10px + env(safe-area-inset-right, 0px)); border-color: transparent; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--accent); }
     html.shell .search-btn svg { width: 22px; height: 22px; }
-    /* leaves with the title bar, by the same distance so the two move as one */
-    .search-btn { transition: transform .3s var(--ease-out), opacity .2s; }
-    html.scroll-down .search-btn { transform: translateY(calc(-1 * (env(safe-area-inset-top, 0px) + var(--edge) + 44px))); opacity: 0; pointer-events: none; }
+    /* stays where it is: the title row it sits on is pinned while the page scrolls under it */
     html:not(.shell) #view > .head:first-child { padding-right: 52px; }
     html.pal-open .search-btn, #app[hidden] ~ .search-btn { display: none; }
     .palette { padding: 0; align-items: stretch; background: var(--bg); }

@@ -35,6 +35,7 @@ import './pages/budgets';
 import './pages/piggy';
 import './features/phone';
 import './features/fabdodge';
+import './features/fithero';
 import './pages/overview';
 import './pages/transactions';
 import './pages/accounts';
