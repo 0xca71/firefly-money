@@ -27,6 +27,8 @@ COPY app/session.js /etc/nginx/money/session.js
 COPY app/ingest.js /etc/nginx/money/ingest.js
 COPY app/default.conf.template /etc/nginx/templates/default.conf.template
 COPY app/index.html /etc/nginx/templates/index.html.template
+COPY app/404.html /etc/nginx/templates/404.html.template
+COPY app/privacy.html /etc/nginx/templates/privacy.html.template
 # Stylesheet as it is, and the bundled scripts from the build stage, served from /assets/
 COPY app/assets /usr/share/nginx/html/assets
 COPY --from=build /src/app/assets/js /usr/share/nginx/html/assets/js
