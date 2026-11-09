@@ -207,6 +207,24 @@ async function alreadySaved(body: ReturnType<typeof buildTxPayload>): Promise<bo
   try { return looksSaved(arr(await api('/transactions', { params: { start: day, end: day, type: 'all', limit: 50 }, fresh: true })), body); }
   catch (e) { if (e instanceof AuthError) throw e; return false; }      // can't tell: let the save go ahead
 }
+/* ---------- Same one already there? ----------
+   Before a new transaction is saved, the day's transactions are checked for one with the same description and amount
+   (Firefly's own duplicate guard is off here on purpose, so a deliberate repeat can still be saved: it only asks). */
+export function duplicateOf(groups: ApiData[], body: { transactions?: Record<string, unknown>[] }): boolean {
+  const want = body.transactions || [], norm = (v: unknown) => String(v || '').trim().toLowerCase();
+  return want.length > 0 && groups.some(g => {
+    const have: ApiData[] = ((g && g.attributes) || {}).transactions || [];
+    return have.length === want.length && want.every(w => have.some(h => norm(h.description) === norm(w.description)
+      && Math.abs(num(h.amount) - num(w.amount)) < 0.005 && String(h.date || '').slice(0, 10) === String(w.date || '').slice(0, 10)
+      && (!w.type || !h.type || h.type === w.type)));
+  });
+}
+async function alreadyThere(body: ReturnType<typeof buildTxPayload>): Promise<boolean> {
+  const day = String(((body.transactions as Record<string, unknown>[])[0] || {}).date || '').slice(0, 10);
+  if (!day) return false;
+  try { return duplicateOf(arr(await api('/transactions', { params: { start: day, end: day, type: 'all', limit: 50 }, fresh: true })), body); }
+  catch (e) { if (e instanceof AuthError) throw e; return false; }      // can't tell: let the save go ahead
+}
 async function saveTx(formEl: HTMLFormElement) {
   collectTx();
   const f: TxForm = S.form;
@@ -225,6 +243,10 @@ async function saveTx(formEl: HTMLFormElement) {
     let saved = false;
     try { saved = await alreadySaved(body); } catch (e) { if (e instanceof AuthError) return showLogin(e.message); }
     if (saved && !await confirmBox('This looks already saved', 'A transaction with the same description, amount and date was added a moment ago. Save anyway?', 'Save anyway')) return;
+  } else if (!f.id) {
+    let dup = false;
+    try { dup = await alreadyThere(body); } catch (e) { if (e instanceof AuthError) return showLogin(e.message); }
+    if (dup && !await confirmBox('Already have this one?', 'A transaction with the same description, amount and date is already there. Save it again?', 'Save anyway')) return;
   }
   const row = f.id && document.querySelector<HTMLElement>('#view tr[data-gid="' + f.id + '"]');
   closeDrawer();
