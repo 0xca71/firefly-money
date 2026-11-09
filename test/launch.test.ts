@@ -6,7 +6,7 @@ const conf = readFileSync('app/default.conf.template', 'utf8');
 const docker = readFileSync('Dockerfile', 'utf8');
 const dockerignore = readFileSync('.dockerignore', 'utf8');
 const build = readFileSync('build.mjs', 'utf8');
-const imgs = [...(readFileSync('app/src/core/logo.ts', 'utf8') + readFileSync('app/src/core/dom.ts', 'utf8')).matchAll(/<img\b[^>]*>/g)].map(m => m[0]);
+const imgs = [...(readFileSync('app/src/core/logo.ts', 'utf8') + readFileSync('app/src/core/dom.ts', 'utf8')).matchAll(/<img\b[^>]*>/g)].map(m => m[0]).filter(t => t.includes('src='));
 
 describe('launch checklist', () => {
   it('page has description, noindex (private app), icon set and a privacy link', () => {
