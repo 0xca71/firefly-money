@@ -2117,8 +2117,9 @@
     html.native-tabs main#view { padding-bottom: 0 !important; }
     #view > .head { flex: none; margin-bottom: 0 !important; }
     #view > .pg { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: clip; overscroll-behavior-y: contain;
-      margin-inline: -14px; padding: var(--head-gap) 14px var(--pb);       /* the side room keeps card shadows from being clipped */
+      margin-inline: calc(-1 * var(--pg-side, 40px)); padding: var(--head-gap) var(--pg-side, 40px) var(--pb);       /* the side room (main's 44px padding on desktop) keeps card shadows, up to Spatial's 40px blur, from being clipped */
       -webkit-mask-image: linear-gradient(to bottom, transparent, #000 16px); mask-image: linear-gradient(to bottom, transparent, #000 16px); }
+    @media (max-width: 900px) { #view > .pg { --pg-side: 14px; } }
     html:has(#story) :is(#view, #view > .pg) { -webkit-mask-image: none; mask-image: none; overflow: visible; }     /* the full-screen story sits in the page */
     html .tbl.feed tr.dayhead { top: 14px !important; }
     html .bulkbar { top: 18px !important; }

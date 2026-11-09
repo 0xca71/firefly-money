@@ -76,3 +76,10 @@ describe('Reports layout', () => {
     expect(ov).toMatch(/const methods = \{ attMore, activityRedraw, nwRedraw \}/);
   });
 });
+
+describe('Overview scroller side room', () => {
+  it('the page scroller leaves room for card shadows on both sides (desktop 40px, phones 14px)', () => {
+    expect(css).toMatch(/#view > \.pg \{[^}]*margin-inline: calc\(-1 \* var\(--pg-side, 40px\)\); padding: var\(--head-gap\) var\(--pg-side, 40px\) var\(--pb\)/);
+    expect(css).toMatch(/max-width: 900px\) \{ #view > \.pg \{ --pg-side: 14px/);
+  });
+});
