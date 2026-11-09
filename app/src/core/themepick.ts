@@ -9,6 +9,7 @@ export const THEMES = [
   ['midnight', 'Midnight', 'linear-gradient(135deg,#7c5cff,#38bdf8)'], ['neon', 'Neon', 'linear-gradient(135deg,#ff2e97,#00e0ff)'],
   ['glass', 'Liquid glass neon', 'radial-gradient(circle at 30% 30%,#ffffffcc 0 12%,transparent 13%),linear-gradient(135deg,#37f5ff,#b86bff 50%,#ff4fd8)'],
   ['frosted', 'Frosted glass', 'radial-gradient(circle at 30% 30%,#ffffffd9 0 14%,transparent 15%),linear-gradient(135deg,#efe4d6,#b98a64 55%,#e2552c)'],
+  ['spatial', 'Spatial glass', 'radial-gradient(circle at 30% 30%,#ffffff99 0 12%,transparent 13%),linear-gradient(135deg,#5a6678,#343c48 60%,#9ac6ff)'],
   ['ocean', 'Ocean', 'linear-gradient(135deg,#14b8a6,#3b9eff)'], ['sunrise', 'Sunrise', 'linear-gradient(135deg,#e8452c,#f59e0b)'],
   ['forest', 'Forest', 'linear-gradient(135deg,#15211b 45%,#6fcf97 45%,#f2c94c)'], ['nord', 'Nord', 'linear-gradient(135deg,#2e3440 45%,#88c0d0 45%,#b48ead)'],
   ['rose', 'Rosé', 'linear-gradient(135deg,#d6456e,#9b6bdf)'],
@@ -25,7 +26,7 @@ export const THEME_GROUPS: [string, [string, string][]][] = [
   ['Calm', [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']]],
   ['Pastel', [['sakura', 'Sakura Milk'], ['mint', 'Mint Cream'], ['lavender', 'Lavender Haze'], ['peach', 'Peach Fizz'], ['sky', 'Sky Powder'], ['butter', 'Butter & Sage']]],
   ['Bold', [['carbon', 'Carbon neon'], ['midnight', 'Midnight'], ['neon', 'Neon'], ['ocean', 'Ocean'], ['sunrise', 'Sunrise'], ['forest', 'Forest'], ['nord', 'Nord'], ['rose', 'Rosé']]],
-  ['Glass', [['glass', 'Liquid glass'], ['frosted', 'Frosted glass']]],
+  ['Glass', [['glass', 'Liquid glass'], ['frosted', 'Frosted glass'], ['spatial', 'Spatial glass']]],
 ];
 // border-box origin: otherwise the gradient tiles under the 2px border and a sliver of the opposite colour shows at the edge
 export function themeButtons() {

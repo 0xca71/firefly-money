@@ -1172,17 +1172,62 @@
   html[data-theme="frosted"][data-scene="night"] :is(.tabbar a.on, .nav a.on) { color: var(--text); }
   html[data-theme="frosted"][data-scene="night"] .track { background: rgba(255, 255, 255, .1); }
   html[data-theme="frosted"][data-scene="night"] .appbar.scrolled { background: rgba(18, 15, 28, .55); }
+  /* ---------- Theme: Spatial glass (visionOS-style: dark slate glass, 24px corners, one bright blue accent, over a soft-focus room; all CSS, works offline) ---------- */
+  html[data-theme="spatial"] { --bg: #343c48; --panel: rgba(120, 134, 156, .3); --line: rgba(255, 255, 255, .16); --text: #f1f4f9; --muted: #d0d8e3; --faint: rgba(255, 255, 255, .09);
+    --good: #74dcaa; --spend: #ffb39b; --income: #74dcaa; --warn: #f3c969; --accent: #9ac6ff; --on-accent: #06142b;
+    --shadow: 0 20px 60px rgba(8, 12, 20, .4); --radius: 24px; color-scheme: dark;
+    --ink: #f1f4f9; --frost-edge: inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 0 0 1px rgba(255, 255, 255, .06);
+    --glow1: #4c5a6d; --glow2: #5d6879; --glow3: #232a35; --glass-base: #5d6a7e; --glass-tint: 30%; --glass-blur: 30px;
+    background: var(--bg); }
+  html[data-theme="spatial"] body { background: transparent; }
+  /* the room: a pale window, a dark sofa, a wall in grey-blue */
+  html[data-theme="spatial"] body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(46vmax 24vmax at 74% 6%, color-mix(in srgb, var(--glow2) 80%, transparent), transparent 70%),
+      radial-gradient(34vmax 30vmax at 8% 22%, color-mix(in srgb, var(--glow1) 85%, transparent), transparent 70%),
+      radial-gradient(60vmax 26vmax at 40% 104%, var(--glow3), transparent 72%),
+      radial-gradient(40vmax 18vmax at 92% 92%, rgba(24, 30, 42, .8), transparent 70%),
+      linear-gradient(180deg, #4b5666, var(--bg) 55%, #262d38); }
+  html[data-theme="spatial"] :is(.panel, .daycards tbody.day, .daycards > .center-empty, .kpi, .insight, .extra, .split, .login form, .dash-bar) {
+    background: linear-gradient(165deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02)), color-mix(in srgb, var(--glass-base) var(--glass-tint), transparent);
+    border: 1px solid rgba(255, 255, 255, .16); border-radius: 24px; box-shadow: var(--frost-edge), 0 14px 40px rgba(8, 12, 20, .35); }
+  html[data-theme="spatial"] :is(.drawer, dialog, .calpop, .pickpop, .palette-box, .bulkbar, .ff-pop) {
+    background: rgba(48, 56, 69, .86); border-color: rgba(255, 255, 255, .18); border-radius: 24px;
+    -webkit-backdrop-filter: blur(40px) saturate(150%); backdrop-filter: blur(40px) saturate(150%); }
+  html[data-theme="spatial"] .drawer footer { background: transparent; border-top-color: rgba(255, 255, 255, .14); }
+  html[data-theme="spatial"] :is(input[type=text], input[type=number], input[type=date], input[type=password], input[type=search], select, textarea, .round, .wctl button, .btn, .seg, .tabs) {
+    background: rgba(255, 255, 255, .09); border-color: rgba(255, 255, 255, .16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1); }
+  html[data-theme="spatial"] select option { background: #39424f; }
+  html[data-theme="spatial"] :is(input, select, textarea):focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); }
+  html[data-theme="spatial"] :is(.btn.primary, .seg button.on, .tabs a.on, .tabbar .plus, .fab) { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: 0 6px 18px rgba(30, 80, 170, .35); }
+  html[data-theme="spatial"] .tbl.feed td { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .1); }
+  html[data-theme="spatial"] .tbl.feed tr.dayhead div { background: rgba(48, 56, 69, .8); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+  html[data-theme="spatial"] .tbl tr.click:hover td { background: rgba(255, 255, 255, .12); }
+  html[data-theme="spatial"] .track { background: rgba(255, 255, 255, .14); }
+  html[data-theme="spatial"] .big { color: var(--text); }
+  html[data-theme="spatial"] .appbar.scrolled { background: rgba(43, 51, 63, .6); }
+  html[data-theme="spatial"] .scrim { background: rgba(6, 10, 18, .4); }
+  /* slim glass rail on the left, a soft glass pill on the current page */
+  html[data-theme="spatial"] .side { background: rgba(120, 134, 156, .22); border: 1px solid rgba(255, 255, 255, .16); border-radius: 28px; box-shadow: var(--frost-edge), 0 14px 40px rgba(8, 12, 20, .3);
+    -webkit-backdrop-filter: blur(30px) saturate(140%); backdrop-filter: blur(30px) saturate(140%); }
+  html[data-theme="spatial"] :is(.tab-pill, .nav a.on) { background: rgba(255, 255, 255, .18); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25); }
+  html[data-theme="spatial"] :is(.tabbar a.on, .nav a.on) { color: var(--text); }
+  /* floating bottom pill nav on phones */
+  html[data-theme="spatial"] .tabbar { background: rgba(52, 61, 75, .78); border: 1px solid rgba(255, 255, 255, .2); box-shadow: var(--frost-edge), 0 16px 44px rgba(6, 10, 18, .45);
+    -webkit-backdrop-filter: blur(32px) saturate(150%); backdrop-filter: blur(32px) saturate(150%); }
+  html[data-theme="spatial"] .tabbar a { color: var(--muted); }
   /* Both glass themes: what's behind a card is only soft light (no card overlaps another), so a live blur under every card
      looks the same but makes the browser re-blur each card on every scroll frame, every entrance animation and, in
      Liquid glass, every frame of the moving light. Only floating things keep it (tab bar, sheets, menus).
      Same selector list as the rules that add the blur: :is() takes its most specific entry, so a shorter list loses. */
-  html:is([data-theme="glass"], [data-theme="frosted"]) :is(.panel, .daycards tbody.day, .daycards > .center-empty, .kpi, .insight, .extra, .split, .dash-bar) { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  html:is([data-theme="glass"], [data-theme="frosted"], [data-theme="spatial"]) :is(.panel, .daycards tbody.day, .daycards > .center-empty, .kpi, .insight, .extra, .split, .dash-bar) { -webkit-backdrop-filter: none; backdrop-filter: none; }
   html[data-theme="glass"] .side { -webkit-backdrop-filter: none; backdrop-filter: none; }
   @media (max-width: 900px) {
     .tbl.feed tr.dayhead div { -webkit-backdrop-filter: none; backdrop-filter: none; }     /* one blur per day header adds up on a long feed */
     html[data-theme="glass"] .tbl.feed tr.dayhead div { background: rgba(20, 16, 42, .9); }
     html[data-theme="frosted"] .tbl.feed tr.dayhead div { background: rgba(255, 248, 240, .88); }
     html[data-theme="frosted"][data-scene="night"] .tbl.feed tr.dayhead div { background: rgba(30, 25, 40, .92); }
+    html[data-theme="spatial"] .tbl.feed tr.dayhead div { background: rgba(48, 56, 69, .94); }
   }
   /* ---------- iPhone: notch / home bar, no accidental zoom, native-app shell ---------- */
   body { touch-action: manipulation; }
@@ -2334,6 +2379,7 @@ html[data-theme="glass"] .ag-c.l3, html[data-theme="glass"] .ag-c.l4 { box-shado
 html[data-theme="carbon"] .opill { box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 45%, transparent); }
 html[data-theme="glass"] .opill { background: rgba(255, 255, 255, .14); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2); }
 html[data-theme="frosted"] .opill { background: var(--ink); }
+html[data-theme="spatial"] .opill { background: rgba(255, 255, 255, .18); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25); }
 /* A soft press on tappable cards, desktop and phone alike; it springs back on release */
 .insight, .list a.row, .hm-cell { transition: transform .22s var(--ease-out), opacity var(--t-hover); }
 @media (hover: hover) { .insight:active { transform: scale(.992); } }
