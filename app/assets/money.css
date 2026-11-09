@@ -2454,3 +2454,47 @@ html[data-theme="spatial"] .opill { background: rgba(255, 255, 255, .18); box-sh
 .tr-stats dd { margin: 2px 0 0; font-size: 15px; font-weight: 600; }
 .tr-stats dd.up { color: var(--spend-t); } .tr-stats dd.down { color: var(--good-t); }
 .tr-card > svg { flex: 1 1 auto; min-height: 0; }
+
+/* ================= Refinements: type, elevation, spring sheets, scrubbing, tap-for-details ================= */
+/* One variable font, bundled with the app (Inter, SIL OFL, latin subset): no request ever leaves for a font host.
+   Other scripts, and anything the file lacks, fall back to the system font. */
+@font-face { font-family: "Inter Variable"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("fonts/inter-latin-var.woff2") format("woff2-variations"), url("fonts/inter-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+:root { --font: "Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+body { font-family: var(--font); font-optical-sizing: auto; font-feature-settings: "cv11", "ss03"; }
+button, input, select, textarea { font-family: inherit; }
+/* Quieter labels, louder figures: the label steps back in weight and size (never in contrast), the number leads */
+.eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .1em; }
+.kpi .val, .stat .val, .total, .big, .tbl .amt, .row .amt, .num { font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum", "lnum", "cv11", "ss03"; }
+@media (min-width: 700px) {
+  .hero .big { font-size: clamp(56px, 5vw, 72px); font-weight: 250; letter-spacing: -.04em; }
+  html.compact .hero .big { font-size: 46px; }
+}
+
+/* Elevation scale: e1 sits on the page (cards), e2 floats over it (menus, pickers, tips), e3 is modal (sheets, dialogs, search) */
+:is(html[data-theme="light"], html:not([data-theme])) { --e1: var(--rim), var(--lift); --e2: 0 1px 2px rgba(34,34,31,.06), 0 8px 24px -8px rgba(34,34,31,.22); --e3: 0 2px 4px rgba(34,34,31,.06), 0 24px 60px -16px rgba(34,34,31,.34); --hi: inset 0 1px 0 rgba(255,255,255,.85); }
+html[data-theme="dark"] { --e1: var(--rim), var(--lift); --e2: 0 1px 0 rgba(0,0,0,.5), 0 10px 28px -8px rgba(0,0,0,.7); --e3: 0 2px 6px rgba(0,0,0,.5), 0 28px 64px -16px rgba(0,0,0,.85); --hi: inset 0 1px 0 rgba(255,255,255,.07); }
+@media (prefers-color-scheme: dark) { html:not([data-theme]) { --e1: var(--rim), var(--lift); --e2: 0 1px 0 rgba(0,0,0,.5), 0 10px 28px -8px rgba(0,0,0,.7); --e3: 0 2px 6px rgba(0,0,0,.5), 0 28px 64px -16px rgba(0,0,0,.85); --hi: inset 0 1px 0 rgba(255,255,255,.07); } }
+:is(html[data-theme="light"], html[data-theme="dark"], html:not([data-theme])) :is(.calpop, .pickpop, .tip) { box-shadow: var(--hi), var(--e2); }
+:is(html[data-theme="light"], html[data-theme="dark"], html:not([data-theme])) :is(dialog, .palette-box) { box-shadow: var(--hi), var(--e3); }
+/* Fewer borders: the card edge and the lines between rows step back, so shadow and spacing carry the structure */
+:is(html[data-theme="light"], html[data-theme="dark"], html:not([data-theme])) :is(.panel, .kpi, .insight, .daycards tbody.day) { border-color: color-mix(in srgb, var(--line) 60%, transparent); }
+:is(html[data-theme="light"], html[data-theme="dark"], html:not([data-theme])) :is(.list .row, .sk-row) { border-top-color: color-mix(in srgb, var(--line) 55%, transparent); }
+
+/* Sheets settle like a spring. The side drawer never overshoots (it would show a gap at the screen edge); the phone sheet
+   may, because the sheet fills in under itself (.drawer::after) */
+@supports (animation-timing-function: linear(0, 1)) {
+  :root { --ease-settle: linear(0, .3 7%, .6 15%, .8 25%, .92 36%, .975 50%, .995 68%, 1); }
+  .drawer { transition-duration: .5s; transition-timing-function: var(--ease-settle); }
+  @media (max-width: 700px) { .drawer { transition-timing-function: var(--ease-spring); } }
+}
+
+/* Drag along a line chart to read it point by point (features/refine.ts); a vertical swipe still scrolls the page */
+.lines { touch-action: pan-y; }
+.lines .scrub-line { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 4; pointer-events: none; }
+
+/* Density: "Tap for details" folds a card's small print until the card is tapped */
+html.fold :is(.kpi, .panel.stat):has(.sub-s):not(.open) .sub-s { display: none; }
+html.fold :is(.kpi, .panel.stat):has(.sub-s) { cursor: pointer; position: relative; }
+html.fold :is(.kpi, .panel.stat):has(.sub-s)::after { content: ""; position: absolute; right: 12px; bottom: 12px; width: 6px; height: 6px; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); opacity: .6; pointer-events: none; }
+html.fold :is(.kpi, .panel.stat).open::after { transform: translateY(1px) rotate(-135deg); }
