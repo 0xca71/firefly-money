@@ -7,8 +7,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Money</title>
 <link rel="manifest" href="/manifest.webmanifest">
+<meta name="description" content="Money: a fast, private dashboard for Firefly III. Budgets, bills, forecasts and insights, in your browser or installed as an app.">
+<meta name="robots" content="noindex">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAADxElEQVR42u3dTU7cQBCAUbuVU2QzkbhmlrnmSPEm14BVpCySMP7rrqp+3xpha3gUZeOBdQnQ4/H2vih92/ZcR5/DCrAqAV8hViXcK8SqhHsFWZVgN5hV6WbACrIqTesGsypN6xVkVZrWDWZVmtYNZlVC3WBWJdQNZlVC3WBWJdQNZlVC3WBWJdTNy6RKNdNZlaZ0g1mVUFs5VH/lMJ2VdUo3mFUJtZVDdVcO01nZp7QJrfoXhVJ60NYNVVg7TGhZOaTQoK0bqrJ2mNCyckhASx1a7c8yoSWgJaAloAW0BLQEtAS0BLSAloCWgJaAloAW0BLQEtAS0BLQAloCWgJauqYvXoLcff35Pcy5/Pr2w4SWby6gBTXQmgE10CqFGmiVCmiVmtJAy4SWgJaAloAW0BLQUrg8bZe8M0+4RXpSz4TWqSpiBlpAy3QGWjADLZiB1sSYgYYZaMEMtFJjjvDnCV7NbwoPoMjwBZ4Rswl9EEX0H+OzrRkm9AUgfn9MtAl2JeZs09mEvgBEpGk4O2agLwIRATXMQF8KYiRqmIG+BcQI1DADfSvCnqhhBroLvh6oYQa6K7o7Pz/MQA9ZC+44DsxAD71wu/J4MAM9FPOVx4UZ6BCYrzg+zECHwnzmPGDe1/p4vL3D3Lc9sGZ9DNSETjTdXj0vmIG+FXNP1DAD3WUy90ANM9Bd14w7UcMM9JCd+Q7UMJ+vzF2OUReA0e6izIy5zIQeeTcjEqDZMZcAHeHWXARIMBcAHek+M1BAl8E8GrVvpuSgIz/f0BsXzMlBZ3hYpxcymJODzvTkWfbPDzTM5X4CAA1zuR0daJhvOy7MyUFXereG+9yTg6741qPMv4kEGuZLzgfm5KBneFPoq+cF8/5CPT464zucs/4PF6Bh1iwrB8wqBdp9WpW7KHSfVqVAn0EJs0KCPoITZoUGvQcpzEoB+hWsMCsV6P+hhVkpQf8NL8xKDfpPxDDrs8r/wXOZ0BLQEtAS0BLQAloCWgJaAloCWkBLQEtAS0BLQAtoCWgJaOkE6G17rl4GVWjbnqsJLSuHBLTUC7Q9WhX2ZxNaVg4pBWhrh7KvGya0rBxSGtDWDmVeN0xo1V85TGllnc7/nNBQKyNmK4fqrxymtLJO508nNNTKhNnKoXlWDlNa2abzyxMaamXAvGvlgFrRMe/eoaFWZMyHLgqhVlTMh0BDraiYD4OGWhExL8uyXILS/wvXaMinJ7RprWiYL5vQprWiDMMW/QQF89AJbVpr5NDrNk3hhrjHcYasB3BDXAo04ADf1QdPgukVTKD6+AAAAABJRU5ErkJggg==">
+<link rel="icon" href="/assets/icons/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
 <meta name="theme-color" content="#22221f">
 <meta name="money-version" content="${MONEY_VERSION}">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -29,6 +32,7 @@
     <label>Password<input type="password" id="loginPw" autocomplete="current-password" required autofocus></label>
     <label class="check"><input type="checkbox" id="loginRemember" checked> Keep me signed in on this computer</label>
     <button class="btn primary" type="submit">Sign in</button>
+    <p class="login-foot"><a href="/privacy.html">Privacy</a></p>
   </form>
 </div>
 

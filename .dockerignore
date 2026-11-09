@@ -1,5 +1,7 @@
 *
 !app/index.html
+!app/404.html
+!app/privacy.html
 !app/default.conf.template
 !app/nginx.conf
 !app/session.js

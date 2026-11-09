@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · Money</title>
+<meta name="description" content="What Money stores, what it sends, and to whom.">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#22221f">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 32px 20px 56px; font: 16px/1.6 system-ui, -apple-system, sans-serif; background: #f4f3ef; color: #1c1c1e; }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 24px; }
+  h2 { margin: 28px 0 6px; font-size: 16px; }
+  p, li { color: #3c3c40; font-size: 15px; }
+  ul { padding-left: 20px; }
+  a { color: inherit; }
+  .back { display: inline-block; margin-bottom: 18px; font-size: 14px; }
+  @media (prefers-color-scheme: dark) { body { background: #161618; color: #f2f2f4; } p, li { color: #c8c8cc; } }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/">← Back to Money</a>
+  <h1>Privacy</h1>
+  <p>Money is a self-hosted dashboard for your own Firefly III. There is no Money company server, no account with us and no tracking.</p>
+  <!--DEMO-->
+  <h2>What stays on your server</h2>
+  <ul>
+    <li>Your transactions, accounts and budgets live in your Firefly III. Money only passes them to your browser.</li>
+    <li>Your Firefly token stays on the server and is never sent to the browser.</li>
+  </ul>
+  <h2>What is stored in your browser</h2>
+  <ul>
+    <li>One sign-in cookie (HttpOnly, signed by the server), only so you stay signed in. It is not used for tracking.</li>
+    <li>Preferences such as theme and layout, in local storage on your device. Some are also saved to your own Firefly.</li>
+  </ul>
+  <h2>What leaves your server</h2>
+  <ul>
+    <li>Payee logos are fetched by your server from DuckDuckGo's icon service. They are cached, and your browser never contacts it.</li>
+    <li>Map pictures come from OpenStreetMap, and optional store lookups from Overpass, also through your server.</li>
+    <li>No analytics, advertising or third-party scripts run in the app.</li>
+  </ul>
+  <h2>Contact</h2>
+  <p>Questions or problems: <a href="https://github.com/Muffy0906/firefly-money/issues">github.com/Muffy0906/firefly-money/issues</a>. Money is open source under the MIT License.</p>
+</main>
+</body>
+</html>
