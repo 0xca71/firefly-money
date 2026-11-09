@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { normGroup } from '../app/src/core/feed';
 import { todoTabs } from '../app/src/core/dom';
 import { learn } from '../app/src/features/stores';
+import { readFileSync } from 'node:fs';
 import { App } from '../app/src/core/base';
 import { spotsOf, suggestStores } from '../app/src/pages/map';
 
@@ -105,5 +106,10 @@ describe('places tab: pin several stores in one go', () => {
     expect(b.textContent).toContain('Walmart #2222');
     expect(b.textContent).toContain('1 selected');
     expect(b.textContent).toContain('Pinned 2 stores');
+  });
+  it('keeps the checkboxes square and the bar on one line (measured in a browser at 320 to 1920 across themes)', () => {
+    const css = readFileSync('app/assets/money.css', 'utf8');
+    expect(css).toMatch(/#storeList input\[type=checkbox\] \{[^}]*width: 18px; height: 18px;[^}]*padding: 0;/);
+    expect(css).toMatch(/#storeList \.bulkbar label \{ white-space: nowrap; \}/);
   });
 });
