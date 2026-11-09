@@ -57,3 +57,28 @@ describe('duplicate warning', () => {
     expect(duplicateOf([], body('Coffee', '4.5'))).toBe(false);
   });
 });
+
+describe('hero numbers fit', () => {
+  it('shrinks one that is wider than its card, leaves the others', async () => {
+    const { fitHero } = await import('../app/src/features/fithero');
+    document.body.innerHTML = '<div id="r"><div class="stat-v">$196,750</div><div class="stat-v">$5</div></div>';
+    const [a, b] = [...document.querySelectorAll<HTMLElement>('.stat-v')];
+    const dim = (e: HTMLElement, cw: number, sw: number) => { Object.defineProperty(e, 'clientWidth', { value: cw }); Object.defineProperty(e, 'scrollWidth', { value: sw }); };
+    dim(a, 100, 150); dim(b, 100, 30);
+    a.style.fontSize = '30px'; document.documentElement.style.fontSize = '';
+    const spy = (globalThis as unknown as { getComputedStyle: typeof getComputedStyle });
+    const orig = spy.getComputedStyle; spy.getComputedStyle = ((e: Element) => ({ ...orig(e), fontSize: '30px' })) as typeof getComputedStyle;
+    fitHero(document.getElementById('r')!);
+    spy.getComputedStyle = orig;
+    expect(parseFloat(a.style.fontSize)).toBeLessThan(20);
+    expect(parseFloat(a.style.fontSize)).toBeGreaterThanOrEqual(12);
+    expect(b.style.fontSize).toBe('');
+  });
+});
+
+describe('phone search button', () => {
+  it('is not hidden on scroll while the title row it sits on stays pinned', async () => {
+    const { readFileSync } = await import('node:fs');
+    expect(readFileSync('app/assets/money.css', 'utf8')).not.toMatch(/scroll-down\s+\.search-btn/);
+  });
+});
