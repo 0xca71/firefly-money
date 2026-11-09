@@ -53,6 +53,7 @@ import './pages/settings';
 import './pages/cleanup';
 import './features/palette';
 import './features/polish';
+import './features/refine';
 import './features/dock';
 import './features/datepicker';
 import './pages/forecast';

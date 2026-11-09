@@ -26,6 +26,7 @@ if (demo) {
   cpSync('app/assets/money.css', 'site/assets/money.css');
   cpSync('docs/icon.svg', 'site/icon.svg');
   cpSync('app/assets/icons', 'site/assets/icons', { recursive: true });
+  cpSync('app/assets/fonts', 'site/assets/fonts', { recursive: true });
   // Search and sharing: the demo is public, so it gets a description for results, a share picture and a sitemap
   const home = 'https://muffy0906.github.io/firefly-money/';
   const blurb = 'Live demo of Money, a fast, private dashboard for Firefly III, with made-up data. Try the budgets, forecasts and 12 themes.';
