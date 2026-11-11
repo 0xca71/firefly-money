@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import { AuthError, CACHE, PAGES, dropSavedCopies } from './api';
 import { S, el } from './base';
 import { closeDrawer, formError, toast } from './dom';
@@ -43,12 +44,12 @@ function forgetDeviceData() {
 export function showLogin(msg?: string) {
   closeDrawer(); S.lists = null; forgetDeviceData();
   el('app').hidden = true; el('login').hidden = false;
-  const e = el('loginErr'); e.hidden = !msg; e.textContent = msg || '';
+  const e = el('loginErr'); e.hidden = !msg; e.textContent = msg ? tr(msg) : '';
   el<HTMLInputElement>('loginPw').value = ''; el<HTMLInputElement>('loginPw').focus();
 }
 export async function withAuth<T>(fn: () => Promise<T>) { try { return await fn(); } catch (e) { if (e instanceof AuthError) return showLogin(e.message); toast((e as Error).message); } }
 export async function busy(btn: HTMLButtonElement | null | undefined, fn: () => Promise<unknown>) {
-  if (btn) { btn.disabled = true; btn.dataset.l = btn.textContent; btn.textContent = 'Saving…'; }
+  if (btn) { btn.disabled = true; btn.dataset.l = btn.textContent; btn.textContent = tr('Saving…'); }
   try { await fn(); } catch (e) { if (e instanceof AuthError) return showLogin(e.message); formError((e as Error).message); }
   finally { if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = btn.dataset.l!; } }
 }

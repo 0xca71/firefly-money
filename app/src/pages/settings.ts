@@ -1,3 +1,4 @@
+import { persistUiLanguage, tr, uiLanguage, type UiLanguage } from '../core/i18n';
 import { html, htmlList, raw } from '../core/html';
 import { AuthError, PAGES, api, getAll, type ApiError } from '../core/api';
 import { withAuth } from '../core/auth';
@@ -22,11 +23,11 @@ document.addEventListener('toggle', e => {
   if (d instanceof HTMLDetailsElement && d.dataset.k) { if (d.open) OPEN.add(d.dataset.k); else OPEN.delete(d.dataset.k); }
 }, true);
 const group = (id: string, title: string, body: unknown, foot?: unknown) =>
-  html`<section class="set-group" id="set-${id}"><h2 class="set-h">${title}</h2><div class="panel set-panel">${body}</div>${foot ? html`<p class="set-foot">${foot}</p>` : ''}</section>`;
+  html`<section class="set-group" id="set-${id}"><h2 class="set-h">${tr(title)}</h2><div class="panel set-panel">${body}</div>${foot ? html`<p class="set-foot">${foot}</p>` : ''}</section>`;
 const row = (label: unknown, hint: unknown, ctl: unknown) =>
-  html`<div class="set-row"><div class="set-label"><div>${label}</div>${hint ? html`<div class="sub-s">${hint}</div>` : ''}</div>${ctl ? html`<div class="set-ctl">${ctl}</div>` : ''}</div>`;
+  html`<div class="set-row"><div class="set-label"><div>${typeof label === 'string' ? tr(label) : label}</div>${hint ? html`<div class="sub-s">${hint}</div>` : ''}</div>${ctl ? html`<div class="set-ctl">${ctl}</div>` : ''}</div>`;
 const more = (k: string, label: unknown, count: unknown, body: unknown, open?: boolean) =>
-  html`<details class="set-more" data-k="${k}"${OPEN.has(k) || open ? ' open' : ''}><summary><span>${label}</span><span class="sub-s">${count}</span></summary><div class="set-body">${body}</div></details>`;
+  html`<details class="set-more" data-k="${k}"${OPEN.has(k) || open ? ' open' : ''}><summary><span>${typeof label === 'string' ? tr(label) : label}</span><span class="sub-s">${count}</span></summary><div class="set-body">${body}</div></details>`;
 // An on/off switch: html`<input ${SWITCH}…>` (the handler stays literal so the smoke test can check it)
 const SWITCH = raw('type="checkbox" class="switch" role="switch"');
 
@@ -56,6 +57,7 @@ VIEWS.settings = async (r, paint) => {
     ${html`<div class="tp-wrap"><div class="tp-title">Theme</div>${themeButtons()}</div>`}
     ${more('theme-custom', 'Customize colors', html`<span class="tc-name">${themeName()}</span>`, html`<div class="theme-custom">${customizer()}</div>`)}
     ${row('Number & date format', localeSample(), html`<select aria-label="Number and date format" data-onchange="App.setLocale(this.value)">${htmlList(localeOptions())}</select>`)}
+    ${row('Interface language', 'English / 简体中文', html`<select aria-label="Interface language" data-onchange="App.setUiLanguage(this.value)">${opt('en', 'English', uiLanguage())}${opt('zh-CN', '简体中文', uiLanguage())}</select>`)}
     ${row('Hide amounts', 'Blur every amount. Press P to switch.', html`<input ${SWITCH} aria-label="Hide amounts" data-pref="privacy"${privacy ? ' checked' : ''} data-onchange="App.togglePrivacy()">`)}
     ${row('Hide when I leave the app', 'Blur amounts as the app goes to the background, so the app switcher doesn’t show them', html`<input ${SWITCH} aria-label="Hide amounts when the app is in the background"${LS.get('privacyBg', false) ? ' checked' : ''} data-onchange="App.togglePrivacyBg(this.checked)">`)}
     ${row('Compact view', 'Tighter spacing to fit more in', html`<input ${SWITCH} aria-label="Compact view" data-pref="compact"${compact ? ' checked' : ''} data-onchange="App.toggleDensity()">`)}
@@ -107,8 +109,8 @@ VIEWS.settings = async (r, paint) => {
   const groups: Record<string, unknown> = { months, look, sync, applepay: applePayHtml(ingest, cards, L.own.filter(a => isAsset(a) || isLiab(a))), currencies: cur, data, about: aboutHtml };
   const cats = SET_SECTIONS.filter(([id]) => groups[id] && String(groups[id]));
   const wide = innerWidth >= SET_WIDE, at = cats.find(c => c[0] === r.q.s) || (wide ? cats[0] : null);
-  const nav = htmlList(cats.map(([id, t]) => html`<a href="#/settings?s=${id}" class="${at && at[0] === id ? 'on' : ''}"${at && at[0] === id ? raw(' aria-current="page"') : ''}>${t}</a>`));
-  const menu = html`<div class="panel set-panel set-menu">${htmlList(cats.map(([id, t, hint]) => html`<a class="set-row" href="#/settings?s=${id}"><span class="set-label"><span>${t}</span><span class="sub-s">${hint}</span></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>`))}</div>`;
+  const nav = htmlList(cats.map(([id, t]) => html`<a href="#/settings?s=${id}" class="${at && at[0] === id ? 'on' : ''}"${at && at[0] === id ? raw(' aria-current="page"') : ''}>${tr(t)}</a>`));
+  const menu = html`<div class="panel set-panel set-menu">${htmlList(cats.map(([id, t, hint]) => html`<a class="set-row" href="#/settings?s=${id}"><span class="set-label"><span>${tr(t)}</span><span class="sub-s">${tr(hint)}</span></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>`))}</div>`;
   const back = html`<a class="set-back" href="#/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Settings</a>`;
   const title = at && !wide ? html`${back}${head(at[1], '', '')}` : head('Settings', '', '');
   paint(html`<div class="set-layout"><div class="set-side">${title}<nav class="set-nav" id="setNav" aria-label="Settings categories">${nav}</nav></div><div class="settings">${at ? groups[at[0]] : menu}</div></div>`);
@@ -391,6 +393,16 @@ function localeOptions() {
   return [opt('', 'Automatic', pick), ...list.map(t => opt(t, langName(t), pick))];
 }
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function setUiLanguage(value: string) {
+  if (value !== 'en' && value !== 'zh-CN') return;
+  if (value === uiLanguage()) return;
+  if ((S.form || el('drawer').classList.contains('open')) && !window.confirm(tr('Language selection requires a reload. Continue?'))) {
+    void route({ quiet: true });
+    return;
+  }
+  persistUiLanguage(value as UiLanguage);
+  window.location.reload();
+}
 const localeSample = () => money(1234.56) + ' · ' + fmtDate(todayIso()) + ' · weeks start on ' + DAYS[weekStart()];
 function setLocale(v: string) { LS.set('locale', v); PAGES.clear(); S.pageKey = ''; toast('Amounts and dates now look like ' + money(1234.56) + ' and ' + fmtDate(todayIso())); route({ quiet: true }); }
 function setWorkHours(v: string) { LS.set('workHours', num(v) || 40); PAGES.clear(); route({ quiet: true }); }
@@ -405,6 +417,7 @@ const methods = {
   toggleHaptics,
   toggleWorkLens,
   setLocale,
+  setUiLanguage,
   setWorkHours,
   setWorkRate,
   setCycleDay,

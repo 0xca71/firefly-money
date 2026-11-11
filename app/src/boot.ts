@@ -1,4 +1,7 @@
+import { setDocumentLanguage } from './core/i18n';
 import { applyCustom } from './core/themevars';
+
+setDocumentLanguage();
 
 /* Runs in <head>, before the stylesheet applies, so the first paint already has the right shell and theme. */
 // Inside the iPhone app (or installed to the Home Screen): use the app-style shell.

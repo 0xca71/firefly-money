@@ -289,3 +289,9 @@ Have a question, an idea, or want to show off your setup? Start a thread in [Dis
 [MIT](LICENSE): you may use, change, share and sell Money freely, as long as the copyright notice stays with it. It comes with no warranty.
 
 Contributions are welcome. Please open an issue or start a [discussion](https://github.com/Muffy0906/firefly-money/discussions) first for anything big.
+
+
+### Interface language / 界面语言 (fork)
+
+The fork supports English (`en`) and Simplified Chinese (`zh-CN`). Under **Settings → Appearance → Interface language**, select **English** or **简体中文**. Without a manual choice, Chinese-language browsers default to Chinese; other browsers use English. The UI language is stored locally per device as `money.uiLang`. It is **independent** of Settings → Number & date format (`money.locale`) and is not synchronized through Firefly. Switching reloads the page; an open form requires confirmation. The translation catalog lives in `app/src/core/i18n.ts`.
+

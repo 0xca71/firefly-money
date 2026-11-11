@@ -1,6 +1,7 @@
 /* The app's entry point. esbuild bundles it, and everything it imports, into assets/js/app.js.
    Modules run in the order they're listed here. A module only imports from modules above it, so that
    order holds; code that needs something further down calls it through App (e.g. App.selChanged()). */
+import { translateInitialShell } from './core/i18n';
 import './core/pagescroll';
 import './core/events';
 import { S, el } from './core/base';
@@ -78,3 +79,5 @@ import './features/whatsnew';
 
 // For the smoke test (dev/smoke_test.py) and the browser console
 Object.assign(window, { S, el, parseHash, refreshAll });
+
+translateInitialShell();
