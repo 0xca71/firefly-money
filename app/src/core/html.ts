@@ -1,3 +1,5 @@
+import { translateStatic } from './i18n';
+
 /* HTML templates that escape by default.
    html`<b>${name}</b>` escapes name. Nested html`` results (and arrays of them) go in as HTML, and so does raw(s) for
    markup that is already safe (constant SVG icons, or text built from html`` pieces). null, undefined and false
@@ -26,8 +28,8 @@ function part(v: unknown): string {
   return escape(s);
 }
 export function html(strings: TemplateStringsArray, ...values: unknown[]): Html {
-  let out = strings[0];
-  for (let i = 0; i < values.length; i++) out += part(values[i]) + strings[i + 1];
+  let out = translateStatic(strings[0]);
+  for (let i = 0; i < values.length; i++) out += part(values[i]) + translateStatic(strings[i + 1]);
   return new Html(out);
 }
 export const raw = (s: string | Html) => s instanceof Html ? s : new Html(String(s ?? ''));
