@@ -1,10 +1,11 @@
 # Builds the Docker image and publishes it to GitHub Container Registry (ghcr.io)
-# on every push to main and for version tags like v1.2.0. Pull requests build it
-# too, without publishing, so a broken Dockerfile shows up before merging.
+# on every push to main and for version tags. During i18n development, pushes
+# to feat/i18n-en-zh-cn publish a branch-tagged image for DSM smoke testing.
+# Pull requests only build (no publish); all images are linux/amd64 only.
 name: Docker image
 on:
   push:
-    branches: [main]
+    branches: [main, feat/i18n-en-zh-cn]
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
@@ -19,7 +20,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
 
       - uses: docker/login-action@v4
@@ -38,6 +38,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
+            type=ref,event=branch
 
       # e.g. "c78fd51 · 2026-09-30", or "v1.2.0 (c78fd51 · 2026-09-30)" for a release tag (no commas: build-args may split on them)
       - name: Version stamp
@@ -49,7 +50,7 @@ jobs:
       - uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           build-args: MONEY_VERSION=${{ env.MONEY_VERSION }}
           tags: ${{ steps.meta.outputs.tags }}
