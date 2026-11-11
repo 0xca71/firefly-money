@@ -1,4 +1,5 @@
 import { el } from '../core/base';
+import { tr } from '../core/i18n';
 
 /* ================= Installable app ================= */
 if ('serviceWorker' in navigator && window.isSecureContext) {
@@ -8,7 +9,9 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
   const updateBar = () => {
     if (el('updateBar')) return;
     const b = document.createElement('div'); b.id = 'updateBar'; b.className = 'undo'; b.setAttribute('role', 'status');
-    b.innerHTML = '<span>A new version of Money is ready</span><button type="button">Reload</button>';
+    b.innerHTML = '<span></span><button type="button"></button>';
+    b.querySelector('span')!.textContent = tr('A new version of Money is ready');
+    b.querySelector('button')!.textContent = tr('Reload');
     b.querySelector('button')!.onclick = () => location.reload();
     document.body.appendChild(b);
   };
