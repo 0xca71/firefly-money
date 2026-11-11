@@ -20,6 +20,7 @@ function req({ method = 'POST', body = {} as any, auth = '', session = '', firef
     const path = uri.replace('/__firefly/api/v1', ''), reply = (status: number, data: unknown) => ({ status, responseText: JSON.stringify(data) });
     if (path === '/accounts') return reply(200, { data: ACCOUNTS[/type=(\w+)/.exec(o.args)![1]] });
     if (path === '/search/accounts') return reply(200, { data: firefly.payee ? [{ id: '9', attributes: { name: firefly.payee } }] : [] });
+    if (firefly.existing && path === '/accounts/1/transactions') return reply(200, { data: [{ attributes: { transactions: firefly.existing } }] });
     if (path === '/accounts/9/transactions') return reply(200, { data: [{ attributes: { transactions: [{ destination_id: '9', category_name: 'Coffee', budget_id: '5' }] } }] });
     if (path === '/preferences/money_cards') {
       if (o.method === 'GET') return firefly.prefs ? reply(200, { data: { attributes: { name: 'money_cards', data: JSON.stringify(firefly.prefs) } } }) : reply(404, { message: 'Not found' });
@@ -138,5 +139,19 @@ describe('ingest.js', () => {
     expect(notJson.status).toBe(400);
     const dup = req({ auth: key, body: { amount: '$4', merchant: 'Shop', card: 'Apple Card' }, firefly: { duplicate: true } }); await ingest.endpoint(dup);
     expect([dup.status, dup.text]).toEqual([200, 'Already logged.\n']);
+  });
+  it('does not log a payment already there from the last day, unless forced', async () => {
+    const key = 'Bearer ' + await keyFor(), now = new Date().toISOString();
+    const existing = [{ date: now, amount: '5.40', description: 'Starbucks', destination_name: 'Starbucks', source_id: '1' }];
+    const dup = req({ auth: key, body: { amount: '$5.40', merchant: 'starbucks', card: 'Checking' }, firefly: { existing } }); await ingest.endpoint(dup);
+    expect(dup.status).toBe(409);
+    expect(dup.text).toContain('already there');
+    expect(dup.calls.some((c: any) => c.uri.endsWith('/transactions') && c.method === 'POST')).toBe(false);
+    const other = req({ auth: key, body: { amount: '$5.50', merchant: 'Starbucks', card: 'Checking' }, firefly: { existing } }); await ingest.endpoint(other);
+    expect(other.status).toBe(200);
+    const old = req({ auth: key, body: { amount: '$5.40', merchant: 'Starbucks', card: 'Checking' }, firefly: { existing: [{ ...existing[0], date: new Date(Date.now() - 20 * 3600000).toISOString() }] } }); await ingest.endpoint(old);
+    expect(old.status).toBe(200);
+    const forced = req({ auth: key, body: { amount: '$5.40', merchant: 'Starbucks', card: 'Checking', force: true }, firefly: { existing } }); await ingest.endpoint(forced);
+    expect(forced.status).toBe(200);
   });
 });

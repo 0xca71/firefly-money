@@ -23,6 +23,23 @@ export function togglePrivacy() {
   vt('prefs', applyPrefs); buzz(8);
   toast(on ? 'Amounts hidden · press P or hover to peek' : 'Amounts visible');
 }
+/* ---------- Hide amounts while the app is in the background (opt-in) ----------
+   iOS takes the app-switcher snapshot as the page goes to the background, so the blur goes on synchronously, with no
+   transition (.priv-snap), from visibilitychange / pagehide, and comes off when the page is back. A page already in privacy mode stays so. */
+export const privacyBgOn = () => !!LS.get('privacyBg', false);
+let snapped = false;
+export function snapPrivacy(away: boolean) {
+  const r = document.documentElement;
+  if (away) { if (!privacyBgOn() || snapped) return; snapped = true; r.classList.add('priv-snap', 'privacy'); }
+  else { if (!snapped) return; snapped = false; r.classList.remove('priv-snap'); r.classList.toggle('privacy', !!LS.get('privacy', false)); }
+}
+addEventListener('visibilitychange', () => snapPrivacy(document.visibilityState === 'hidden'));
+addEventListener('pagehide', () => snapPrivacy(true));
+addEventListener('pageshow', () => snapPrivacy(document.visibilityState === 'hidden'));
+// Control Center and the switcher gesture blur the window before the page is hidden; touch devices only, so clicking into dev tools doesn't blur a desktop
+addEventListener('blur', () => { if (matchMedia('(hover: none)').matches) snapPrivacy(true); });
+addEventListener('focus', () => snapPrivacy(false));
+function togglePrivacyBg(on: boolean) { LS.set('privacyBg', !!on); buzz(8); toast(on ? 'Amounts hide when you leave the app' : 'Amounts stay as they are when you leave'); }
 // Fold the sidebar down to its icons for more room, or open it again. Kept per device: a laptop and a big screen differ.
 const sideLabels = (on: boolean) => document.querySelectorAll<HTMLElement>('.side-tg').forEach(b => { b.title = (on ? 'Expand' : 'Collapse') + ' the sidebar ([)'; b.setAttribute('aria-label', (on ? 'Expand' : 'Collapse') + ' the sidebar'); });
 sideLabels(!!LS.get('sideMini', false));
@@ -60,6 +77,7 @@ applyPrefs();
 // The methods markup handlers call (see events.ts), added to App and to its type
 const methods = {
   togglePrivacy,
+  togglePrivacyBg,
   toggleSide,
   toggleDensity,
   drawToggles,

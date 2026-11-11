@@ -148,6 +148,24 @@ async function lastUse(r, payee) {
   } catch (e) { return {}; }
 }
 
+// A payment already logged for this account: the same payee and amount, within the last 12 hours (about "the same
+// day" whatever time zone Firefly keeps). Firefly's own hash check is too strict to catch a double tap, since the time
+// differs. Null when none, or when Firefly can't say (then it just logs).
+async function findDuplicate(r, acc, merchant, refund, abs, paid) {
+  try {
+    const day = new Date(Date.now() - 86400000).toISOString().slice(0, 10), end = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const res = await ff(r, 'GET', '/accounts/' + acc.id + '/transactions', 'type=' + (refund ? 'deposit' : 'withdrawal') + '&start=' + day + '&end=' + end + '&limit=50');
+    if (res.status !== 200) return null;
+    const splits = ((res.data && res.data.data) || []).reduce((all, g) => all.concat((g.attributes && g.attributes.transactions) || []), []);
+    const amounts = [parseFloat(abs), parseFloat(paid)];
+    return splits.find(s => {
+      const payee = refund ? s.source_name : s.destination_name, at = Date.parse(s.date || ''), a = parseFloat(s.amount), fa = parseFloat(s.foreign_amount);
+      return (words(payee) === words(merchant) || words(s.description) === words(merchant)) && Math.abs(Date.now() - at) <= 43200000
+        && amounts.some(x => Math.abs(a - x) < 0.005 || Math.abs(fa - x) < 0.005);
+    }) || null;
+  } catch (e) { return null; }
+}
+
 function say(r, status, text) {
   r.headersOut['Content-Type'] = 'text/plain; charset=utf-8';
   r.headersOut['Cache-Control'] = 'no-store';
@@ -213,6 +231,9 @@ async function endpoint(r) {
       notes: notes.join('\n'),
     }, foreign || {}, spot ? { latitude: spot.latitude, longitude: spot.longitude, zoom_level: 16 } : {},
     refund ? { source_name: merchant, destination_id: acc.id } : { source_id: acc.id, destination_name: merchant });
+    const force = b.force === true || /^(1|true|yes)$/i.test(String(b.force || ''));
+    const dup = force ? null : await findDuplicate(r, acc, merchant, refund, abs, paid);
+    if (dup) return say(r, 409, 'Not logged: ' + merchant + ' ' + abs + ' (' + acc.name + ') is already there from the last day. To log it anyway, add "force": true to the Shortcut’s request.');
     const res = await ff(r, 'POST', '/transactions', '', { error_if_duplicate_hash: true, apply_rules: true, fire_webhooks: true, transactions: [split] });
     const what = foreign ? paid + ' ' + foreign.foreign_currency_code + ' (' + (estimated || 'check the ') + abs + ' ' + acc.currency + ')' : abs;
     if (res.status === 200) return say(r, 200, (refund ? 'Refund of ' : 'Logged ') + what + ' at ' + merchant + ' (' + acc.name + ').');
