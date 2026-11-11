@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import { AuthError, PAGES, api, dropSavedCopies } from './api';
 import { SIGN_OUT_FAILED, migrateSavedPassword, rememberedSignIn, showLogin, signIn, signOut } from './auth';
 import { App, S, el, nowMonth } from './base';
@@ -15,7 +16,7 @@ el('loginForm').onsubmit = async ev => {
   const btn = (ev.target as HTMLElement).querySelector<HTMLButtonElement>('button[type=submit]')!;
   btn.disabled = true;
   try { await signIn(el<HTMLInputElement>('loginPw').value, el<HTMLInputElement>('loginRemember').checked); el<HTMLInputElement>('loginPw').value = ''; showApp(); }
-  catch (e) { el('loginErr').hidden = false; el('loginErr').textContent = (e as Error).message; }
+  catch (e) { el('loginErr').hidden = false; el('loginErr').textContent = tr((e as Error).message); }
   finally { btn.disabled = false; }
 };
 export { THEMES, themeButtons };
