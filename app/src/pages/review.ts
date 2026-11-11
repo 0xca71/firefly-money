@@ -39,11 +39,13 @@ function pairsPanel(pairs: XferPair[]) {
   if (!pairs.length) return '';
   return html`<section class="panel" style="margin-bottom:20px"><div class="panel-head"><h2>Transfers to match</h2><span class="neutral">${pairs.length} found</span></div><p class="lead">These look like one move between your accounts, imported as an expense and an income. Make each one a transfer so it isn’t counted as spending.</p><div class="list">${htmlList(pairs.map(p => { const a = p.out.splits[0], b = p.in.splits[0]; return html`<div class="row xfer-pair"><span class="name">${a.source_name} → ${b.destination_name}<span class="sub-s" style="display:block">${fmtDay(a.date)} “${a.description}” · ${fmtDay(b.date)} “${b.description}”</span></span><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><span class="num">${money(p.amount)}</span><button type="button" class="btn small primary" data-onclick="App.mergeTransfer('${p.id}')">Make a transfer</button><button type="button" class="link" data-onclick="App.skipPair('${p.id}')">Not a pair</button></span></div>`; }))}</div></section>`;
 }
-let lastPairs: XferPair[] = [];
+let lastPairs: XferPair[] = [], lastRaw: ApiData[] = [];
 async function mergeTransfer(id: string) {
   const p = lastPairs.find(x => x.id === id); if (!p) return;
   const a = p.out.splits[0], b = p.in.splits[0];
-  if (!await confirmBox('Make this one transfer?', 'Money adds a transfer of ' + money(p.amount) + ' from ' + a.source_name + ' to ' + b.destination_name + ' on ' + fmtDay(a.date) + ', then deletes the two separate transactions.', 'Make a transfer')) return;
+  // A transfer of the same amount between the same two accounts that day may already be there (Firefly isn't asked: this is what was just loaded)
+  const have = lastRaw.map(normGroup).some(g => g.type === 'transfer' && g.splits.some(x => x.source_id === a.source_id && x.destination_id === b.destination_id && Math.abs(x.amount - p.amount) < 0.005 && String(x.date).slice(0, 10) === String(a.date).slice(0, 10)));
+  if (!await confirmBox(have ? 'A transfer like this exists' : 'Make this one transfer?', (have ? 'There is already a transfer of ' + money(p.amount) + ' between these accounts on ' + fmtDay(a.date) + '. ' : '') + 'Money adds a transfer of ' + money(p.amount) + ' from ' + a.source_name + ' to ' + b.destination_name + ' on ' + fmtDay(a.date) + ', then deletes the two separate transactions.', have ? 'Make it anyway' : 'Make a transfer')) return;
   await withAuth(async () => {
     const tx: Record<string, unknown> = { type: 'transfer', date: String(a.date).slice(0, 10), amount: String(p.amount), description: a.description || b.description, source_id: a.source_id, destination_id: b.destination_id };
     if (a.category) tx.category_name = a.category;
@@ -61,6 +63,7 @@ VIEWS.review = async (r, paint) => {
   await lists();
   const raw = await getAll('/transactions', { type: 'all', start: addDays(todayIso(), -LOOKBACK), end: addDays(todayIso(), 7) });
   const queue = reviewQueue(raw, since(), LS.get('reviewed', []));
+  lastRaw = raw;
   const own = new Set(S.lists!.own.map(a => a.id)), pairs = lastPairs = matchTransfers(raw.map(normGroup), own, new Set(LS.get('xferSkip', [])));
   // Forget ticked-off ids that have left the queue's window
   const ids = new Set(raw.map(g => String(g.id))), done: string[] = LS.get('reviewed', []);

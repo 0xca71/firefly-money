@@ -330,6 +330,10 @@
   .bulkbar { position: sticky; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 6; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--panel); border: 1px solid var(--accent);
     border-radius: 14px; padding: 10px 14px; margin-bottom: 14px; box-shadow: var(--shadow); }
   .bulkbar strong { margin-right: 6px; }
+  #storeList input[type=checkbox] { width: 18px; height: 18px; min-width: 18px; padding: 0; margin: 0; flex: none; cursor: pointer; accent-color: var(--accent); }
+  #storeList .bulkbar { margin-bottom: 10px; }
+  #storeList .bulkbar label { white-space: nowrap; }
+  #storeList .bulkbar .btn { margin-left: auto; }
   .bulkbar select, .bulkbar input { padding: 6px 10px; font-size: 13.5px; }
   .extra { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; margin-top: 14px; }
   .extra h3 { font-size: 14px; margin: 0 0 10px; }
@@ -397,6 +401,8 @@
   .login form { width: min(360px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 34px 30px; }
   .login h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
   .login p { margin: 0 0 24px; color: var(--muted); font-size: 13.5px; }
+  .login .login-foot { margin: 18px 0 0; text-align: center; font-size: 12.5px; }
+  .login .login-foot a { color: var(--muted); }
   .login .btn { width: 100%; justify-content: center; padding: 10px; margin-top: 6px; }
 
   /* ---------- Motion & snappiness ---------- */
@@ -560,6 +566,8 @@
   .barchart text.bv { font-size: 11.5px; font-weight: 600; fill: var(--text); }
   .barchart .bar { fill: var(--good); }
   .barchart .bar.neg { fill: var(--spend); }
+  .barchart .bar.part { fill: var(--muted); opacity: .45; }
+  .barchart text.bv.part { fill: var(--muted); font-weight: 500; }
   .trends { display: grid; }
   .trend-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 76px; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
   .trend-row:first-child { border-top: 0; padding-top: 2px; }
@@ -711,8 +719,8 @@
   .dh-txt { min-width: 0; }
   /* ---------- Insight cards ---------- */
   main#view { min-width: 0; }
-  .insights { min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 1fr); gap: 14px; margin: -14px 0 24px; overflow-x: auto; scroll-snap-type: x mandatory;
-    scrollbar-width: none; padding: 2px; }
+  .insights { min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 1fr); gap: 14px; margin: -14px -8px 24px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 8px;
+    scrollbar-width: none; padding: 8px; }
   .insights::-webkit-scrollbar { display: none; }
   .insight { --tone: var(--muted); position: relative; scroll-snap-align: start; display: flex; gap: 12px; align-items: flex-start; text-decoration: none;
     background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 36px 14px 14px; transition: border-color var(--t-hover), transform var(--t-hover); }
@@ -749,7 +757,7 @@
   .cards.free { columns: auto; }
   /* The insight strip uses the same columns and gutters as the cards, so their edges line up (it still scrolls sideways
      when there are more insights than columns; on phones it keeps its peek-at-the-next-card width) */
-  .dash-wrap:not([data-n="1"]) .insights { grid-auto-columns: calc((100% - (var(--n) - 1) * var(--gap)) / var(--n)); gap: var(--gap); padding: 2px 0; margin-bottom: calc(var(--gap) - 2px); }
+  .dash-wrap:not([data-n="1"]) .insights { grid-auto-columns: calc((100% - (var(--n) - 1) * var(--gap)) / var(--n)); gap: var(--gap); padding: 2px 0; margin-inline: 0; margin-bottom: calc(var(--gap) - 2px); }
   .dash-wrap .insight { border-radius: var(--radius); }
   .cards.free .band { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: var(--gap); align-items: start; margin-bottom: var(--gap); }
   .cards.free .dcol { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
@@ -1022,6 +1030,7 @@
   .tabs { width: fit-content; max-width: 100%; gap: 2px; padding: 4px; border: 0; border-radius: 999px; background: var(--faint); box-shadow: inset 0 0 0 1px var(--line); scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
   .tabs a { padding: 7px 14px; margin: 0; border: 0; border-radius: 999px; line-height: 1.2; }
+  @media (max-width: 360px) { .tabs a { padding: 7px 10px; } }   /* three To do tabs fit at 320 */
   .tabs a.on .neutral { color: inherit; opacity: .7; }
   @media (min-width: 901px) {
     .side { margin: 14px 0 14px 14px; height: calc(100vh - 28px); top: 14px; border: 1px solid var(--line); border-radius: 26px; background: var(--panel); box-shadow: var(--shadow); }
@@ -1168,17 +1177,62 @@
   html[data-theme="frosted"][data-scene="night"] :is(.tabbar a.on, .nav a.on) { color: var(--text); }
   html[data-theme="frosted"][data-scene="night"] .track { background: rgba(255, 255, 255, .1); }
   html[data-theme="frosted"][data-scene="night"] .appbar.scrolled { background: rgba(18, 15, 28, .55); }
+  /* ---------- Theme: Spatial glass (visionOS-style: dark slate glass, 24px corners, one bright blue accent, over a soft-focus room; all CSS, works offline) ---------- */
+  html[data-theme="spatial"] { --bg: #343c48; --panel: rgba(120, 134, 156, .3); --line: rgba(255, 255, 255, .16); --text: #f1f4f9; --muted: #d0d8e3; --faint: rgba(255, 255, 255, .09);
+    --good: #74dcaa; --spend: #ffb39b; --income: #74dcaa; --warn: #f3c969; --accent: #9ac6ff; --on-accent: #06142b;
+    --shadow: 0 20px 60px rgba(8, 12, 20, .4); --radius: 24px; color-scheme: dark;
+    --ink: #f1f4f9; --frost-edge: inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 0 0 1px rgba(255, 255, 255, .06);
+    --glow1: #4c5a6d; --glow2: #5d6879; --glow3: #232a35; --glass-base: #5d6a7e; --glass-tint: 30%; --glass-blur: 30px;
+    background: var(--bg); }
+  html[data-theme="spatial"] body { background: transparent; }
+  /* the room: a pale window, a dark sofa, a wall in grey-blue */
+  html[data-theme="spatial"] body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(46vmax 24vmax at 74% 6%, color-mix(in srgb, var(--glow2) 80%, transparent), transparent 70%),
+      radial-gradient(34vmax 30vmax at 8% 22%, color-mix(in srgb, var(--glow1) 85%, transparent), transparent 70%),
+      radial-gradient(60vmax 26vmax at 40% 104%, var(--glow3), transparent 72%),
+      radial-gradient(40vmax 18vmax at 92% 92%, rgba(24, 30, 42, .8), transparent 70%),
+      linear-gradient(180deg, #4b5666, var(--bg) 55%, #262d38); }
+  html[data-theme="spatial"] :is(.panel, .daycards tbody.day, .daycards > .center-empty, .kpi, .insight, .extra, .split, .login form, .dash-bar) {
+    background: linear-gradient(165deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02)), color-mix(in srgb, var(--glass-base) var(--glass-tint), transparent);
+    border: 1px solid rgba(255, 255, 255, .16); border-radius: 24px; box-shadow: var(--frost-edge), 0 14px 40px rgba(8, 12, 20, .35); }
+  html[data-theme="spatial"] :is(.drawer, dialog, .calpop, .pickpop, .palette-box, .bulkbar, .ff-pop) {
+    background: rgba(48, 56, 69, .86); border-color: rgba(255, 255, 255, .18); border-radius: 24px;
+    -webkit-backdrop-filter: blur(40px) saturate(150%); backdrop-filter: blur(40px) saturate(150%); }
+  html[data-theme="spatial"] .drawer footer { background: transparent; border-top-color: rgba(255, 255, 255, .14); }
+  html[data-theme="spatial"] :is(input[type=text], input[type=number], input[type=date], input[type=password], input[type=search], select, textarea, .round, .wctl button, .btn, .seg, .tabs) {
+    background: rgba(255, 255, 255, .09); border-color: rgba(255, 255, 255, .16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1); }
+  html[data-theme="spatial"] select option { background: #39424f; }
+  html[data-theme="spatial"] :is(input, select, textarea):focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); }
+  html[data-theme="spatial"] :is(.btn.primary, .seg button.on, .tabs a.on, .tabbar .plus, .fab) { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: 0 6px 18px rgba(30, 80, 170, .35); }
+  html[data-theme="spatial"] .tbl.feed td { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .1); }
+  html[data-theme="spatial"] .tbl.feed tr.dayhead div { background: rgba(48, 56, 69, .8); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+  html[data-theme="spatial"] .tbl tr.click:hover td { background: rgba(255, 255, 255, .12); }
+  html[data-theme="spatial"] .track { background: rgba(255, 255, 255, .14); }
+  html[data-theme="spatial"] .big { color: var(--text); }
+  html[data-theme="spatial"] .appbar.scrolled { background: rgba(43, 51, 63, .6); }
+  html[data-theme="spatial"] .scrim { background: rgba(6, 10, 18, .4); }
+  /* slim glass rail on the left, a soft glass pill on the current page */
+  html[data-theme="spatial"] .side { background: rgba(120, 134, 156, .22); border: 1px solid rgba(255, 255, 255, .16); border-radius: 28px; box-shadow: var(--frost-edge), 0 14px 40px rgba(8, 12, 20, .3);
+    -webkit-backdrop-filter: blur(30px) saturate(140%); backdrop-filter: blur(30px) saturate(140%); }
+  html[data-theme="spatial"] :is(.tab-pill, .nav a.on) { background: rgba(255, 255, 255, .18); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25); }
+  html[data-theme="spatial"] :is(.tabbar a.on, .nav a.on) { color: var(--text); }
+  /* floating bottom pill nav on phones */
+  html[data-theme="spatial"] .tabbar { background: rgba(52, 61, 75, .78); border: 1px solid rgba(255, 255, 255, .2); box-shadow: var(--frost-edge), 0 16px 44px rgba(6, 10, 18, .45);
+    -webkit-backdrop-filter: blur(32px) saturate(150%); backdrop-filter: blur(32px) saturate(150%); }
+  html[data-theme="spatial"] .tabbar a { color: var(--muted); }
   /* Both glass themes: what's behind a card is only soft light (no card overlaps another), so a live blur under every card
      looks the same but makes the browser re-blur each card on every scroll frame, every entrance animation and, in
      Liquid glass, every frame of the moving light. Only floating things keep it (tab bar, sheets, menus).
      Same selector list as the rules that add the blur: :is() takes its most specific entry, so a shorter list loses. */
-  html:is([data-theme="glass"], [data-theme="frosted"]) :is(.panel, .daycards tbody.day, .daycards > .center-empty, .kpi, .insight, .extra, .split, .dash-bar) { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  html:is([data-theme="glass"], [data-theme="frosted"], [data-theme="spatial"]) :is(.panel, .daycards tbody.day, .daycards > .center-empty, .kpi, .insight, .extra, .split, .dash-bar) { -webkit-backdrop-filter: none; backdrop-filter: none; }
   html[data-theme="glass"] .side { -webkit-backdrop-filter: none; backdrop-filter: none; }
   @media (max-width: 900px) {
     .tbl.feed tr.dayhead div { -webkit-backdrop-filter: none; backdrop-filter: none; }     /* one blur per day header adds up on a long feed */
     html[data-theme="glass"] .tbl.feed tr.dayhead div { background: rgba(20, 16, 42, .9); }
     html[data-theme="frosted"] .tbl.feed tr.dayhead div { background: rgba(255, 248, 240, .88); }
     html[data-theme="frosted"][data-scene="night"] .tbl.feed tr.dayhead div { background: rgba(30, 25, 40, .92); }
+    html[data-theme="spatial"] .tbl.feed tr.dayhead div { background: rgba(48, 56, 69, .94); }
   }
   /* ---------- iPhone: notch / home bar, no accidental zoom, native-app shell ---------- */
   body { touch-action: manipulation; }
@@ -1405,9 +1459,7 @@
     .search-btn svg { width: 18px; height: 18px; }
     html.shell .search-btn { top: calc(env(safe-area-inset-top, 0px) + var(--edge) + 4px); right: calc(10px + env(safe-area-inset-right, 0px)); border-color: transparent; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--accent); }
     html.shell .search-btn svg { width: 22px; height: 22px; }
-    /* leaves with the title bar, by the same distance so the two move as one */
-    .search-btn { transition: transform .3s var(--ease-out), opacity .2s; }
-    html.scroll-down .search-btn { transform: translateY(calc(-1 * (env(safe-area-inset-top, 0px) + var(--edge) + 44px))); opacity: 0; pointer-events: none; }
+    /* stays where it is: the title row it sits on is pinned while the page scrolls under it */
     html:not(.shell) #view > .head:first-child { padding-right: 52px; }
     html.pal-open .search-btn, #app[hidden] ~ .search-btn { display: none; }
     .palette { padding: 0; align-items: stretch; background: var(--bg); }
@@ -2058,13 +2110,17 @@
     :root { --head-gap: 28px; --pb: 72px; }
     html.compact { --head-gap: 18px; }
     html { overflow: hidden; }
-    .app { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+    .app { height: 100vh; height: max(100dvh, 100lvh); min-height: 0; overflow: hidden; }
+    /* iOS Home Screen app: the fixed backdrop and the page reach the very bottom edge, under the home indicator (no flat strip) */
+    html.ios-web body::after, html.ios-web body::before { bottom: calc(-1 * env(safe-area-inset-bottom, 0px)); }
+    html.ios-web .app { min-height: -webkit-fill-available; }
     main#view { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; box-sizing: border-box; padding-bottom: 0 !important; }
     html.native-tabs main#view { padding-bottom: 0 !important; }
     #view > .head { flex: none; margin-bottom: 0 !important; }
     #view > .pg { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: clip; overscroll-behavior-y: contain;
-      margin-inline: -14px; padding: var(--head-gap) 14px var(--pb);       /* the side room keeps card shadows from being clipped */
+      margin-inline: calc(-1 * var(--pg-side, 40px)); padding: var(--head-gap) var(--pg-side, 40px) var(--pb);       /* the side room (main's 44px padding on desktop) keeps card shadows, up to Spatial's 40px blur, from being clipped */
       -webkit-mask-image: linear-gradient(to bottom, transparent, #000 16px); mask-image: linear-gradient(to bottom, transparent, #000 16px); }
+    @media (max-width: 900px) { #view > .pg { --pg-side: 14px; } }
     html:has(#story) :is(#view, #view > .pg) { -webkit-mask-image: none; mask-image: none; overflow: visible; }     /* the full-screen story sits in the page */
     html .tbl.feed tr.dayhead { top: 14px !important; }
     html .bulkbar { top: 18px !important; }
@@ -2282,7 +2338,7 @@ html[data-theme="sakura"] .panel,html[data-theme="mint"] .panel,html[data-theme=
 
 /* ---------- Activity grid: a year of days, a week to a column, darker = more spent ---------- */
 html { --ag: var(--spend); }
-.ag-scroll { height: 131px; overflow-y: hidden; box-sizing: border-box; align-items: flex-start; display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.ag-scroll { height: 143px; margin: -6px; overflow-y: hidden; box-sizing: border-box; align-items: flex-start; display: flex; flex-direction: row-reverse; overflow-x: auto; padding: 6px; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px); mask-image: linear-gradient(to right, transparent 0, #000 14px); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .ag-wrap { --agm: 14px; flex: none; margin-right: auto; min-width: 0; display: grid; gap: 3px; }
 .ag-months { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: var(--agm); gap: 3px; height: 12px; line-height: 12px; font-size: 11px; color: var(--muted); }
 .ag-months span { white-space: nowrap; overflow: visible; }
@@ -2330,6 +2386,7 @@ html[data-theme="glass"] .ag-c.l3, html[data-theme="glass"] .ag-c.l4 { box-shado
 html[data-theme="carbon"] .opill { box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 45%, transparent); }
 html[data-theme="glass"] .opill { background: rgba(255, 255, 255, .14); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2); }
 html[data-theme="frosted"] .opill { background: var(--ink); }
+html[data-theme="spatial"] .opill { background: rgba(255, 255, 255, .18); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25); }
 /* A soft press on tappable cards, desktop and phone alike; it springs back on release */
 .insight, .list a.row, .hm-cell { transition: transform .22s var(--ease-out), opacity var(--t-hover); }
 @media (hover: hover) { .insight:active { transform: scale(.992); } }
@@ -2406,3 +2463,42 @@ html[data-theme="frosted"] .opill { background: var(--ink); }
 .ib-card[data-sw=skip] { box-shadow: 0 0 0 2px var(--muted); }
 @media (prefers-reduced-motion: reduce) { .ib-card { transition: none; } }
 .ib-accept { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ================= Refinements: type, elevation, spring sheets, scrubbing, tap-for-details ================= */
+/* One variable font, bundled with the app (Inter, SIL OFL, latin subset): no request ever leaves for a font host.
+   Other scripts, and anything the file lacks, fall back to the system font. */
+@font-face { font-family: "Inter Variable"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("fonts/inter-latin-var.woff2") format("woff2-variations"), url("fonts/inter-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+:root { --font: "Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+body { font-family: var(--font); font-optical-sizing: auto; font-feature-settings: "cv11", "ss03"; }
+button, input, select, textarea { font-family: inherit; }
+/* Quieter labels, louder figures: the label steps back in weight and size (never in contrast), the number leads */
+.eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .1em; }
+.kpi .val, .stat .val, .total, .big, .tbl .amt, .row .amt, .num { font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum", "lnum", "cv11", "ss03"; }
+@media (min-width: 700px) {
+  .hero .big { font-size: clamp(56px, 5vw, 72px); font-weight: 250; letter-spacing: -.04em; }
+  html.compact .hero .big { font-size: 46px; }
+}
+
+/* Elevation scale: e1 sits on the page (cards), e2 floats over it (menus, pickers, tips), e3 is modal (sheets, dialogs, search) */
+:is(html[data-theme="light"], html:not([data-theme])) { --e1: var(--rim), var(--lift); --e2: 0 1px 2px rgba(34,34,31,.06), 0 8px 24px -8px rgba(34,34,31,.22); --e3: 0 2px 4px rgba(34,34,31,.06), 0 24px 60px -16px rgba(34,34,31,.34); --hi: inset 0 1px 0 rgba(255,255,255,.85); }
+html[data-theme="dark"] { --e1: var(--rim), var(--lift); --e2: 0 1px 0 rgba(0,0,0,.5), 0 10px 28px -8px rgba(0,0,0,.7); --e3: 0 2px 6px rgba(0,0,0,.5), 0 28px 64px -16px rgba(0,0,0,.85); --hi: inset 0 1px 0 rgba(255,255,255,.07); }
+@media (prefers-color-scheme: dark) { html:not([data-theme]) { --e1: var(--rim), var(--lift); --e2: 0 1px 0 rgba(0,0,0,.5), 0 10px 28px -8px rgba(0,0,0,.7); --e3: 0 2px 6px rgba(0,0,0,.5), 0 28px 64px -16px rgba(0,0,0,.85); --hi: inset 0 1px 0 rgba(255,255,255,.07); } }
+:is(html[data-theme="light"], html[data-theme="dark"], html:not([data-theme])) :is(.calpop, .pickpop, .tip) { box-shadow: var(--hi), var(--e2); }
+:is(html[data-theme="light"], html[data-theme="dark"], html:not([data-theme])) :is(dialog, .palette-box) { box-shadow: var(--hi), var(--e3); }
+/* Fewer borders: the card edge and the lines between rows step back, so shadow and spacing carry the structure */
+:is(html[data-theme="light"], html[data-theme="dark"], html:not([data-theme])) :is(.panel, .kpi, .insight, .daycards tbody.day) { border-color: color-mix(in srgb, var(--line) 60%, transparent); }
+:is(html[data-theme="light"], html[data-theme="dark"], html:not([data-theme])) :is(.list .row, .sk-row) { border-top-color: color-mix(in srgb, var(--line) 55%, transparent); }
+
+/* Sheets settle like a spring. The side drawer never overshoots (it would show a gap at the screen edge); the phone sheet
+   may, because the sheet fills in under itself (.drawer::after) */
+@supports (animation-timing-function: linear(0, 1)) {
+  :root { --ease-settle: linear(0, .3 7%, .6 15%, .8 25%, .92 36%, .975 50%, .995 68%, 1); }
+  .drawer { transition-duration: .5s; transition-timing-function: var(--ease-settle); }
+  @media (max-width: 700px) { .drawer { transition-timing-function: var(--ease-spring); } }
+}
+
+/* Drag along a line chart to read it point by point (features/refine.ts); a vertical swipe still scrolls the page */
+.lines { touch-action: pan-y; }
+.lines .scrub-line { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 4; pointer-events: none; }
+

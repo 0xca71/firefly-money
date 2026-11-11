@@ -33,6 +33,8 @@ services:
     #   - ./app/ingest.js:/etc/nginx/money/ingest.js:ro
     #   - ./app/default.conf.template:/etc/nginx/templates/default.conf.template:ro
     #   - ./app/index.html:/etc/nginx/templates/index.html.template:ro
+    #   - ./app/404.html:/etc/nginx/templates/404.html.template:ro
+    #   - ./app/privacy.html:/etc/nginx/templates/privacy.html.template:ro
     #   - ./app/assets:/usr/share/nginx/html/assets:ro
 
 # TrueNAS: adds the "Web UI" button on the app's page. Other Docker hosts ignore this.

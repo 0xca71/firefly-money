@@ -25,6 +25,16 @@ if (demo) {
   await esbuild.build(options);
   cpSync('app/assets/money.css', 'site/assets/money.css');
   cpSync('docs/icon.svg', 'site/icon.svg');
+  cpSync('app/assets/icons', 'site/assets/icons', { recursive: true });
+  cpSync('app/assets/fonts', 'site/assets/fonts', { recursive: true });
+  // Search and sharing: the demo is public, so it gets a description for results, a share picture and a sitemap
+  const home = 'https://muffy0906.github.io/firefly-money/';
+  const blurb = 'Live demo of Money, a fast, private dashboard for Firefly III, with made-up data. Try the budgets, forecasts and 12 themes.';
+  writeFileSync('site/robots.txt', `User-agent: *\nAllow: /\nSitemap: ${home}sitemap.xml\n`);
+  writeFileSync('site/sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n<url><loc>${home}</loc></url>\n<url><loc>${home}privacy.html</loc></url>\n</urlset>\n`);
+  writeFileSync('site/404.html', readFileSync('app/404.html', 'utf8').replace('href="/icon.svg"', 'href="/firefly-money/icon.svg"').replace('<a href="/">', '<a href="/firefly-money/">'));
+  writeFileSync('site/privacy.html', readFileSync('app/privacy.html', 'utf8').replace('href="/icon.svg"', 'href="icon.svg"').replace('href="/"', 'href="./"')
+    .replace('<!--DEMO-->', '<p>This demo runs entirely in your browser with made-up data. Nothing you do here is sent anywhere' + (process.env.GOATCOUNTER ? ', apart from a cookie-free page-view count (GoatCounter: no personal data, no cookies).' : '.') + '</p>'));
   // The page's Content-Security-Policy, taken from the nginx config so the demo runs under the same rules
   // (frame-ancestors only works as a header, so it's left out of the <meta> version)
   let csp = readFileSync('app/default.conf.template', 'utf8').match(/add_header Content-Security-Policy "(.*?)";/)[1]
@@ -39,6 +49,13 @@ if (demo) {
   const page = readFileSync('app/index.html', 'utf8')
     .replaceAll('${MONEY_VERSION}', version)
     .replaceAll('${FIREFLY_URL}', '')
+    .replace('<meta name="robots" content="noindex">', `<meta name="robots" content="index,follow">
+<link rel="canonical" href="${home}">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Money"><meta property="og:title" content="Money: a dashboard for Firefly III">
+<meta property="og:description" content="${blurb}"><meta property="og:url" content="${home}"><meta property="og:image" content="${home}assets/icons/og-image.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="Money's Overview page in the Frosted glass theme">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${home}assets/icons/og-image.png">`)
+    .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${blurb}">`)
     .replace(/<link rel="manifest"[^>]*>\n/, '')                    // no install-as-app in the demo
     .replaceAll('href="/', 'href="').replaceAll('src="/', 'src="')  // GitHub Pages serves the site from /<repo>/
     .replace('<script src="assets/js/boot.js', `<meta http-equiv="Content-Security-Policy" content="${csp}">

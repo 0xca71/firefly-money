@@ -22,7 +22,8 @@ import { fcHorizon } from './forecast';
 import { type BudgetLimit, budgetLimits, budgetPace } from './budgets';
 import { loanHistory } from './loans';
 import { type Piggy, normPiggy, paceBits } from './piggy';
-import { budgetsLessRefunds, insight, refundsIn } from '../features/refunds';
+import { INVEST_RE } from '../features/moneyhealth';
+import { budgetsLessRefunds, insight, lessRefundTx, refundsIn } from '../features/refunds';
 
 /* ================= Overview ================= */
 type CatRow = { name: string, id?: string, amt: number, prev: number };
@@ -73,14 +74,14 @@ VIEWS[''] = async (r, paint) => {
   const slowP = Promise.all([on('loans') ? loanHistory(loansShown).catch(() => ({})) : {}, on('safe') ? App.safeCard() : '',
     coreP.then(c => App.insightCards({ cur, future: monthOnly, budgets: arr(c[7]), limits: c[8], cards, trend: c[5], max: 3 })).catch(() => ''),
     on('cash', 'cards') ? App.balanceSparks([...cashShown, ...cardsShown]).catch(() => ({})) : {},
-    monthOnly || !on('heatmap', 'pace') ? none : getAll('/transactions', { start: cur.start, end: cur.end, type: 'withdrawal' }).catch(() => []),
+    monthOnly || !on('heatmap', 'pace') ? none : Promise.all([getAll('/transactions', { start: cur.start, end: cur.end, type: 'withdrawal' }).catch(() => []), rsFor(cur) || refundsIn(cur.start, cur.end)]).then(([tx, rs]) => lessRefundTx(tx, rs)),
     on('flow', 'income') ? insight('/insight/income/revenue', p(cur), rsFor(cur)).catch(() => []) : none,
     on('payees') ? insight('/insight/expense/expense', p(cur), rsFor(cur)).catch(() => []) : none, all || !on('payees') ? none : insight('/insight/expense/expense', p(prev), rsFor(prev)).catch(() => []),
     on('goals') ? getAll('/piggy-banks').then(ps => ps.map(normPiggy)).catch(() => []) : none, on('networth') ? App.netWorthHistory().catch(() => null) : null,
-    monthOnly || !on('pace') ? none : getAll('/transactions', { start: monthRange(vy, vm - 3).start, end: prev.end, type: 'withdrawal' }).catch(() => []),     // three months back: the pace learns from all of them
+    monthOnly || !on('pace') ? none : Promise.all([getAll('/transactions', { start: monthRange(vy, vm - 3).start, end: prev.end, type: 'withdrawal' }).catch(() => []), refundsIn(monthRange(vy, vm - 3).start, prev.end).catch(() => [])]).then(([tx, rs]) => lessRefundTx(tx, rs)),     // three months back: the pace learns from all of them
     on('trends') ? Promise.all(months.map(mo => insight('/insight/expense/category', p(mo), monthsRs).catch(() => []))) : none,
     // The activity grid ignores the month at the top: it covers its own range up to today (from Firefly only, nothing when it is down)
-    on('activity') ? getAll('/transactions', { start: actRange === 'all' ? ALL_START : activityRange(actRange, t0, '').start, end: t0, type: 'withdrawal' }).catch(() => null) : none,
+    on('activity') ? (() => { const a0 = actRange === 'all' ? ALL_START : activityRange(actRange, t0, '').start; return Promise.all([getAll('/transactions', { start: a0, end: t0, type: 'withdrawal' }), refundsIn(a0, t0).catch(() => [])]).then(([tx, rs]) => lessRefundTx(tx, rs)).catch(() => null); })() : none,
     // The subscription audit works from the past year's charges (from Firefly only, a note when it can't be reached)
     on('subs') ? subCharges().then(cs => auditSubs(cs, t0)).catch(() => null) : none]);
   slowP.catch(() => {});
@@ -108,14 +109,14 @@ VIEWS[''] = async (r, paint) => {
     const idle = (k: string, why = future ? 'Fills in once this month starts.' : 'Shows for one month at a time: pick a month at the top.') => quietPanel(k, why);
     const W: [string, unknown][] = [
       ['networth', networthTile(netWorth, slow ? nw : undefined)],
-      ['spent', spentTile(last.spend, future && !last.spend ? 0 : before.spend, soFar ? 'the same point in ' + prev.short : prev.short, trend, all)],
-      ['earned', earnedTile(last.income, last.spend)],
+      ['spent', spentTile(last.spend, future && !last.spend ? 0 : before.spend, soFar ? 'the same point in ' + prev.short : prev.short, trend, all, !!soFar)],
+      ['earned', earnedTile(last.income, last.spend, !!soFar)],
       ['insights', monthOnly ? idle('insights') : wait('insights') ?? (insights || quietPanel('insights', 'Nothing unusual this month.'))],
       ['safe', future ? idle('safe') : wait('safe') ?? (safe || idle('safe'))],
       ['attention', attentionPanel({ uncat, uncatQ, bills: arr(bills), budgets: arr(budgets), limits, future, unusual })],
       ['spending', spendingPanel([...cats.values()], future, all, tileOpt('spending', 'count'), tileOpt('spending', 'compare'), noneHref('category', cur))],
       ['budgets', budgetsMini(arr(budgets), limits, all, tileOpt('budgets', 'unset'), all || future ? null : cur)],
-      ['cash', balancesPanel('Cash & savings', 'Bank account balances', cashShown, a => a.balance, false, tileOpt('cash', 'sparks') ? sparks : {})],
+      ['cash', balancesPanel('Cash & savings', 'Bank account balances', cashShown.filter(a => !INVEST_RE.test(a.name)), a => a.balance, false, tileOpt('cash', 'sparks') ? sparks : {}, cashShown.filter(a => INVEST_RE.test(a.name)))],
       ['cards', balancesPanel('Credit cards', 'Current balances owed', cardsShown, a => Math.max(0, -a.balance), true, tileOpt('cards', 'sparks') ? sparks : {})],
       ['loans', loansShown.length ? wait('loans') ?? loansPanel(loansShown, prog) : loansPanel(loansShown, {})], ['bills', billsMini(arr(bills), tileOpt('bills', 'days'), 4)],
       ['heatmap', monthOnly ? idle('heatmap') : wait('heatmap') ?? App.heatmapPanel(cur, dayTx.map(normGroup))],
@@ -219,16 +220,16 @@ export function samePoint(cur: { start: string }, prev: { start: string, end: st
   const e = addDays(prev.start, daysBetween(cur.start, today));
   return { start: prev.start, end: e < prev.end ? e : prev.end };
 }
-function spentTile(spend: number, before: number, prevShort: string, trend: CashMonth[], all: boolean) {
+function spentTile(spend: number, before: number, prevShort: string, trend: CashMonth[], all: boolean, part = false) {
   const change = before ? (spend - before) / before * 100 : 0, bars = trend.map(t => t.spend);
-  return html`<section class="panel stat"><div class="eyebrow">Spent</div><div class="stat-v num go-num" data-count="${spend}" data-go="${txHref({ type: 'withdrawal' })}" title="See these expenses">${money0(spend)}</div><div class="sub-s">${all ? 'of all time' : before ? html`<span class="${change > 0 ? 'up' : 'down'}">${change > 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(0)}%</span> vs ${prevShort}` : html`&nbsp;`}</div>${all ? '' : sparkBars(bars, Math.max(1, ...bars), trend.map(t => t.label + ' · ' + money0(t.spend)), trend.map(t => t.start && t.end ? txHref({ type: 'withdrawal' }, { start: t.start, end: t.end }) : ''))}</section>`;
+  return html`<section class="panel stat"><div class="eyebrow">Spent${part ? ' so far' : ''}</div><div class="stat-v num go-num" data-count="${spend}" data-go="${txHref({ type: 'withdrawal' })}" title="See these expenses">${money0(spend)}</div><div class="sub-s">${all ? 'of all time' : before ? html`<span class="${change > 0 ? 'up' : 'down'}">${change > 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(0)}%</span> vs ${prevShort}` : html`&nbsp;`}</div>${all ? '' : sparkBars(bars, Math.max(1, ...bars), trend.map(t => t.label + ' · ' + money0(t.spend)), trend.map(t => t.start && t.end ? txHref({ type: 'withdrawal' }, { start: t.start, end: t.end }) : ''))}</section>`;
 }
 // What came in, what went out, and what was kept: two bars on the same scale, so a month that ran over shows it at a glance
-function earnedTile(income: number, spend: number) {
+function earnedTile(income: number, spend: number, part = false) {
   const kept = income - spend, pct = income > 0 ? Math.round(kept / income * 100) : 0, top = Math.max(income, spend, 1);
   const bar = (label: string, v: number, c: string) => html`<div class="io-r" data-go="${txHref({ type: c === 'in' ? 'deposit' : 'withdrawal' })}"><span class="io-l">${label}</span><span class="io-t"><i class="${c}" style="width:${(v / top * 100).toFixed(1)}%"></i></span><span class="io-v num">${money0(v)}</span></div>`;
-  const sub = !income && !spend ? 'Nothing came in yet' : kept >= 0 ? html`Kept <span class="down num">${money0(kept)}</span>${income ? html` · ${pct}%` : ''}` : html`<span class="up num">${money0(-kept)}</span> more out than in`;
-  return html`<section class="panel stat earned"><div class="eyebrow">Earned</div><div class="stat-v num go-num" data-count="${income}" data-go="${txHref({ type: 'deposit' })}" title="See this income">${money0(income)}</div><div class="sub-s">${sub}</div><div class="io">${bar('In', income, 'in')}${bar('Out', spend, kept < 0 ? 'over' : 'out')}</div></section>`;
+  const sub = !income && !spend ? 'Nothing came in yet' : kept >= 0 ? html`Kept <span class="down num">${money0(kept)}</span>${income ? html` · <span class="${part ? 'neutral' : ''}"${part ? html` title="Not final: the month isn't over"` : ''}>${pct}%</span>` : ''}` : html`<span class="up num">${money0(-kept)}</span> more out than in`;
+  return html`<section class="panel stat earned"><div class="eyebrow">Earned${part ? ' so far' : ''}</div><div class="stat-v num go-num" data-count="${income}" data-go="${txHref({ type: 'deposit' })}" title="See this income">${money0(income)}</div><div class="sub-s">${sub}</div><div class="io">${bar('In', income, 'in')}${bar('Out', spend, kept < 0 ? 'over' : 'out')}</div></section>`;
 }
 function spendingPanel(cats: CatRow[], future: boolean, all: boolean, count = 6, compare = true, uncat = '') {
   const cmp = compare && !all, total = cats.reduce((t, c) => t + c.amt, 0);
@@ -240,9 +241,9 @@ function spendingPanel(cats: CatRow[], future: boolean, all: boolean, count = 6,
   const chart = shareChart(items, html`<span class="eyebrow">Spent</span><strong class="num">${money0(total)}</strong>`, 'Spending by category', { limit: count, ring: tileOpt('spending', 'style') !== 'bars', go: txHref({ type: 'withdrawal' }), rest: '#/categories' });
   return html`<section class="panel"><h2>Where it went</h2><p class="lead">Spending by category ${all ? 'of all time' : 'this month'}${cmp ? ', against last month' : ''}</p>${chart || html`<p class="empty">${future ? 'This month hasn’t started yet.' : 'No spending recorded ' + (all ? 'yet.' : 'this month.')}</p>`}</section>`;
 }
-function balancesPanel(title: string, lead: string, items: Account[], val: (a: Account) => number, paidOff: boolean, sparks: any = {}) {
+function balancesPanel(title: string, lead: string, items: Account[], val: (a: Account) => number, paidOff: boolean, sparks: any = {}, invest: Account[] = []) {
   const rows = htmlList([...items].sort((a, b) => val(b) - val(a)).map(a => html`<a class="row" href="#/account/${a.id}"><span class="name">${a.name}</span>${sparks[a.id] ? App.sparkline(sparks[a.id], paidOff) : ''}<span class="num">${paidOff && !val(a) ? html`<span class="down">Paid off</span>` : money(val(a))}</span></a>`));
-  return html`<section class="panel"><h2>${title}</h2><p class="lead">${lead}</p>${items.length ? html`<div class="total num">${money0(items.reduce((s, a) => s + val(a), 0))}</div><div class="list">${rows}</div>` : html`<p class="empty">None yet.</p>`}</section>`;
+  return html`<section class="panel"><h2>${title}</h2><p class="lead">${lead}</p>${items.length ? html`<div class="total num">${money0(items.reduce((s, a) => s + val(a), 0))}</div><div class="list">${rows}</div>` : html`<p class="empty">None yet.</p>`}${invest.length ? html`<a class="row" href="#/accounts" style="margin-top:6px;padding-top:10px;border-top:1px solid var(--line);text-decoration:none;color:inherit"><span class="name">Investments</span><span class="num neutral" style="text-decoration:none">${money0(invest.reduce((s, a) => s + val(a), 0))}</span></a>` : ''}</section>`;
 }
 function loansPanel(loans: Account[], prog: any = {}) {
   // The biggest four; the rest are a tap away on Loans, so one long list doesn't set the height of its whole row
@@ -296,7 +297,7 @@ function pacePanel(cur: Period, prev: Period, now: { date: string, total: number
 }
 // Savings rate: the share of each month's income you kept
 function savingsRate(trend: CashMonth[]) {
-  const pts = trend.map(t => ({ label: t.label, v: t.income > 0 ? Math.round((t.income - t.spend) / t.income * 100) : null, go: t.go }));
+  const pts = trend.map(t => ({ label: t.label, v: t.income > 0 ? Math.round((t.income - t.spend) / t.income * 100) : null, go: t.go, part: !!t.end && !!t.start && t.start <= todayIso() && t.end >= todayIso() }));
   const fm = fullMonths(trend), all = pts.filter(p => p.v != null) as { v: number }[], part = pts.filter((p, i) => p.v != null && fm.includes(trend[i])) as { v: number }[], got = part.length ? part : all, avg = got.length ? Math.round(got.reduce((s, p) => s + p.v, 0) / got.length) : 0;
   return html`<h2>Savings rate</h2><p class="lead">${got.length ? html`How much of each month’s income you kept · <strong>${avg}%</strong> on average` : 'Shows up once income is recorded'}</p>${got.length ? barChart(pts, v => v + '%', 'Share of income kept each month') : ''}`;
 }
@@ -326,7 +327,7 @@ function budgetsMini(budgets: ApiData[], limits: Record<string, BudgetLimit>, al
     const lim = limits[String(b.id)], spent = Math.abs((b.attributes.spent || []).reduce((s: number, x: ApiData) => s + num(x.sum), 0)), p = b.attributes.active !== false && lim ? budgetPace(spent, lim.amount, cur.start, cur.end, t, budgetAlert()) : null;
     return p && (p.tone === 'warn' || p.tone === 'over');
   }).length;
-  return html`<section class="panel"><div class="panel-head"><h2>Budgets</h2><a class="link" href="#/budgets">Insights</a></div><p class="lead">${all ? 'Spent of all time' : 'This month'}${ahead ? html` · <span class="up">${ahead} ahead of pace</span>` : ''}</p>${rows ? html`<div class="brings">${rows}</div>` : html`<p class="empty">No budgets yet.</p>`}</section>`;
+  return html`<section class="panel"><div class="panel-head"><h2>Budgets</h2><a class="link" href="#/budgets">Insights</a></div><p class="lead">${all ? 'Spent of all time' : 'This month'}${ahead ? html` · <span class="up">${ahead} over or near limit</span>` : ''}</p>${rows ? html`<div class="brings">${rows}</div>` : html`<p class="empty">No budgets yet.</p>`}</section>`;
 }
 // Where the money went by who was paid (Firefly's expense accounts), against last month
 function payeesPanel(now: ApiData[], prev: ApiData[], future: boolean, all: boolean, count = 8, compare = true) {
@@ -378,7 +379,8 @@ let actTok = 0;
 async function activityRedraw(): Promise<boolean> {
   const sec = document.querySelector<HTMLElement>('#dash .w[data-w="activity"] > section.panel'); if (!sec) return false;
   const tok = ++actTok, range = String(tileOpt('activity', 'range') || 'year'), t0 = todayIso();
-  const tx = await getAll('/transactions', { start: range === 'all' ? ALL_START : activityRange(range, t0, '').start, end: t0, type: 'withdrawal' }).catch(() => null);
+  const a0 = range === 'all' ? ALL_START : activityRange(range, t0, '').start;
+  const tx = await Promise.all([getAll('/transactions', { start: a0, end: t0, type: 'withdrawal' }), refundsIn(a0, t0).catch(() => [])]).then(([x, rs]) => lessRefundTx(x, rs)).catch(() => null);
   if (tok !== actTok) return true;      // a newer chip press owns the card now
   if (!sec.isConnected) return false;
   const tpl = document.createElement('template'); tpl.innerHTML = String(activityTile(tx, range, t0));

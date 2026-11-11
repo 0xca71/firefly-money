@@ -63,7 +63,8 @@ describe('Reports layout', () => {
     expect(reports).toContain('class="report-gap"');
   });
   it('every range has the same fixed-height grid, so changing the range in settings shifts nothing', () => {
-    expect(css).toMatch(/\.ag-scroll \{ height: 131px/);
+    expect(css).toMatch(/\.ag-scroll \{ height: 143px; margin: -6px;/);
+    expect(css).toMatch(/\.ag-scroll \{[^}]*padding: 6px/);
     expect(css).toMatch(/\.ag-none \{ height: 131px/);
     expect(css).toMatch(/\.panel\.ag-card \{ padding: 10px 12px/);
     for (const r of ['1m', 'year', 'all']) expect(String(activityPanel(buys, '2019-01-01', '2026-11-07', { range: r }))).toContain('--agm:14px');
@@ -73,5 +74,12 @@ describe('Reports layout', () => {
     expect(dash).toMatch(/k === 'activity' && App\.activityRedraw/);
     expect(ov).toMatch(/sec\.replaceWith\(next\)/);
     expect(ov).toMatch(/const methods = \{ attMore, activityRedraw, nwRedraw \}/);
+  });
+});
+
+describe('Overview scroller side room', () => {
+  it('the page scroller leaves room for card shadows on both sides (desktop 40px, phones 14px)', () => {
+    expect(css).toMatch(/#view > \.pg \{[^}]*margin-inline: calc\(-1 \* var\(--pg-side, 40px\)\); padding: var\(--head-gap\) var\(--pg-side, 40px\) var\(--pb\)/);
+    expect(css).toMatch(/max-width: 900px\) \{ #view > \.pg \{ --pg-side: 14px/);
   });
 });
