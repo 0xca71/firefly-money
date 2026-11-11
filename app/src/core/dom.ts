@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import { type Html, html, htmlList, raw } from './html';
 import { App, S, type State, el, fmtDate, fmtDay, monthRange, nowMonth } from './base';
 import { BUZZ_DELETE, buzz } from './haptics';
@@ -43,21 +44,21 @@ export const navItem = (r: string) => NAV.find(n => n[0] === r)!;
 export const todoTabs = (on: string) => html`<div class="tabs"><a href="#/review" class="${on === 'review' ? 'on' : ''}">Review new</a><a href="#/inbox" class="${on === 'inbox' ? 'on' : ''}">Categorize</a><a href="#/places" class="${on === 'places' ? 'on' : ''}">Places</a></div>`;
 export function drawNav(active: string) {
   const cur = NAV.find(n => n[0] === active);
-  document.title = cur && cur[0] ? cur[1] + ' · Money' : 'Money';      // one title per page, for the tab, history and bookmarks
-  const a = (r: string) => { const [, label, ic] = navItem(r); return html`<a href="#/${r}" class="${r === active ? 'on' : ''}" title="${label}" data-onmouseenter="App.prefetch('${r}')">${icon(ic)}<span>${label}</span></a>`; };
-  el('nav').innerHTML = String(htmlList(NAV_GROUPS.map(([title, rs]) => html`${title ? html`<div class="nav-h">${title}</div>` : ''}${htmlList(rs.map(a))}`)));
+  document.title = cur && cur[0] ? tr(cur[1]) + ' · Money' : 'Money';      // one title per page, for the tab, history and bookmarks
+  const a = (r: string) => { const [, label, ic] = navItem(r); return html`<a href="#/${r}" class="${r === active ? 'on' : ''}" title="${tr(label)}" data-onmouseenter="App.prefetch('${r}')">${icon(ic)}<span>${tr(label)}</span></a>`; };
+  el('nav').innerHTML = String(htmlList(NAV_GROUPS.map(([title, rs]) => html`${title ? html`<div class="nav-h">${tr(title)}</div>` : ''}${htmlList(rs.map(a))}`)));
   el('navFoot').innerHTML = String(a('settings'));
   if (window.App && App.drawTabbar) App.drawTabbar(active);
 }
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 export function toast(msg: string) {
-  const t = el('toast'); t.textContent = msg; t.classList.add('show');
+  const t = el('toast'); t.textContent = tr(msg); t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 export function confirmBox(title: string, text: string, okLabel = 'Delete') {
   return new Promise<boolean>(res => {
     const d = el<HTMLDialogElement>('confirm');
-    d.innerHTML = String(html`<h3>${title}</h3><p>${text}</p><div class="btns"><button class="btn" value="no">Cancel</button><button class="btn primary" value="yes">${okLabel}</button></div>`);
+    d.innerHTML = String(html`<h3>${tr(title)}</h3><p>${tr(text)}</p><div class="btns"><button class="btn" value="no">Cancel</button><button class="btn primary" value="yes">${tr(okLabel)}</button></div>`);
     d.querySelectorAll('button').forEach(b => b.onclick = () => { if (b.value === 'yes') buzz(BUZZ_DELETE); d.close(); res(b.value === 'yes'); });
     d.oncancel = () => res(false);
     d.showModal();
@@ -159,7 +160,7 @@ export function monthNav() {
   return html`<div class="month"><button class="round" data-onclick="App.shiftMonth(-1)" aria-label="Previous month">${ICON_PREV}</button><span title="${fmtDate(r.start)} – ${fmtDate(r.end)}"><i class="ml">${r.label}</i><i class="ms">${r.short} ${r.y}</i>${r.start.endsWith('-01') ? '' : html`<small class="cycle">${fmtDay(r.start)} – ${fmtDay(r.end)}</small>`}</span><button class="round" data-onclick="App.shiftMonth(1)" aria-label="Next month"${isNow ? ' disabled' : ''}>${ICON_NEXT}</button>${ahead !== 0 ? html`<button class="btn small" style="margin-left:6px" data-onclick="App.thisMonth()">Today</button>` : html`<button class="btn small today-gap" style="margin-left:6px" aria-hidden="true" tabindex="-1" disabled>Today</button>`}<button class="btn small" style="margin-left:6px" data-onclick="App.allTime()">All time</button></div>`;
 }
 export function head(title: string | Html, sub: string | Html, actions?: string | Html) {
-  return html`<div class="head"><div><h1>${title}</h1>${sub ? html`<p class="sub">${sub}</p>` : ''}</div><div class="actions">${actions || ''}</div></div>`;
+  return html`<div class="head"><div><h1>${typeof title === 'string' ? tr(title) : title}</h1>${sub ? html`<p class="sub">${sub}</p>` : ''}</div><div class="actions">${actions || ''}</div></div>`;
 }
 /* ---------- Empty states: a drawn icon, what the page is for, and the one thing to do next ---------- */
 const EMPTY_ICONS: Record<string, string> = {
@@ -173,9 +174,9 @@ const EMPTY_ICONS: Record<string, string> = {
 };
 export function emptyState(kind: keyof typeof EMPTY_ICONS | string, title: string, text: string, actions?: string | Html) {
   const d = EMPTY_ICONS[kind] || EMPTY_ICONS.list;
-  return html`<div class="empty-state"><div class="es-ic" aria-hidden="true">${raw(`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`)}</div><h3>${title}</h3><p>${text}</p>${actions ? html`<div class="es-act">${actions}</div>` : ''}</div>`;
+  return html`<div class="empty-state"><div class="es-ic" aria-hidden="true">${raw(`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`)}</div><h3>${tr(title)}</h3><p>${tr(text)}</p>${actions ? html`<div class="es-act">${actions}</div>` : ''}</div>`;
 }
-export const opt = (v: string | number, label: string | number, sel: unknown) => html`<option value="${v}"${String(v) === String(sel) ? ' selected' : ''}>${label}</option>`;
+export const opt = (v: string | number, label: string | number, sel: unknown) => html`<option value="${v}"${String(v) === String(sel) ? ' selected' : ''}>${tr(String(label))}</option>`;
 
 // The methods markup handlers call (see events.ts), added to App and to its type
 const methods = {
