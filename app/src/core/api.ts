@@ -4,8 +4,8 @@ import { progPages, progReq } from './progress';
 
 /* ================= API ================= */
 export class AuthError extends Error {}
-// What api() throws for a failed response: the message to show, and the HTTP status.
-export type ApiError = Error & { status?: number, network?: boolean };
+// Failed responses retain field errors so forms can show them beside the relevant input.
+export type ApiError = Error & { status?: number, network?: boolean, errors?: Record<string, string[]> };
 // Responses are kept in memory until something changes (your edits), you pull to refresh, or the app comes back
 // after a while. Nothing is saved on the device (see dropSavedCopies).
 export type CacheEntry = { t: number, v: ApiData };
@@ -159,7 +159,9 @@ async function apiRaw(u: URL, opt: ApiOpts): Promise<ApiData> {
     if (r.status === 404 && !j) msg = tr('Not found');
     if (r.status === 409 && (!j || !j.message)) msg = tr('Firefly refused because this is still in use.');
     if (NET_BUSY.has(r.status) && !(j && j.message)) msg = tr('Firefly III didn’t respond ({status}). It may be busy or restarting. Try again in a moment.', { status: r.status });
-    const err: ApiError = new Error(msg); err.status = r.status; throw err;
+    const err: ApiError = new Error(msg); err.status = r.status;
+    if (r.status === 422 && j?.errors && typeof j.errors === 'object' && !Array.isArray(j.errors)) err.errors = j.errors;
+    throw err;
   }
   return j;
 }

@@ -204,6 +204,7 @@ export const transactionsZhCN: Readonly<Record<string, string>> = {
   "Couldn’t undo: {error}": "无法撤销：{error}",
   "Put back": "已恢复",
   "Pick a category first.": "请先选择分类。",
+  "Fill in this field.": "请填写此项。",
   "Saved": "已保存",
   "{count} transactions": "{count} 笔交易",
   "rule created": "规则已创建",

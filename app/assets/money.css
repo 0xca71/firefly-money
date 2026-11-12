@@ -360,6 +360,33 @@
   .split { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 18px 4px; margin-bottom: 14px; }
   .split .split-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: 600; font-size: 13px; }
   .form-err { background: var(--faint); color: var(--spend); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; font-size: 13.5px; }
+  /* Motion Prompt #159 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#159 */
+  #txForm :is(input, select, textarea) { scroll-margin-block: 18px; transition: border-color .15s var(--ease-out), background-color .15s var(--ease-out); }
+  #txForm [aria-invalid="true"] { border-color: var(--spend-t); background-color: color-mix(in srgb, var(--spend) 6%, var(--panel)); }
+  #txForm .field-corrected { border-color: var(--good-t); transition-duration: .25s; }
+  .field-feedback { display: grid; grid-template-rows: 0fr; opacity: 0; font-size: 13px; line-height: 1.45; transition: grid-template-rows .15s var(--ease-out), opacity .15s var(--ease-out); }
+  .field-feedback > span { min-height: 0; overflow: hidden; }
+  .field-feedback.invalid, .field-feedback.corrected { grid-template-rows: 1fr; opacity: 1; }
+  .field-feedback.invalid { color: var(--spend-t); }
+  .field-feedback.invalid > span::before { content: '!'; display: inline-block; font-weight: 700; margin-right: 6px; }
+  .field-feedback.corrected { color: var(--good-t); transition-duration: .25s; }
+  .field-feedback.corrected > span::before { content: '✓'; display: inline-block; margin-right: 6px; animation: fieldCheck .25s var(--ease-spring); }
+  @keyframes fieldCheck { from { transform: scale(0); } to { transform: scale(1); } }
+  /* Motion Prompt #160 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#160
+     Keep the original label's footprint instead of shrinking the footer button into a circle. */
+  #txSave.tx-submit { position: relative; opacity: 1; transition: color .2s var(--ease-out), background-color .2s var(--ease-out), border-color .2s var(--ease-out); }
+  .tx-submit .tx-idle { visibility: hidden; }
+  .tx-status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+  .tx-status svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .tx-spinner { animation: txSpin .7s linear infinite; }
+  .tx-spinner circle { opacity: .25; }
+  .tx-status .tx-check { display: none; }
+  #txSave[data-state="saved"] { color: var(--good-t); background: var(--panel); border-color: var(--good-t); }
+  [data-state="saved"] .tx-spinner { display: none; }
+  [data-state="saved"] .tx-status .tx-check { display: block; }
+  .tx-check path { stroke-dasharray: 1; animation: txCheck .25s linear both; }
+  @keyframes txSpin { to { transform: rotate(360deg); } }
+  @keyframes txCheck { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
   .hint { font-size: 12px; color: var(--muted); margin: -8px 0 14px; }
   dialog { border: 1px solid var(--line); border-radius: 18px; padding: 24px; background: var(--panel); color: var(--text); max-width: 400px; box-shadow: var(--shadow); }
   dialog::backdrop { background: rgba(20, 20, 18, .3); }
@@ -535,6 +562,12 @@
     :is(#view.anim, .pop) .fill { transform-origin: left; animation: growRight .8s .2s var(--ease-out) both; }
     :is(#view.anim, .pop) :is(.donut, .ring) .seg { animation: sweepIn .6s cubic-bezier(.3, 0, .2, 1) both; animation-delay: calc(.25s + var(--at, 0) * .9s); }
     :is(#view.anim, .pop) .chart .pt .dot { animation: fadeIn .4s 1.1s both; }
+    /* Motion Prompt #004 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#004
+       Clip the dashed reference/projection instead of replacing their meaningful dash patterns with a solid stroke. */
+    :is(#view.anim, .pop) .bpace .pace-usual { animation: paceReveal .8s .1s var(--ease-glide) both; }
+    :is(#view.anim, .pop) .bpace .ahead { animation: paceReveal .3s 1.3s var(--ease-out) both; }
+    :is(#view.anim, .pop) .bpace .pace-tip { animation: fadeIn .2s 1.3s both; }
+    @keyframes paceReveal { from { clip-path: inset(-8px 100% -8px -8px); } to { clip-path: inset(-8px -8px -8px -8px); } }
   }
   /* ---------- Morph (core/morph.ts): a redraw in the same layout moves from the old values to the new ---------- */
   /* An amount rolling like an odometer: each changed digit is a column one line tall, its strip of digits moved by
@@ -1576,7 +1609,9 @@
   .dbars .db.now i { background: var(--accent); }
   .dbars .db.fut { cursor: default; }
   .dbars .db.fut i { background: var(--faint); }
-  #view.anim:not(.calm) .dbars .db i { animation: growUp .55s var(--ease-out) both; }
+  /* Motion Prompt #002 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#002
+     Compress the stagger to 12ms per day; even 31 bars finish in under a second. Month-change morphs stay independent. */
+  #view.anim:not(.calm) .dbars .db i { animation: growUp .55s var(--ease-out) both; animation-delay: calc(.08s + var(--j, 0) * 12ms); }
   .txbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
   .txbar .search { flex: 0 1 340px; max-width: none; }
   .txbar .search input { border-radius: 999px; }
@@ -1866,8 +1901,15 @@
   .panel.quiet .lead { margin-bottom: 0; }
   .attention .all-clear { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; color: var(--muted); font-size: 13.5px; }
   .attention .all-clear span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); font-size: 12px; }
-  .attention .att-more { display: contents; }
-  .attention .att-more[hidden] { display: none; }
+  /* Motion Prompt #052 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#052
+     Cubic-bezier approximation of the reference's easeInOutCubic; natural content height replaces the demo's 58px. */
+  .attention .att-more { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows .32s cubic-bezier(.645, .045, .355, 1), opacity .32s cubic-bezier(.645, .045, .355, 1), visibility 0s .32s; }
+  .attention .att-more.open { grid-template-rows: 1fr; opacity: 1; visibility: visible; transition-duration: .35s, .35s, 0s; transition-delay: 0s; }
+  .attention .att-content { min-height: 0; overflow: hidden; }
+  .attention .att-content > .row:first-child { border-top: 1px solid var(--line); padding-top: 10px; }
+  .attention .att-toggle { display: inline-flex; align-items: center; gap: 5px; }
+  .att-toggle svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; transition: transform .32s cubic-bezier(.645, .045, .355, 1); }
+  .att-toggle[aria-expanded="true"] svg { transform: rotate(180deg); transition-duration: .35s; }
   @media (min-width: 700px) { .attention :is(.list, .all-clear) { min-height: var(--att-h, 88px); } }
   .attention .all-clear { align-items: flex-start; }
   .dash-ghost > .wctl { visibility: hidden; }
@@ -1963,7 +2005,18 @@
   .tl-end::before { bottom: auto !important; height: 11px; }
   .tl-end p { margin: 0; color: var(--muted); font-size: 13px; line-height: 22px; }
   .tl-end p strong { color: var(--text); }
-  .tl-new { animation: riseIn .45s var(--ease-out) both; }
+  /* Motion Prompt #145 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#145
+     One-shot reveals for appended months; animate each connector in place, never the whole timeline row. */
+  @media (prefers-reduced-motion: no-preference) {
+    .tl-wait::before { opacity: 0; }
+    .tl-wait > .tl-dot { opacity: .35; }
+    .tl-reveal::before { transform-origin: top; animation: tlLine .45s var(--ease-out) both; animation-delay: var(--tl-delay, 0ms); }
+    .tl-reveal > .tl-dot { animation: tlNode .22s var(--ease-out) both; animation-delay: calc(var(--tl-delay, 0ms) + .08s); }
+    .tl-reveal > .tl-card { animation: riseIn .45s var(--ease-out) both; animation-delay: var(--tl-delay, 0ms); }
+    .tl-reveal > .tl-date, .tl-year.tl-reveal > span { animation: fadeIn .25s ease both; animation-delay: calc(var(--tl-delay, 0ms) + .08s); }
+  }
+  @keyframes tlLine { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  @keyframes tlNode { from { opacity: .35; transform: scale(.5); } to { opacity: 1; transform: scale(1); } }
   @media (min-width: 1000px) {
     .tl { --gap: 40px; }
     .tl > li { --sx: 50%; }
@@ -1982,16 +2035,11 @@
   .nw-tl { display: inline-flex; align-items: center; gap: 1px; color: var(--muted); text-decoration: none; }
   .nw-tl svg { width: 13px; height: 13px; }
   @media (hover: hover) { .nw-tl:hover { color: var(--text); } }
-  /* ---------- Hover: the sidebar swells toward the mouse (mouse and trackpad only, never with Reduce motion) ---------- */
-  /* Nothing with text in it moves by CSS transition or by a part of a pixel: Chrome on Windows draws text that's
-     animating (or sitting between pixels) blurred until it settles. So dock.ts moves text in whole device
-     pixels themselves, and only icons (SVG, which stays sharp) scale with transitions. */
-  /* The sidebar swells like the macOS Dock: dock.ts sets --dock (0 to 1) on each link by how near the pointer is, and
-     --dock-x, the label's nudge in whole pixels. The rows and the hover pill stay where they are. */
+  /* Motion Prompt #010 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#010
+     A short, restrained overshoot for the active icon only. Labels, neighbours and hover hit areas stay still. */
   @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-    .side .nav a svg { scale: calc(1 + var(--dock, 0) * .3); transition: scale .2s var(--ease-out); }
-    .side .nav a span { translate: var(--dock-x, 0px) 0; }
-    html.side-mini .side .nav a svg { scale: calc(1 + var(--dock, 0) * .42); }
+    .side .nav a svg { scale: 1; translate: 0 0; transform-origin: center; transition: scale .32s cubic-bezier(.34, 1.56, .64, 1), translate .32s cubic-bezier(.34, 1.56, .64, 1); }
+    .side .nav a:is(:hover, :focus-visible) svg { scale: 1.18; translate: 0 -1px; }
     .side-search svg, .side-tg svg { transition: scale .2s var(--ease-out), transform .34s var(--ease-glide); }
     .side-search:hover svg, .side-tg:hover svg { scale: 1.14; }
   }
@@ -2370,7 +2418,8 @@ html[data-theme="glass"] .ag-c.l3, html[data-theme="glass"] .ag-c.l4 { box-shado
   .side .side-search { height: var(--row); margin-bottom: clamp(2px, 1.3vh, 14px); }
   .side .nav a, .side .foot .nav a { min-height: var(--row); padding-block: 0; box-sizing: border-box; }
   .side .foot .nav a { margin-bottom: clamp(0px, .6vh, 6px); }
-  .side .nav-h { height: var(--hh); padding-top: calc(var(--hh) * .42); padding-bottom: calc(var(--hh) * .13); box-sizing: border-box; }
+  /* Reserve a full text line plus a gap above the first link, even when the rail compresses on short windows. */
+  .side .nav-h { height: calc(1.5em + var(--hh) * .42 + 6px); line-height: 1.5; padding-top: calc(var(--hh) * .42); padding-bottom: 6px; box-sizing: border-box; }
   html.side-mini .side .nav-h { height: var(--hm); padding-top: 0; padding-bottom: 0; }
   .side .foot a, .side .foot button { padding-block: 0; min-height: max(22px, calc(var(--row) - 4px)); line-height: 1.2; }
 }
@@ -2490,12 +2539,23 @@ html[data-theme="dark"] { --e1: var(--rim), var(--lift); --e2: 0 1px 0 rgba(0,0,
 :is(html[data-theme="light"], html[data-theme="dark"], html:not([data-theme])) :is(.panel, .kpi, .insight, .daycards tbody.day) { border-color: color-mix(in srgb, var(--line) 60%, transparent); }
 :is(html[data-theme="light"], html[data-theme="dark"], html:not([data-theme])) :is(.list .row, .sk-row) { border-top-color: color-mix(in srgb, var(--line) 55%, transparent); }
 
-/* Sheets settle like a spring. The side drawer never overshoots (it would show a gap at the screen edge); the phone sheet
-   may, because the sheet fills in under itself (.drawer::after) */
+/* The side drawer settles without crossing its screen-edge endpoint. */
 @supports (animation-timing-function: linear(0, 1)) {
   :root { --ease-settle: linear(0, .3 7%, .6 15%, .8 25%, .92 36%, .975 50%, .995 68%, 1); }
   .drawer { transition-duration: .5s; transition-timing-function: var(--ease-settle); }
-  @media (max-width: 700px) { .drawer { transition-timing-function: var(--ease-spring); } }
+}
+/* Motion Prompt #051 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#051
+   Motion Prompt #010 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#010
+   Soft-spring adaptation: continuous arrival with one small rebound, not a separate bounce after stopping. */
+@media (max-width: 700px) {
+  :root { --ease-sheet: cubic-bezier(.22, 1.12, .36, 1); }
+  .drawer { transition-duration: .4s; transition-timing-function: cubic-bezier(.215, .61, .355, 1); }
+  .drawer.open { transition-duration: .56s; transition-timing-function: var(--ease-sheet); }
+  html.vt-drawer-open::view-transition-new(drawer) { animation-duration: .56s; animation-timing-function: var(--ease-sheet); }
+  @supports (animation-timing-function: linear(0, 1)) {
+    /* Damped spring (zeta .8, omega 18), sampled over .56s: about 1.5% overshoot, with a near-zero final velocity. */
+    :root { --ease-sheet: linear(0, .0419, .1413, .26773, .40074, .52743, .64051, .73663, .81507, .87677, .92358, .95779, .98173, .99762, 1.00742, 1.01279, 1.01505, 1.01528, 1.01424, 1.01254, 1.01055, 1.00855, 1.0067, 1.00508, 1.00372, 1.00263, 1.00179, 1.00115, 1.0007, 1.00038, 1.00018, 1.00006, 1); }
+  }
 }
 
 /* Drag along a line chart to read it point by point (features/refine.ts); a vertical swipe still scrolls the page */

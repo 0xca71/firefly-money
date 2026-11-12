@@ -1,12 +1,12 @@
 import { tr } from '../core/i18n';
 import { type Html, html, htmlList } from '../core/html';
-import { AuthError, api, type ApiError } from '../core/api';
+import { AuthError, api, sleep, type ApiError } from '../core/api';
 import { showLogin } from '../core/auth';
 import { type ApiData, App, S, arr, el, fmtDate, fmtDay, isoDate, money, num, sameName, todayIso, type AppApi, type Field } from '../core/base';
 import { LS } from '../core/helpers';
 import { BUZZ_SAVE, buzz } from '../core/haptics';
-import { closeDrawer, confirmBox, formError, heroParts, icon, openDrawer, opt, toast, vt, vtName } from '../core/dom';
-import { type Group, amtInner, avatarHtml, normGroup, payeeOf, signed } from '../core/feed';
+import { closeDrawer, confirmBox, heroParts, icon, openDrawer, opt, toast, vt, vtName } from '../core/dom';
+import { type Group, avatarHtml, normGroup, payeeOf, signed } from '../core/feed';
 import { hoursText, lensOn } from '../core/worklens';
 import { type Account, invalidate, isAsset, isCard, isLiab, lists } from '../core/lists';
 import { REFUND_TAG, isRefundTag, refundLinkType } from './refunds';
@@ -142,10 +142,12 @@ export function renderTxForm() {
       if (before) box.before(c); else form.append(c);
     });
     const ft = el('drawer').querySelector(':scope > footer'); if (ft) ft.innerHTML = String(foot);
+    bindTxValidation(form as HTMLFormElement);
     el('drawerBody').scrollTop = scroll;
     return;
   }
   openDrawer(tr(f.id ? 'Edit transaction' : f.draft ? 'Draft' : f.refundOf ? 'Refund' : 'New transaction'), body, foot);
+  bindTxValidation(el<HTMLFormElement>('txForm'));
   if (!wasOpen) { collectTx(); S.formBase = JSON.stringify(S.form); }     // what it looked like when it opened, to tell later whether anything was typed
   if (wasOpen) el('drawerBody').scrollTop = scroll;
   if (f.id && (window.App as Partial<AppApi>).loadTxExtras) App.loadTxExtras(f.id, f.splits.map(s => s.jid).filter(Boolean));
@@ -205,6 +207,100 @@ function buildTxPayload() {
   if (!edit) body.error_if_duplicate_hash = false;
   return body;
 }
+
+// Motion Prompt #159 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#159
+const boundTxForms = new WeakSet<HTMLFormElement>();
+const txServerErrors = new WeakMap<Field, string>();
+const TX_FIELDS = '#f-date, #f-title, #f-main, #f-src, #f-dst, .split [data-k]';
+function txFieldIssue(field: Field): string {
+  const server = txServerErrors.get(field); if (server) return server;
+  if (!field.validity.valid) return field.validationMessage;
+  if (field.required && !field.value.trim()) return tr('Fill in this field.');
+  if (field.id === 'f-dst' && field.value && field.value === el<Field>('f-src')?.value) return tr('A transfer needs two different accounts.');
+  if (field.dataset.k === 'fc' && !field.value && num(field.closest('.split')?.querySelector<Field>('[data-k="fa"]')?.value) > 0) return tr('Pick the currency for the foreign amount.');
+  return '';
+}
+function txFieldFeedback(field: Field, message: string) {
+  const label = field.closest('label'); if (!label) return;
+  if (!field.id) field.id = 'tx-' + field.closest<HTMLElement>('.split')!.dataset.i + '-' + field.dataset.k;
+  let feedback = label.querySelector<HTMLElement>('.field-feedback');
+  if (!feedback && !message) return;
+  if (!feedback) {
+    feedback = document.createElement('span'); feedback.className = 'field-feedback'; feedback.id = field.id + '-feedback';
+    feedback.setAttribute('aria-live', 'polite'); feedback.append(document.createElement('span')); label.append(feedback);
+    const described = field.getAttribute('aria-describedby');
+    field.setAttribute('aria-describedby', [described, feedback.id].filter(Boolean).join(' '));
+  }
+  const wasInvalid = field.getAttribute('aria-invalid') === 'true';
+  field.setAttribute('aria-invalid', String(!!message)); field.dataset.checked = 'true';
+  field.classList.toggle('field-corrected', !message && wasInvalid);
+  feedback.classList.toggle('invalid', !!message); feedback.classList.toggle('corrected', !message && wasInvalid);
+  feedback.firstElementChild!.textContent = message || (wasInvalid ? tr('Updated') : '');
+}
+function focusTxField(field: Field) {
+  field.focus({ preventScroll: true }); field.scrollIntoView({ block: 'nearest' });
+}
+function bindTxValidation(form: HTMLFormElement) {
+  if (boundTxForms.has(form)) return;
+  boundTxForms.add(form); form.noValidate = true;
+  const check = (e: Event) => {
+    const field = e.target;
+    if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement) || !field.matches(TX_FIELDS)) return;
+    if (e.type === 'focusout') field.dataset.checked = 'true';
+    else txServerErrors.delete(field);
+    if (field.dataset.checked) txFieldFeedback(field, txFieldIssue(field));
+    const related = field.id === 'f-src' ? form.querySelector<Field>('#f-dst')
+      : field.dataset.k === 'fa' ? field.closest('.split')!.querySelector<Field>('[data-k="fc"]') : null;
+    if (related?.dataset.checked) { txServerErrors.delete(related); txFieldFeedback(related, txFieldIssue(related)); }
+  };
+  form.addEventListener('focusout', check); form.addEventListener('input', check); form.addEventListener('change', check);
+}
+function validateTx(form: HTMLFormElement): boolean {
+  let first: Field | null = null;
+  form.querySelectorAll<Field>(TX_FIELDS).forEach(field => {
+    field.dataset.checked = 'true';
+    const message = txFieldIssue(field); txFieldFeedback(field, message);
+    if (message && !first) first = field;
+  });
+  if (first) focusTxField(first);
+  return !first;
+}
+function txSaveError(form: HTMLFormElement, f: TxForm, error: ApiError) {
+  const unmatched: string[] = [], mapped = new Map<Field, string[]>();
+  for (const [key, messages] of Object.entries(error.errors || {})) {
+    let field: Field | null = key === 'group_title' ? form.querySelector('#f-title') : null;
+    const match = /^transactions\.(\d+)\.([a-z_]+)(?:\.\d+)?$/.exec(key);
+    if (match) {
+      const [, index, name] = match;
+      const shared = name === 'date' ? 'f-date' : /^(source|destination)_(id|name)$/.test(name)
+        ? f.type === 'transfer' ? (name.startsWith('source') ? 'f-src' : 'f-dst')
+          : name.startsWith(f.type === 'withdrawal' ? 'source' : 'destination') ? 'f-main' : '' : '';
+      const splitKey = /^(source|destination)_(id|name)$/.test(name) ? 'counter'
+        : ({ category_name: 'category', category_id: 'category', budget_id: 'budget', bill_id: 'bill', foreign_amount: 'fa', foreign_currency_code: 'fc', foreign_currency_id: 'fc' } as Record<string, string>)[name] || name;
+      field = shared ? form.querySelector<Field>('#' + shared) : form.querySelector<Field>('.split[data-i="' + index + '"] [data-k="' + splitKey + '"]');
+    }
+    const text = Array.isArray(messages) ? messages : [String(messages)];
+    if (field) mapped.set(field, [...(mapped.get(field) || []), ...text]); else unmatched.push(...text);
+  }
+  for (const [field, messages] of mapped) {
+    const message = messages.join(' '); txServerErrors.set(field, message); txFieldFeedback(field, message);
+  }
+  if (!mapped.size || unmatched.length) {
+    let summary = form.querySelector<HTMLElement>('.form-err');
+    if (!summary) { summary = document.createElement('p'); summary.className = 'form-err'; summary.setAttribute('role', 'alert'); form.append(summary); }
+    summary.textContent = unmatched.length ? unmatched.join(' ') : error.message;
+  }
+  const first = form.querySelector<Field>('[aria-invalid="true"]');
+  if (first) focusTxField(first);
+}
+
+// Motion Prompt #160 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#160
+const pendingTx = new WeakSet<TxForm>();
+function txSaveState(btn: HTMLButtonElement, label: string, state: 'saving' | 'saved') {
+  btn.classList.add('tx-submit'); btn.dataset.state = state; btn.setAttribute('aria-busy', String(state === 'saving'));
+  const status = tr(state === 'saving' ? 'Saving…' : 'Saved'); btn.setAttribute('aria-label', status);
+  btn.innerHTML = String(html`<span class="tx-idle">${label}</span><span class="tx-status" role="status"><svg class="tx-spinner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 8.09 15.88"/></svg><svg class="tx-check" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M4 12.32l5.76 5.76 10.56-11.52"/></svg><span>${status}</span></span>`);
+}
 /* ---------- Saved already? (a reply that never came back) ----------
    If the connection drops after Firefly saved a new transaction, the form shows an error and pressing Save again
    would add it twice. So after a save that got no answer, the next Save first asks Firefly whether a transaction
@@ -245,37 +341,31 @@ async function alreadyThere(body: ReturnType<typeof buildTxPayload>): Promise<bo
   catch (e) { if (e instanceof AuthError) throw e; return false; }      // can't tell: let the save go ahead
 }
 async function saveTx(formEl: HTMLFormElement) {
+  const f: TxForm | null = S.form;
+  if (!f || !formEl.isConnected || pendingTx.has(f)) return;
   collectTx();
-  const f: TxForm = S.form;
-  if (f.type === 'transfer') {
-    if (!f.src || !f.dst) return formError('Choose both accounts for the transfer.');
-    if (f.src === f.dst) return formError('A transfer needs two different accounts.');
-  } else if (!f.main) return formError('Choose the account.');
-  for (const s of f.splits) {
-    if (s.fa && num(s.fa) > 0 && !s.fc) return formError('Pick the currency for the foreign amount.');
-    if (!s.description.trim()) return formError('Every part needs a description.');
-    if (!(num(s.amount) > 0)) return formError('Every part needs an amount above zero.');
-  }
-  // Optimistic: close right away and show the change; if Firefly refuses, reopen the form with the error.
-  const body = buildTxPayload();
-  if (!f.id && f.maybeSaved) {
-    let saved = false;
-    try { saved = await alreadySaved(body); } catch (e) { if (e instanceof AuthError) return showLogin(e.message); }
-    if (saved && !await confirmBox('This looks already saved', 'A transaction with the same description, amount and date was added a moment ago. Save anyway?', 'Save anyway')) return;
-  } else if (!f.id) {
-    let dup = false;
-    try { dup = await alreadyThere(body); } catch (e) { if (e instanceof AuthError) return showLogin(e.message); }
-    if (dup && !await confirmBox('Already have this one?', 'A transaction with the same description, amount and date is already there. Save it again?', 'Save anyway')) return;
-  }
-  const row = f.id && document.querySelector<HTMLElement>('#view tr[data-gid="' + f.id + '"]');
-  closeDrawer();
-  if (row) {
-    row.classList.add('saving');
-    const d = row.querySelector('.desc'); if (d && f.splits.length === 1) d.textContent = f.splits[0].description;
-    const a = row.querySelector('.amt'); if (a && f.splits.length === 1 && f.type !== 'transfer') a.innerHTML = String(amtInner((f.type === 'deposit' ? 1 : -1) * Math.abs(num(f.splits[0].amount))));
-    const c = row.querySelector('.catcol span'); if (c && f.splits.length === 1) { c.textContent = f.splits[0].category || '—'; }
-  } else toast('Saving…');
+  if (!validateTx(formEl)) return;
+  const body = buildTxPayload(), btn = el<HTMLButtonElement>('txSave'), label = btn.textContent!;
+  const controls = [...formEl.querySelectorAll<Field | HTMLButtonElement>('input, select, textarea, button'),
+    ...el('drawer').querySelectorAll<HTMLButtonElement>('footer button:not([data-onclick="App.closeDrawer()"])')].filter(c => !c.disabled);
+  const current = () => S.form === f && formEl.isConnected && el('drawer').classList.contains('open');
+  pendingTx.add(f); controls.forEach(c => { c.disabled = true; }); formEl.setAttribute('aria-busy', 'true');
+  formEl.querySelector('.form-err')?.remove(); txSaveState(btn, label, 'saving');
+  let error: ApiError | undefined, sent = false;
   try {
+    if (!f.id && f.maybeSaved) {
+      let saved = false;
+      try { saved = await alreadySaved(body); } catch (e) { if (e instanceof AuthError) throw e; }
+      if (!current()) return;
+      if (saved && !await confirmBox('This looks already saved', 'A transaction with the same description, amount and date was added a moment ago. Save anyway?', 'Save anyway')) return;
+    } else if (!f.id) {
+      let dup = false;
+      try { dup = await alreadyThere(body); } catch (e) { if (e instanceof AuthError) throw e; }
+      if (!current()) return;
+      if (dup && !await confirmBox('Already have this one?', 'A transaction with the same description, amount and date is already there. Save it again?', 'Save anyway')) return;
+    }
+    if (!current()) return;
+    sent = true;
     if (f.id) await api('/transactions/' + f.id, { method: 'PUT', body });
     else {
       const res = await api('/transactions', { method: 'POST', body });
@@ -283,14 +373,26 @@ async function saveTx(formEl: HTMLFormElement) {
     }
     if (f.draft) dropDraft(f.draft);
     if (!f.id && !f.refundOf) rememberTx(f);
-    buzz(BUZZ_SAVE); invalidate(); toast(f.id ? 'Transaction updated' : 'Transaction added'); route();
+    buzz(BUZZ_SAVE); invalidate();
+    if (current()) {
+      txSaveState(btn, label, 'saved'); formEl.setAttribute('aria-busy', 'false');
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) await sleep(250);
+      if (current()) closeDrawer();
+    }
+    toast(f.id ? 'Transaction updated' : 'Transaction added'); route();
   } catch (e) {
-    if (e instanceof AuthError) return showLogin(e.message);
-    if (row) row.classList.remove('saving');
-    // no answer came back (dropped connection, timeout, server error): Firefly may have saved it all the same
-    if (!f.id && (!(e as ApiError).status || (e as ApiError).status! >= 500)) f.maybeSaved = true;
-    S.drawerHero = null; S.form = f; renderTxForm(); formError((e as Error).message);
+    error = e as ApiError;
+    // A write without an answer may have succeeded; retain the existing duplicate check before retrying.
+    if (sent && !f.id && (!error.status || error.status >= 500)) f.maybeSaved = true;
+  } finally {
+    pendingTx.delete(f); controls.forEach(c => { c.disabled = false; }); formEl.removeAttribute('aria-busy');
+    btn.classList.remove('tx-submit'); delete btn.dataset.state; btn.removeAttribute('aria-busy'); btn.removeAttribute('aria-label'); btn.textContent = label;
   }
+  if (!error) return;
+  if (error instanceof AuthError) return showLogin(error.message);
+  if (current()) txSaveError(formEl, f, error);
+  else if (!S.form) { S.drawerHero = null; S.form = f; renderTxForm(); txSaveError(el<HTMLFormElement>('txForm'), f, error); }
+  else toast(error.message);
 }
 async function deleteTx() {
   const f = S.form; if (!f || !f.id) return;
