@@ -208,7 +208,7 @@ function attentionPanel({ uncat, bills, budgets, limits, future, unusual }: { un
   if (!items.length) return html`<section class="panel attention"><h2>Needs attention</h2><p class="lead">Quick things to tidy up</p><p class="all-clear"><span aria-hidden="true">✓</span> All caught up</p></section>`;
   // Two rows at most, so the card is the same height from month to month; the rest open from the heading
   const more = items.length - 2;
-  return html`<section class="panel attention"><div class="panel-head"><h2>Needs attention</h2>${more > 0 ? html`<button type="button" class="link" data-onclick="App.attMore(this)">${tr("{count} more", { count: more })}</button>` : ''}</div><p class="lead">Quick things to tidy up</p><div class="list">${htmlList(items.slice(0, 2))}${more > 0 ? html`<div class="att-more" hidden>${htmlList(items.slice(2))}</div>` : ''}</div></section>`;
+  return html`<section class="panel attention"><div class="panel-head"><h2>Needs attention</h2>${more > 0 ? html`<button type="button" class="link att-toggle" aria-expanded="false" aria-controls="attention-more" data-onclick="App.attMore(this)"><span>${tr("{count} more", { count: more })}</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>` : ''}</div><p class="lead">Quick things to tidy up</p><div class="list">${htmlList(items.slice(0, 2))}${more > 0 ? html`<div class="att-more" id="attention-more" inert aria-hidden="true"><div class="att-content">${htmlList(items.slice(2))}</div></div>` : ''}</div></section>`;
 }
 // The bento's number tiles: net worth with its trend, what was spent against last month, what came in and was kept
 function networthTile(netWorth: number, pts: NetWorthPoint[] | null | undefined) {
@@ -373,7 +373,11 @@ function billsMini(bills: ApiData[], days = 45, max = 0) {
 
 function attMore(b: HTMLElement) {
   const m = b.closest('.attention')!.querySelector<HTMLElement>('.att-more'); if (!m) return;
-  m.hidden = !m.hidden; b.textContent = m.hidden ? tr("{count} more", { count: m.children.length }) : tr('Fewer');
+  const open = b.getAttribute('aria-expanded') !== 'true';
+  if (!open && m.contains(document.activeElement)) b.focus({ preventScroll: true });
+  b.setAttribute('aria-expanded', String(open)); m.setAttribute('aria-hidden', String(!open)); m.inert = !open;
+  m.classList.toggle('open', open);
+  b.querySelector('span')!.textContent = open ? tr('Fewer') : tr("{count} more", { count: m.firstElementChild!.children.length });
 }
 // The Activity range chips: redraw only that card from its own data (the page, scroll and other cards stay as they are)
 let actTok = 0;

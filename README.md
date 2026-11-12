@@ -94,8 +94,12 @@ Firefly III is a great engine for your finances. Money is a faster, friendlier w
 
 **Feel**
 - Animated page and edit-panel transitions (View Transitions API), with instant fallback in other browsers and when reduced motion is on.
-- Changes show right away and roll back if Firefly refuses them. Deleting has an undo option.
-- **Phone:** bottom tab bar, bottom sheets you can drag down to close, swipe a transaction left to categorize or delete it, pull to refresh, and light vibration on supported devices.
+- Transaction forms keep the entered details while saving, show a loading indicator and a confirmation checkmark, and put validation errors beside the affected fields. Errors appear after leaving a field or submitting, not on the first keystroke; correcting them clears the error. Save stays disabled while a request is pending.
+- **Needs attention:** additional items expand and collapse in place, with a rotating disclosure arrow. With reduced motion enabled, feedback and disclosure states switch instantly.
+- **Chart motion:** budget pace curves draw in while dashed guides keep their meaning; daily spending bars enter with a short stagger. Newly loaded Timeline connectors and nodes reveal once as they enter the viewport, without replaying months already seen. Reduced motion shows these immediately.
+- **Sidebar:** the hovered or keyboard-focused menu icon gives a short spring response; labels, neighbouring icons and click targets stay still. Section headings retain a full text line and a gap above the first link, including in short desktop windows.
+- Inline transaction category and budget changes show right away and roll back if Firefly refuses them. Deleting has an undo option.
+- **Phone:** bottom tab bar, bottom sheets that glide up with one small, soft rebound and can be dragged down to close, swipe a transaction left to categorize or delete it, pull to refresh, and light vibration on supported devices. Reduced motion opens sheets immediately.
 - **Keyboard:**
   - `J`/`K` move through transactions and `Enter` opens one.
   - `C` and `B` change the category or budget, and `X` selects.
@@ -255,7 +259,7 @@ The online demo is the same data ported to TypeScript (`app/src/demo/mockapi.ts`
 - Preferences are stored in `localStorage` under `money.*` / `moneyTheme`. The ones listed in `SYNCED` in `features/sync.ts` (dashboard layout, dismissed insights, forecast, loan plan…) are also saved to the Firefly user preference `money_settings` and pulled in at sign-in and when the app comes back to the foreground; the latest change wins. Theme, privacy and density stay on the device. Everything else lives in Firefly.
 - **Publishing a new version:** push to `main`, and GitHub Actions builds a new `latest` image in a few minutes (see the repo's **Actions** tab). For a numbered release, push a tag: `git tag v1.2.0 && git push --tags`.
 - **Unit tests** (`test/*.test.ts`) cover the logic that doesn't need a server: the `data-on*` handler parser, the `html` template tag, date helpers, quick-add date words, the Overview's snap grid, loan payment plans, payee names, subscription detection and savings-goal pace. Pure logic like that lives in modules without side effects (for example `features/grid.ts`, `features/nldate.ts`, `features/subs.ts`, `features/pace.ts`) so it can be tested on its own.
-- **Smoke test:** opens every page and every "new …" form on desktop and phone sizes against the demo server, and fails on any JavaScript error:
+- **Smoke test:** opens every page and every "new …" form on desktop and phone sizes against the demo server, and fails on any JavaScript error. Sidebar checks measure rendered heading clearance, mouse/touch target sizes and scroll reachability rather than matching CSS source text:
 
   ```bash
   pip install playwright && playwright install chromium

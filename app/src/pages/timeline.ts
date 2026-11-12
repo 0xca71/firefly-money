@@ -19,6 +19,37 @@ type Month = { k: number, y: number, m: number, label: string, soFar: boolean, e
 // history goes, and whether more is on its way
 let startAcc: Account | undefined, shown = BATCH, floor = '', loading = false, done = false, quiet = 0, lastY: number | null = null;
 
+// Motion Prompt #145 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#145
+// Pagination fetches ahead of the viewport. Reveal only when a new segment comes into view, once, without moving its line.
+let revealObserver: IntersectionObserver | null = null;
+function finishReveal(e: AnimationEvent) {
+  if (e.animationName !== 'tlLine' || !(e.target instanceof HTMLElement)) return;
+  e.target.classList.remove('tl-reveal'); e.target.style.removeProperty('--tl-delay');
+}
+function resetReveal() {
+  revealObserver?.disconnect(); revealObserver = null;
+  document.querySelectorAll<HTMLElement>('#tl .tl-wait, #tl .tl-reveal').forEach(n => {
+    n.classList.remove('tl-wait', 'tl-reveal'); n.style.removeProperty('--tl-delay');
+  });
+}
+function revealNew(list: HTMLElement) {
+  const animate = typeof IntersectionObserver !== 'undefined' && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (animate && !revealObserver) revealObserver = new IntersectionObserver(entries => {
+    let order = 0;
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const item = entry.target as HTMLElement;
+      revealObserver?.unobserve(item); item.classList.remove('tl-wait');
+      item.style.setProperty('--tl-delay', Math.min(order++, 5) * 80 + 'ms'); item.classList.add('tl-reveal');
+    }
+  }, { rootMargin: '0px 0px -42px 0px' });
+  list.querySelectorAll<HTMLElement>('.tl-new').forEach(item => {
+    item.classList.remove('tl-new');
+    if (animate) { item.classList.add('tl-wait'); revealObserver!.observe(item); }
+  });
+}
+addEventListener('hashchange', () => { if (parseHash().name !== 'timeline') resetReveal(); });
+
 // The round numbers worth a mention when net worth passes them
 const MARKS = [1e3, 5e3, 1e4, 2.5e4, 5e4, 7.5e4, 1e5, 1.5e5, 2e5, 2.5e5, 5e5, 7.5e5, 1e6, 1.5e6, 2e6, 2.5e6, 5e6, 1e7];
 const short$ = (v: number) => v >= 1e6 ? '$' + +(v / 1e6).toFixed(2) + 'm' : '$' + +(v / 1e3).toFixed(1) + 'k';
@@ -110,7 +141,10 @@ VIEWS.timeline = async (r, paint) => {
   floor = [opened, tx].filter(Boolean).sort()[0] || ''; startAcc = opened && opened === floor ? first : undefined; loading = false; quiet = 0;
   const ms = await load(0, shown);
   done = ms.length < shown || ms.length === 0;
+  resetReveal();
   paint(html`${head('Timeline', tr('Your money, month by month. The newest is on top; scroll down to go back in time.'))}<ol class="tl" id="tl">${items(ms, false, null)}${done ? endCap() : more()}</ol>`);
+  const list = document.getElementById('tl');
+  list?.addEventListener('animationend', finishReveal); list?.addEventListener('animationcancel', finishReveal);
   requestAnimationFrame(check);
 };
 // Near the bottom: fetch the next six months and add them under the others
@@ -126,6 +160,7 @@ async function loadMore() {
     done = ms.length < BATCH || (!floor && (quiet >= 12 || shown >= 240));
     spot.insertAdjacentHTML('beforebegin', String(items(ms, true, lastY)));
     if (done) spot.outerHTML = String(endCap());
+    revealNew(list);
   } catch (e) {
     spot.querySelector('.tl-card')!.innerHTML = String(html`<p class="sub-s">${tr("Couldn’t load older months: {error}", { error: (e as Error).message })}</p><button type="button" class="btn small" data-onclick="App.tlMore()">Try again</button>`);
     done = true; loading = false; return;

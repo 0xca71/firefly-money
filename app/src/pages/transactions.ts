@@ -124,12 +124,13 @@ async function monthStrip(cur: Period, key: string, rank = true) {
   list.reduce((t, d) => (cum[d] = t + (byDay[d] || 0)), 0);
   const most = Math.max(1, ...list.map(d => (running ? cum : byDay)[d] || 0));
   const fmt = (d: string) => fmtD(d, { weekday: 'short', month: 'short', day: 'numeric' });
-  const bars = htmlList(list.map(d => {
+  // Motion Prompt #002 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#002
+  const bars = htmlList(list.map((d, i) => {
     const v = byDay[d] || 0, n = nDay[d] || 0, label = fmt(d) + ': ' + (v ? tr('{amount} spent', { amount: money(v) }) : tr('nothing spent'));
     const tip = fmt(d) + (d === today ? ' (' + tr('today') + ')' : '') + '\n' + (v ? tr(n === 1 ? '{amount} spent · {count} purchase' : '{amount} spent · {count} purchases', { amount: money(v), count: n }) : tr('Nothing spent')) + (running ? '\n' + tr('{amount} so far this month', { amount: money(cum[d]) }) : '');
     return d > today
-      ? html`<button type="button" class="db fut" style="--v:0" aria-label="${fmt(d)}" disabled><i></i></button>`
-      : html`<button type="button" class="db${d === today ? ' now' : ''}" data-day="${d}" data-onclick="App.txDay(this.dataset.day)" style="--v:${((running ? cum[d] : v) / most).toFixed(3)}" data-tip="${tip}" aria-label="${label}"><i></i></button>`;
+      ? html`<button type="button" class="db fut" style="--v:0;--j:${i}" aria-label="${fmt(d)}" disabled><i></i></button>`
+      : html`<button type="button" class="db${d === today ? ' now' : ''}" data-day="${d}" data-onclick="App.txDay(this.dataset.day)" style="--v:${((running ? cum[d] : v) / most).toFixed(3)};--j:${i}" data-tip="${tip}" aria-label="${label}"><i></i></button>`;
   }));
   return { n: ++stripN, html: html`<section class="panel txsum" id="txsum" data-selfmorph data-k="${key}" data-n="${stripN}"><div class="ts-k"><div><span class="eyebrow">Spent</span><strong class="num">${money0(spent)}</strong></div><div><span class="eyebrow">Earned</span><strong class="num pos">${money0(earned)}</strong></div><div><span class="eyebrow">Net</span><strong class="num${net < 0 ? ' neg' : ''}">${net > 0 ? '+' : ''}${money0(net)}</strong></div></div>${list.length ? html`<div class="dbars" role="group" aria-label="Spending each day">${bars}</div>` : ''}</section>` };
 }

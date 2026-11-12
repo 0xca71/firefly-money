@@ -28,6 +28,93 @@ async def goto(page, route):
     await page.goto(BASE + '#/' + route)
     await page.wait_for_function(PAINTED, timeout=15000)
 
+async def sidebar_spacing(page):
+    """Check rendered heading clearance, mouse targets and scrollable touch targets instead of CSS spelling."""
+    errors, viewport = [], page.viewport_size
+    collapsed = await page.evaluate("document.documentElement.classList.contains('side-mini')")
+    try:
+        await page.evaluate("document.documentElement.classList.remove('side-mini')")
+        for height in (600, 900):
+            await page.set_viewport_size({'width': 1440, 'height': height})
+            row_heights = await page.locator('.side .nav a').evaluate_all('(rows) => rows.map(n => n.getBoundingClientRect().height)')
+            if not row_heights or min(row_heights) < 23.5:
+                errors.append(f'sidebar mouse targets are smaller than 24px at {height}px: {row_heights}')
+            headings = page.locator('#nav .nav-h')
+            if not await headings.count(): errors.append(f'sidebar headings did not render at {height}px')
+            for i in range(await headings.count()):
+                heading = headings.nth(i)
+                await heading.locator('xpath=following-sibling::a[1]').hover()
+                await page.wait_for_function("""() => document.querySelector('#nav').getAnimations({subtree:true})
+                    .every(a => a.playState !== 'running')""")
+                gap = await heading.evaluate("""h => {
+                    const text = document.createRange(); text.selectNodeContents(h);
+                    const ink = text.getBoundingClientRect(), next = h.nextElementSibling;
+                    return {title:h.textContent, textBottom:ink.bottom, headingBottom:h.getBoundingClientRect().bottom,
+                        linkTop:next.getBoundingClientRect().top, iconTop:next.querySelector('svg').getBoundingClientRect().top};
+                }""")
+                if gap['textBottom'] > gap['headingBottom'] - 4 or gap['textBottom'] + 4 > min(gap['linkTop'], gap['iconTop']):
+                    errors.append(f'sidebar heading overlaps its hovered first link at {height}px: {gap}')
+        touch_context = await page.context.browser.new_context(viewport={'width': 1440, 'height': 600}, has_touch=True)
+        try:
+            await touch_context.add_cookies(await page.context.cookies())
+            await touch_context.add_init_script("window.MONEY_NO_WHATSNEW = true; localStorage.setItem('money.syncOff', 'true')")
+            touch = await touch_context.new_page()
+            await touch.goto(page.url)
+            await touch.wait_for_selector('.side .nav a', timeout=15000)
+            touch_targets = await touch.evaluate("""() => {
+                const side = document.querySelector('.side'), rows = [...side.querySelectorAll('.nav a')];
+                side.scrollTop = side.scrollHeight;
+                const last = rows.at(-1)?.getBoundingClientRect(), rail = side.getBoundingClientRect();
+                return {coarse:matchMedia('(pointer: coarse)').matches, heights:rows.map(n => n.getBoundingClientRect().height),
+                    overflow:getComputedStyle(side).overflowY, scrollable:side.scrollHeight > side.clientHeight,
+                    scrolled:side.scrollTop > 0, lastVisible:!!last && last.top >= rail.top && last.bottom <= rail.bottom};
+            }""")
+            if not touch_targets['coarse'] or not touch_targets['heights'] or min(touch_targets['heights']) < 39.5:
+                errors.append(f'sidebar touch targets are smaller than 40px: {touch_targets}')
+            if touch_targets['overflow'] not in ('auto', 'scroll') or not all(touch_targets[k] for k in ('scrollable', 'scrolled', 'lastVisible')):
+                errors.append(f'sidebar touch targets cannot be reached by scrolling: {touch_targets}')
+        finally:
+            await touch_context.close()
+    finally:
+        await page.set_viewport_size(viewport)
+        await page.evaluate('(collapsed) => document.documentElement.classList.toggle("side-mini", collapsed)', collapsed)
+    return errors
+
+async def mobile_sheet_motion(page):
+    """A transaction sheet should arrive with a small rebound and settle, while reduced motion stays immediate."""
+    errors, viewport = [], page.viewport_size
+    reduced = await page.evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches")
+    try:
+        for width, height, reduce in ((390, 844, False), (430, 932, False), (390, 844, True)):
+            await page.set_viewport_size({'width': width, 'height': height})
+            await page.emulate_media(reduced_motion='reduce' if reduce else 'no-preference')
+            await page.locator('.tabbar .plus').click()
+            await page.wait_for_selector('#drawer.open #txForm')
+            frames = await page.evaluate("""async () => {
+                const sheet = document.querySelector('#drawer'), samples = [], start = performance.now();
+                do {
+                    await new Promise(requestAnimationFrame);
+                    const r = sheet.getBoundingClientRect(); samples.push({top:r.top, height:r.height});
+                } while (performance.now() - start < 650);
+                return samples;
+            }""")
+            final_top = frames[-1]['top']
+            overshoot = final_top - min(f['top'] for f in frames)
+            if not reduce and not .5 < overshoot < frames[-1]['height'] * .025:
+                errors.append(f'transaction sheet rebound is missing or excessive at {width}x{height}: {overshoot}px')
+            if max(f['top'] for f in frames[-3:]) - min(f['top'] for f in frames[-3:]) > 1:
+                errors.append(f'transaction sheet has not settled at {width}x{height}')
+            if reduce and max(f['top'] for f in frames) - min(f['top'] for f in frames) > 1:
+                errors.append('transaction sheet moves despite reduced motion')
+            await page.locator('#drawer button[data-onclick="App.closeDrawer()"]').first.click()
+            await page.wait_for_function("() => !document.querySelector('#drawer').getAnimations().some(a => a.playState === 'running')")
+    finally:
+        await page.set_viewport_size(viewport)
+        await page.emulate_media(reduced_motion='reduce' if reduced else 'no-preference')
+    return errors
+
+
+
 
 async def check(pw, width, height, mobile):
     br = await pw.chromium.launch()
@@ -61,6 +148,8 @@ async def check(pw, width, height, mobile):
     else:
         await page.wait_for_timeout(1500)
         if await page.locator('#whatsNew[open]').count(): errors.append('What\'s new opened on a new install or the demo')
+    if mobile: errors.extend(await mobile_sheet_motion(page))
+    else: errors.extend(await sidebar_spacing(page))
     # every data-on* handler in the source parses and calls an App method that exists
     if not mobile:
         await goto(page, '')
