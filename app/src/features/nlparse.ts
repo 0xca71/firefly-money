@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { html, htmlList } from '../core/html';
 import { App, S, el, money, num, parseAmount } from '../core/base';
 import { toast } from '../core/dom';
@@ -61,10 +62,10 @@ export function nlParse(text: string, submit?: boolean) {
     if (from) f.src = from.a.id; if (to) f.dst = to.a.id;
     if (!payee && from && to) sp.description = 'Transfer to ' + to.a.name;
   } else if (accs[0]) f.main = accs[0].a.id;
-  const chip = (l: string, v: string) => html`<span class="nlchip"><em>${l}</em>${v}</span>`;
+  const chip = (l: string, v: string) => html`<span class="nlchip"><em>${tr(l)}</em>${v}</span>`;
   f.nl = text;
   f.nlChips = text.trim() ? htmlList([
-    type !== base.type ? chip('Type', ({ deposit: 'Income', transfer: 'Transfer', withdrawal: 'Expense' } as Record<string, string>)[type]) : '',
+    type !== base.type ? chip('Type', tr(({ deposit: 'Income', transfer: 'Transfer', withdrawal: 'Expense' } as Record<string, string>)[type])) : '',
     out.amount ? chip('Amount', money(num(out.amount))) : '',
     out.date ? chip('Date', dayLabel(out.date)) : '',
     type === 'transfer' ? (accs.length ? html`${chip('From', (L.byId[f.src] || {}).name || '?')}${f.dst ? chip('To', (L.byId[f.dst] || {}).name || '?') : ''}` : '') : accs[0] ? chip('Account', accs[0].a.name) : '',

@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { api, getAll } from '../core/api';
 import { S, arr, num, type ApiData } from '../core/base';
 import { normGroup } from '../core/feed';
@@ -117,5 +118,5 @@ export async function insight(path: string, range: { start: string, end: string 
 export const REFUND_ROW = 'refund-net';
 export function lessRefundTx(tx: ApiData[] | null, rs: Refund[]): ApiData[] | null {
   if (!tx || !rs.length) return tx;
-  return [...tx, ...rs.map(r => ({ id: REFUND_ROW, attributes: { transactions: [{ transaction_journal_id: r.jid, type: 'withdrawal', date: r.date, amount: String(-r.amount), description: r.oneOff ? 'One-off' : 'Refund', category_name: r.category }] } }))];
+  return [...tx, ...rs.map(r => ({ id: REFUND_ROW, attributes: { transactions: [{ transaction_journal_id: r.jid, type: 'withdrawal', date: r.date, amount: String(-r.amount), description: tr(r.oneOff ? 'One-off' : 'Refund'), category_name: r.category }] } }))];
 }

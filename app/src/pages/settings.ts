@@ -23,9 +23,9 @@ document.addEventListener('toggle', e => {
   if (d instanceof HTMLDetailsElement && d.dataset.k) { if (d.open) OPEN.add(d.dataset.k); else OPEN.delete(d.dataset.k); }
 }, true);
 const group = (id: string, title: string, body: unknown, foot?: unknown) =>
-  html`<section class="set-group" id="set-${id}"><h2 class="set-h">${tr(title)}</h2><div class="panel set-panel">${body}</div>${foot ? html`<p class="set-foot">${foot}</p>` : ''}</section>`;
+  html`<section class="set-group" id="set-${id}"><h2 class="set-h">${tr(title)}</h2><div class="panel set-panel">${body}</div>${foot ? html`<p class="set-foot">${typeof foot === 'string' ? tr(foot) : foot}</p>` : ''}</section>`;
 const row = (label: unknown, hint: unknown, ctl: unknown) =>
-  html`<div class="set-row"><div class="set-label"><div>${typeof label === 'string' ? tr(label) : label}</div>${hint ? html`<div class="sub-s">${hint}</div>` : ''}</div>${ctl ? html`<div class="set-ctl">${ctl}</div>` : ''}</div>`;
+  html`<div class="set-row"><div class="set-label"><div>${typeof label === 'string' ? tr(label) : label}</div>${hint ? html`<div class="sub-s">${typeof hint === 'string' ? tr(hint) : hint}</div>` : ''}</div>${ctl ? html`<div class="set-ctl">${ctl}</div>` : ''}</div>`;
 const more = (k: string, label: unknown, count: unknown, body: unknown, open?: boolean) =>
   html`<details class="set-more" data-k="${k}"${OPEN.has(k) || open ? ' open' : ''}><summary><span>${typeof label === 'string' ? tr(label) : label}</span><span class="sub-s">${count}</span></summary><div class="set-body">${body}</div></details>`;
 // An on/off switch: html`<input ${SWITCH}…>` (the handler stays literal so the smoke test can check it)
@@ -46,11 +46,11 @@ VIEWS.settings = async (r, paint) => {
 
   const day = cycleDay(), alertPct = budgetAlert(), ex = monthRange(...nowMonth());
   const months = group('months', 'Months & budgets', html`
-    ${row('Month starts on', 'Your payday, if you like', html`<select aria-label="Month starts on" data-onchange="App.setCycleDay(this.value)">${htmlList([...Array(28)].map((_, i) => opt(i + 1, 'the ' + ordinal(i + 1), day)))}</select>`)}
+    ${row('Month starts on', 'Your payday, if you like', html`<select aria-label="Month starts on" data-onchange="App.setCycleDay(this.value)">${htmlList([...Array(28)].map((_, i) => opt(i + 1, tr('the {day}', { day: uiLanguage() === 'zh-CN' ? i + 1 : ordinal(i + 1) }), day)))}</select>`)}
     ${row('Budget warning', 'When a budget is this full', html`<select aria-label="Warn when a budget reaches" data-onchange="App.setBudgetAlert(this.value)">${htmlList([50, 60, 70, 75, 80, 85, 90, 95].map(p => opt(p, p + '%', alertPct)))}</select>`)}
     ${row('Leave out one-offs', 'Spending tagged “One-off” stays out of Spent, trends, pace and reports', html`<input ${SWITCH} aria-label="Leave out one-offs"${skipOneOffs() ? ' checked' : ''} data-onchange="App.toggleOneOffs(this.checked)">`)}`,
-    'This month runs ' + fmtDate(ex.start) + ' – ' + fmtDate(ex.end) + '. Budgets, the Overview, recaps and reports all use it.' +
-      (day > 1 ? ' Firefly’s own pages still use calendar months, and auto-budgets still reset on the 1st.' : ''));
+    tr('This month runs {start} – {end}. Budgets, the Overview, recaps and reports all use it.', { start: fmtDate(ex.start), end: fmtDate(ex.end) }) +
+      (day > 1 ? ' ' + tr('Firefly’s own pages still use calendar months, and auto-budgets still reset on the 1st.') : ''));
 
   const privacy = !!LS.get('privacy', false), compact = !!LS.get('compact', false);
   const look = group('look', 'Appearance', html`
@@ -64,21 +64,21 @@ VIEWS.settings = async (r, paint) => {
     ${row('Logos', 'Payees’ and banks’ logos instead of initials', html`<input ${SWITCH} aria-label="Show logos"${logosOn() ? ' checked' : ''} data-onchange="App.toggleLogos(this.checked)">`)}
     ${row('Haptics', 'A light tap when you save, delete or flip a switch. iPhone needs iOS 18 or later.', html`<input ${SWITCH} aria-label="Haptics"${hapticsOn() ? ' checked' : ''} data-onchange="App.toggleHaptics(this.checked)">`)}
     ${row('Hours of work', 'Under each purchase, the hours you worked to pay for it', html`<input ${SWITCH} aria-label="Hours of work"${lensOn() ? ' checked' : ''} data-onchange="App.toggleWorkLens(this.checked)">`)}
-    ${lensOn() ? html`${row('Hours a week', 'How long you work', html`<select aria-label="Hours a week" data-onchange="App.setWorkHours(this.value)">${htmlList([10, 15, 20, 25, 30, 32, 35, 37.5, 40, 45, 50, 55, 60].map(h => opt(h, h + ' hours', workHours())))}</select>`)}
-    ${row('Hourly take-home', +LS.get('workRate', 0) > 0 ? 'Yours. Clear it to work it out from your income.' : hourlyRate() ? 'Worked out from what came in over the last six months: ' + money(hourlyRate()) + ' an hour' : 'Working it out from your income…', html`<input type="number" inputmode="decimal" min="0" step="0.01" class="set-num" aria-label="Hourly take-home" placeholder="${hourlyRate() ? hourlyRate().toFixed(2) : 'Auto'}" value="${+LS.get('workRate', 0) > 0 ? String(LS.get('workRate', 0)) : ''}" data-onchange="App.setWorkRate(this.value)">`)}` : ''}
+    ${lensOn() ? html`${row('Hours a week', 'How long you work', html`<select aria-label="Hours a week" data-onchange="App.setWorkHours(this.value)">${htmlList([10, 15, 20, 25, 30, 32, 35, 37.5, 40, 45, 50, 55, 60].map(h => opt(h, tr('{count} hours', { count: h }), workHours())))}</select>`)}
+    ${row('Hourly take-home', +LS.get('workRate', 0) > 0 ? 'Yours. Clear it to work it out from your income.' : hourlyRate() ? tr('Worked out from what came in over the last six months: {amount} an hour', { amount: money(hourlyRate()) }) : 'Working it out from your income…', html`<input type="number" inputmode="decimal" min="0" step="0.01" class="set-num" aria-label="Hourly take-home" placeholder="${hourlyRate() ? hourlyRate().toFixed(2) : tr('Auto')}" value="${+LS.get('workRate', 0) > 0 ? String(LS.get('workRate', 0)) : ''}" data-onchange="App.setWorkRate(this.value)">`)}` : ''}
     ${more('logos', 'About logos', '', html`<p class="sub-s">Your Money server fetches each logo from DuckDuckGo’s icon service by the payee’s website (guessed from its name; change it in the account’s settings) and keeps it, so your browser never contacts another site.</p>`)}`,
     'Theme, hide amounts, compact view, haptics are saved on this device only. Number & date format, hours of work and your colors for each theme sync like your other settings.');
 
   const syncOff = !!LS.get('syncOff', false), syncAt = LS.get('syncAt', 0);
-  const syncStatus = syncOff ? 'Off: this device keeps its own settings.' : S.syncError ? html`<span class="up">Couldn’t sync: ${S.syncError}</span>`
-    : syncAt ? 'Last synced ' + fmtDate(isoDate(new Date(syncAt))) + ' at ' + fmtD(new Date(syncAt), { hour: 'numeric', minute: '2-digit' }) + '.' : 'Nothing synced yet.';
+  const syncStatus = syncOff ? 'Off: this device keeps its own settings.' : S.syncError ? html`<span class="up">${tr('Couldn’t sync: {error}', { error: S.syncError })}</span>`
+    : syncAt ? tr('Last synced {date} at {time}.', { date: fmtDate(isoDate(new Date(syncAt))), time: fmtD(new Date(syncAt), { hour: 'numeric', minute: '2-digit' }) }) : 'Nothing synced yet.';
   const sync = group('sync', 'Sync', html`
     ${row('Sync between devices', syncStatus, html`<input ${SWITCH} aria-label="Sync this device’s settings"${syncOff ? '' : ' checked'} data-onchange="App.toggleSync(this.checked)">`)}
     ${syncOff ? '' : row('Update other devices', 'Send this device’s settings and fetch the others’ now', html`<button class="btn small" type="button" data-onclick="App.syncNow()">Sync now</button>`)}`,
     'Your Overview layout, month start, drafts, saved reports, dismissed insights, forecast, loan plan and subscription choices and theme colors are kept in Firefly III, so they follow you to every device.');
 
   const showAll = r.q.rates === 'all';
-  const rateBody = html`${rates && rates.length ? html`<div class="list">${htmlList(rates.slice(0, showAll ? 500 : 6).map(x => { const a = x.attributes; return html`<div class="row"><span class="name">1 ${a.from_currency_code || a.from} = ${num(a.rate)} ${a.to_currency_code || a.to} <span class="sub-s">on ${fmtDate(a.date)}</span></span><button class="link" data-onclick="App.deleteRate('${x.id}')">Remove</button></div>`; }))}</div>${rates.length > 6 ? html`<p style="margin:10px 0 0"><a class="link" href="#/settings?s=currencies${showAll ? '' : '&rates=all'}">${showAll ? 'Show fewer' : 'Show all ' + rates.length + ' rates'}</a></p>` : ''}` : html`<p class="sub-s" style="margin:0">Used to convert foreign amounts in reports. No rates yet.</p>`}<form style="margin-top:14px" data-onsubmit="event.preventDefault();App.addRate(this)"><div class="grid2"><label>From<select name="f">${htmlList(enabled.map(c => opt(c.code, c.code, S.currency)))}</select></label><label>To<select name="t">${htmlList(enabled.map(c => opt(c.code, c.code, (enabled.find(x => x.code !== S.currency) || {}).code)))}</select></label><label>Rate<input type="number" step="any" min="0" name="r" required></label><label>Date<input type="date" name="d" value="${todayIso()}" required></label></div><button class="btn small">Add rate</button></form>`;
+  const rateBody = html`${rates && rates.length ? html`<div class="list">${htmlList(rates.slice(0, showAll ? 500 : 6).map(x => { const a = x.attributes; return html`<div class="row"><span class="name">1 ${a.from_currency_code || a.from} = ${num(a.rate)} ${a.to_currency_code || a.to} <span class="sub-s">${tr('on {date}', { date: fmtDate(a.date) })}</span></span><button class="link" data-onclick="App.deleteRate('${x.id}')">Remove</button></div>`; }))}</div>${rates.length > 6 ? html`<p style="margin:10px 0 0"><a class="link" href="#/settings?s=currencies${showAll ? '' : '&rates=all'}">${showAll ? tr('Show fewer') : tr('Show all {count} rates', { count: rates.length })}</a></p>` : ''}` : html`<p class="sub-s" style="margin:0">Used to convert foreign amounts in reports. No rates yet.</p>`}<form style="margin-top:14px" data-onsubmit="event.preventDefault();App.addRate(this)"><div class="grid2"><label>From<select name="f">${htmlList(enabled.map(c => opt(c.code, c.code, S.currency)))}</select></label><label>To<select name="t">${htmlList(enabled.map(c => opt(c.code, c.code, (enabled.find(x => x.code !== S.currency) || {}).code)))}</select></label><label>Rate<input type="number" step="any" min="0" name="r" required></label><label>Date<input type="date" name="d" value="${todayIso()}" required></label></div><button class="btn small">Add rate</button></form>`;
   const cur = group('currencies', 'Currencies', html`
     ${htmlList(enabled.map(c => row(html`${c.code} · ${c.name}${c.code === S.currency ? html` <span class="chip good">Main</span>` : ''}`, '',
       c.code !== S.currency ? html`<button class="link" data-onclick="App.currency('${c.code}','primary')">Make main</button><button class="link" data-onclick="App.currency('${c.code}','disable')">Disable</button>` : '')))}
@@ -87,18 +87,18 @@ VIEWS.settings = async (r, paint) => {
     'Enabled currencies can be used for foreign amounts and accounts.');
 
   const yr = new Date().getFullYear();
-  const exp = html`<div class="grid2"><label>From (transactions only)<input type="date" id="ex-start" value="${yr - 1}-01-01"></label><label>To<input type="date" id="ex-end" value="${todayIso()}"></label></div><div style="display:flex;flex-wrap:wrap;gap:8px">${htmlList(EXPORTS.map(([k, l]) => html`<button class="btn small" data-onclick="App.exportData('${k}', this)">${l}</button>`))}</div>`;
-  const hookBody = hooks === null ? '' : html`<p class="sub-s" style="margin:0 0 12px">Firefly calls these web addresses when transactions change, for automations like Home Assistant or n8n.</p>${hooks.length ? html`<div class="list">${htmlList(hooks.map(x => { const a = x.attributes, tr = a.trigger || (a.triggers || [])[0];
-      return html`<div class="row"><span class="name"><label class="check" style="margin:0;display:inline-flex"><input type="checkbox"${a.active ? ' checked' : ''} data-onchange="App.toggleHook('${x.id}',this.checked)"> ${a.title}</label><br><span class="sub-s">${(TRIG.find(t => t[0] === tr) || [0, tr])[1]} → ${a.url}</span></span><button class="link" data-onclick="App.deleteHook('${x.id}')">Delete</button></div>`; }))}</div>` : ''}<form data-onsubmit="event.preventDefault();App.addHook(this)" style="margin-top:14px"><div class="grid2"><label>Name<input type="text" name="t" required></label><label>When<select name="w">${htmlList(TRIG.map(([v, l]) => opt(v, l, '')))}</select></label></div><label>URL<input type="text" name="u" placeholder="https://…" required></label><div class="grid2"><label>Send<select name="r">${opt('TRANSACTIONS', 'The transaction', '')}${opt('ACCOUNTS', 'The accounts involved', '')}${opt('NONE', 'Nothing (just ping)', '')}</select></label><span></span></div><button class="btn small">Add webhook</button></form>`;
+  const exp = html`<div class="grid2"><label>From (transactions only)<input type="date" id="ex-start" value="${yr - 1}-01-01"></label><label>To<input type="date" id="ex-end" value="${todayIso()}"></label></div><div style="display:flex;flex-wrap:wrap;gap:8px">${htmlList(EXPORTS.map(([k, l]) => html`<button class="btn small" data-onclick="App.exportData('${k}', this)">${tr(l)}</button>`))}</div>`;
+  const hookBody = hooks === null ? '' : html`<p class="sub-s" style="margin:0 0 12px">Firefly calls these web addresses when transactions change, for automations like Home Assistant or n8n.</p>${hooks.length ? html`<div class="list">${htmlList(hooks.map(x => { const a = x.attributes, trigger = a.trigger || (a.triggers || [])[0], label = TRIG.find(t => t[0] === trigger)?.[1];
+      return html`<div class="row"><span class="name"><label class="check" style="margin:0;display:inline-flex"><input type="checkbox"${a.active ? ' checked' : ''} data-onchange="App.toggleHook('${x.id}',this.checked)"> ${a.title}</label><br><span class="sub-s">${label ? tr(label) : trigger} → ${a.url}</span></span><button class="link" data-onclick="App.deleteHook('${x.id}')">Delete</button></div>`; }))}</div>` : ''}<form data-onsubmit="event.preventDefault();App.addHook(this)" style="margin-top:14px"><div class="grid2"><label>Name<input type="text" name="t" required></label><label>When<select name="w">${htmlList(TRIG.map(([v, l]) => opt(v, tr(l), '')))}</select></label></div><label>URL<input type="text" name="u" placeholder="https://…" required></label><div class="grid2"><label>Send<select name="r">${opt('TRANSACTIONS', tr('The transaction'), '')}${opt('ACCOUNTS', tr('The accounts involved'), '')}${opt('NONE', tr('Nothing (just ping)'), '')}</select></label><span></span></div><button class="btn small">Add webhook</button></form>`;
   const data = group('data', 'Data', html`
     ${more('export', 'Export to CSV', '', html`<p class="sub-s" style="margin:0 0 12px">Files you can open in Excel or Numbers.</p>${exp}`)}
-    ${hooks === null ? '' : more('hooks', 'Webhooks', hooks.length ? hooks.filter(x => x.attributes.active).length + ' on' : '', hookBody)}
+    ${hooks === null ? '' : more('hooks', 'Webhooks', hooks.length ? tr('{count} on', { count: hooks.filter(x => x.attributes.active).length }) : '', hookBody)}
     ${row('Clean up', 'Payees, categories, tags and budgets that nothing uses', html`<a class="btn small" href="#/cleanup">Review</a>`)}
     ${row('Recalculate everything', 'If a total looks wrong: fetch every number fresh from Firefly III. Your data there isn’t changed.', html`<button class="btn small" type="button" data-onclick="App.recalcAll(this)">Recalculate</button>`)}`);
 
   const ab = (about && about.data) || {};
   const aboutHtml = group('about', 'About', html`
-    ${row('Money', '', moneyVersion() || 'Local build')}
+    ${row('Money', '', moneyVersion() || tr('Local build'))}
     ${row('What’s new', 'The highlights of this version', html`<button class="btn small" type="button" data-onclick="App.whatsNew(true)">Show</button>`)}
     ${row('Firefly III', '', ab.version || '—')}
     ${row('API', '', ab.api_version || '—')}`,
@@ -122,7 +122,7 @@ export const SET_SECTIONS: [string, string, string][] = [['months', 'Months & bu
   ['data', 'Data', 'Export, webhooks, clean up'], ['about', 'About', 'Versions and what’s new']];
 /* ---------- Customize colors: your own background, accent and (for the glass themes) light, tint and blur ---------- */
 const curTheme = () => document.documentElement.getAttribute('data-theme') || 'auto';
-const themeName = () => { const t = THEMES.find(x => x[0] === curTheme()); return t ? t[1] : ''; };
+const themeName = () => { const t = THEMES.find(x => x[0] === curTheme()); return t ? tr(t[1]) : ''; };
 // The colour the theme shows right now (yours, or its own), as #rrggbb for a colour well
 function shown(v: string) {
   const x = getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -140,9 +140,9 @@ const SCENE_SW: Record<string, string> = {
 };
 function scenePicker(c: Custom) {
   const cur = c.scene || 'room';
-  const btns = htmlList(SCENES.map(([k, label]) => html`<button type="button" title="${label}" aria-label="${label} scene" class="${k === cur ? 'on' : ''}" style="background:${SCENE_SW[k]};background-origin:border-box" data-s="${k}" data-onclick="App.themeScene(this.dataset.s)"></button>`));
+  const btns = htmlList(SCENES.map(([k, label]) => html`<button type="button" title="${tr(label)}" aria-label="${tr('{name} scene', { name: tr(label) })}" class="${k === cur ? 'on' : ''}" style="background:${SCENE_SW[k]};background-origin:border-box" data-s="${k}" data-onclick="App.themeScene(this.dataset.s)"></button>`));
   const photo = LS.get(PHOTO_KEY, '');
-  return html`<div class="themes scenes">${btns}${photo ? html`<button type="button" title="Your photo" aria-label="Your photo" class="${cur === 'photo' ? 'on' : ''}" style="background:center/cover url('${photo}')" data-onclick="App.themeScene('photo')"></button>` : ''}<label class="btn small">${photo ? 'New photo…' : 'Your photo…'}<input type="file" accept="image/*" hidden data-onchange="App.themePhoto(this)"></label></div>`;
+  return html`<div class="themes scenes">${btns}${photo ? html`<button type="button" title="Your photo" aria-label="Your photo" class="${cur === 'photo' ? 'on' : ''}" style="background:center/cover url('${photo}')" data-onclick="App.themeScene('photo')"></button>` : ''}<label class="btn small">${tr(photo ? 'New photo…' : 'Your photo…')}<input type="file" accept="image/*" hidden data-onchange="App.themePhoto(this)"></label></div>`;
 }
 function customizer() {
   const t = curTheme();
@@ -160,7 +160,7 @@ function customizer() {
     ${row('Frost', 'Clear to solid', html`<input type="range" min="0" max="90" step="1" aria-label="Frost" value="${frost}" data-oninput="App.themeRange('frost', this)"><output>${frost}%</output>`)}
     ${row('Blur', 'How much the light softens behind the cards', html`<input type="range" min="0" max="60" step="1" aria-label="Blur" value="${blur}" data-oninput="App.themeRange('blur', this)"><output>${blur}px</output>`)}
     ${t === 'glass' ? row('Moving light', 'Let the light drift slowly', html`<input ${SWITCH} aria-label="Moving light"${c.motion === true ? ' checked' : ''} data-onchange="App.themeVar('motion', this.checked)">`) : ''}` : ''}
-    ${Object.keys(c).length ? row('', '', html`<button class="btn small" type="button" data-onclick="App.resetThemeCustom()">Reset ${themeName()}</button>`) : ''}`;
+    ${Object.keys(c).length ? row('', '', html`<button class="btn small" type="button" data-onclick="App.resetThemeCustom()">${tr('Reset {theme}', { theme: themeName() })}</button>`) : ''}`;
 }
 // Redraw after the theme changes (setTheme) or the colors are reset
 function drawThemeCustom() {
@@ -225,7 +225,7 @@ async function currency(code: string, action: string) {
       else if (action === 'disable' && (e as ApiError).status === 409) return disableInUse(code);
       else throw e;
     }
-    invalidate(); toast(({ enable: 'Enabled ', disable: 'Disabled ', primary: 'Main currency is now ' } as Record<string, string>)[action] + code); route();
+    invalidate(); toast(tr(({ enable: 'Enabled {code}', disable: 'Disabled {code}', primary: 'Main currency is now {code}' } as Record<string, string>)[action], { code })); route();
   });
 }
 // Firefly refuses (409) to disable a currency that anything still uses. Exchange rates are the usual
@@ -233,18 +233,17 @@ async function currency(code: string, action: string) {
 async function disableInUse(code: string) {
   const rates = (S.rates || []).filter(x => [x.attributes.from_currency_code || x.attributes.from, x.attributes.to_currency_code || x.attributes.to].includes(code));
   if (!rates.length) {
-    return confirmBox(code + ' is still in use', 'Firefly won’t disable ' + code + ' while an account, bill, budget, piggy bank or transaction uses it. Change those to another currency first.', 'OK');
+    return confirmBox(tr('{code} is still in use', { code }), tr('Firefly won’t disable {code} while an account, bill, budget, piggy bank or transaction uses it. Change those to another currency first.', { code }), 'OK');
   }
-  if (!await confirmBox(code + ' is still in use', code + ' has ' + rates.length + ' exchange rate' + (rates.length === 1 ? '' : 's') + ', which stops Firefly from disabling it. Remove ' +
-    (rates.length === 1 ? 'that rate' : 'those rates') + ' and disable ' + code + '?', 'Remove & disable')) return;
+  if (!await confirmBox(tr('{code} is still in use', { code }), tr(rates.length === 1 ? '{code} has {count} exchange rate, which stops Firefly from disabling it. Remove that rate and disable {code}?' : '{code} has {count} exchange rates, which stops Firefly from disabling it. Remove those rates and disable {code}?', { code, count: rates.length }), 'Remove & disable')) return;
   let done = 0;
   for (const x of rates) { try { await api('/exchange-rates/' + x.id, { method: 'DELETE' }); done++; } catch (e) { if (e instanceof AuthError) throw e; } }
   try {
     await api('/currencies/' + code + '/disable', { method: 'POST' });
-    toast('Removed ' + done + ' rate' + (done === 1 ? '' : 's') + ' and disabled ' + code);
+    toast(tr(done === 1 ? 'Removed {count} rate and disabled {code}' : 'Removed {count} rates and disabled {code}', { count: done, code }));
   } catch (e) {
     if ((e as ApiError).status !== 409) throw e;
-    await confirmBox(code + ' is still in use', 'The exchange rates are gone, but something else still uses ' + code + ' — an account, bill, budget, piggy bank or transaction. Change those first.', 'OK');
+    await confirmBox(tr('{code} is still in use', { code }), tr('The exchange rates are gone, but something else still uses {code} — an account, bill, budget, piggy bank or transaction. Change those first.', { code }), 'OK');
   }
   invalidate(); route();
 }
@@ -336,9 +335,9 @@ function cardsHtml(cards: Cards | null, accounts: Account[]) {
   if (!cards) return '';
   cardState = cards;
   cardNames = Object.keys(cards.cards).concat(cards.unmatched.filter(u => !Object.keys(cards.cards).some(k => sameCard(k, u))));
-  const options = (sel: string, none: string) => html`${opt('', none, sel)}${htmlList(accounts.map(a => opt(a.id, a.name, sel)))}`;
+  const options = (sel: string, none: string) => html`${opt('', tr(none), sel)}${htmlList(accounts.map(a => opt(a.id, a.name, sel)))}`;
   const needs = cardNames.filter(n => !cards.cards[n]).length;
-  return more('cards', 'Cards', needs ? html`<span class="chip warn">${needs} need${needs === 1 ? 's' : ''} an account</span>` : cardNames.length || '', html`<p class="sub-s" style="margin:0 0 8px">Money finds the account by the card’s name in Wallet. When the names differ, pick the account here. Cards Money couldn’t place show up here after their first payment.</p>${cardNames.length ? html`<div class="list">${htmlList(cardNames.map((n, i) => { const id = cards.cards[n] || ''; return html`<div class="row" style="flex-wrap:wrap;gap:8px"><span class="name" style="min-width:0">${n}${id ? '' : html` <span class="chip warn">Needs an account</span>`}</span><span style="display:flex;gap:8px;align-items:center;min-width:0;flex:1 1 200px"><select aria-label="Account for this card" data-onchange="App.setCardAccount(${i}, this.value)" style="flex:1;min-width:0">${options(id, 'Pick an account')}</select><button class="link" type="button" data-onclick="App.removeCard(${i})">Remove</button></span></div>`; }))}</div>` : ''}<form style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap" data-onsubmit="event.preventDefault();App.addCard(this)"><input name="n" type="text" placeholder="Card name in Wallet" aria-label="Card name in Wallet" style="flex:1;min-width:140px"><select name="a" aria-label="Account" style="flex:1;min-width:140px">${options('', 'Pick an account')}</select><button class="btn small">Add</button></form>`, needs > 0);
+  return more('cards', 'Cards', needs ? html`<span class="chip warn">${tr(needs === 1 ? '{count} needs an account' : '{count} need an account', { count: needs })}</span>` : cardNames.length || '', html`<p class="sub-s" style="margin:0 0 8px">Money finds the account by the card’s name in Wallet. When the names differ, pick the account here. Cards Money couldn’t place show up here after their first payment.</p>${cardNames.length ? html`<div class="list">${htmlList(cardNames.map((n, i) => { const id = cards.cards[n] || ''; return html`<div class="row" style="flex-wrap:wrap;gap:8px"><span class="name" style="min-width:0">${n}${id ? '' : html` <span class="chip warn">Needs an account</span>`}</span><span style="display:flex;gap:8px;align-items:center;min-width:0;flex:1 1 200px"><select aria-label="Account for this card" data-onchange="App.setCardAccount(${i}, this.value)" style="flex:1;min-width:0">${options(id, 'Pick an account')}</select><button class="link" type="button" data-onclick="App.removeCard(${i})">Remove</button></span></div>`; }))}</div>` : ''}<form style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap" data-onsubmit="event.preventDefault();App.addCard(this)"><input name="n" type="text" placeholder="Card name in Wallet" aria-label="Card name in Wallet" style="flex:1;min-width:140px"><select name="a" aria-label="Account" style="flex:1;min-width:140px">${options('', 'Pick an account')}</select><button class="btn small">Add</button></form>`, needs > 0);
 }
 function applePayHtml(key: string | null, cards: Cards | null, accounts: Account[]) {
   if (!key) return '';
@@ -370,9 +369,9 @@ async function copyText(text: string, done: string) {
 }
 function selectKey() { const k = el<HTMLInputElement>('applePayKey'); k.focus(); k.select(); k.setSelectionRange(0, k.value.length); }
 function showKey(btn: HTMLElement | null) {
-  const k = el<HTMLInputElement>('applePayKey'), hide = k.type === 'text' && btn && btn.textContent === 'Hide';
+  const k = el<HTMLInputElement>('applePayKey'), hide = k.type === 'text';
   k.type = hide ? 'password' : 'text';
-  if (btn) btn.textContent = hide ? 'Show' : 'Hide';
+  if (btn) btn.textContent = tr(hide ? 'Show' : 'Hide');
   if (!hide) selectKey();
 }
 
@@ -380,17 +379,17 @@ function toggleOneOffs(on: boolean) { LS.set('skipOneOffs', !!on); PAGES.clear()
 function toggleLogos(on: boolean) { LS.set('logos', !!on); toast(on ? 'Logos on' : 'Logos off'); }
 function toggleHaptics(on: boolean) { LS.set('haptics', !!on); if (on) buzz(); toast(on ? 'Haptics on' : 'Haptics off'); }
 // The month start day: stay on the current month, and redraw every page with the new ranges
-function setCycleDay(v: string) { LS.set('cycleDay', Math.min(28, Math.max(1, Math.floor(num(v)) || 1))); S.all = false; [S.y, S.m] = nowMonth(); PAGES.clear(); toast('Months now start on the ' + ordinal(cycleDay())); route(); }
+function setCycleDay(v: string) { LS.set('cycleDay', Math.min(28, Math.max(1, Math.floor(num(v)) || 1))); S.all = false; [S.y, S.m] = nowMonth(); PAGES.clear(); toast(tr('Months now start on the {day}', { day: uiLanguage() === 'zh-CN' ? cycleDay() : ordinal(cycleDay()) })); route(); }
 // Hours of work (core/worklens.ts): every amount list is drawn again with or without the hours
 function toggleWorkLens(on: boolean) { LS.set('workLens', !!on); PAGES.clear(); toast(on ? 'Purchases show the hours of work they cost' : 'Hours of work off'); if (on) learnRate(); route({ quiet: true }); }
 /* ---------- Number & date format ----------
    Automatic follows the browser's language; the others are the common ways of writing amounts and dates. */
 const LOCALES = ['en-US', 'en-GB', 'en-CA', 'en-AU', 'en-IN', 'de-DE', 'de-CH', 'fr-FR', 'fr-CA', 'es-ES', 'es-MX', 'it-IT', 'nl-NL', 'pt-PT', 'pt-BR', 'sv-SE', 'da-DK', 'nb-NO', 'fi-FI', 'pl-PL', 'cs-CZ', 'ja-JP', 'zh-CN', 'ko-KR'];
-const langName = (tag: string) => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(tag) || tag; } catch (e) { return tag; } };
+const langName = (tag: string) => { try { return new Intl.DisplayNames([uiLanguage()], { type: 'language' }).of(tag) || tag; } catch (e) { return tag; } };
 function localeOptions() {
   const pick = String(LS.get('locale', '') || '');
   const list = pick && !LOCALES.includes(pick) ? [...LOCALES, pick] : LOCALES;
-  return [opt('', 'Automatic', pick), ...list.map(t => opt(t, langName(t), pick))];
+  return [opt('', tr('Automatic'), pick), ...list.map(t => opt(t, langName(t), pick))];
 }
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 function setUiLanguage(value: string) {
@@ -403,11 +402,11 @@ function setUiLanguage(value: string) {
   persistUiLanguage(value as UiLanguage);
   window.location.reload();
 }
-const localeSample = () => money(1234.56) + ' · ' + fmtDate(todayIso()) + ' · weeks start on ' + DAYS[weekStart()];
-function setLocale(v: string) { LS.set('locale', v); PAGES.clear(); S.pageKey = ''; toast('Amounts and dates now look like ' + money(1234.56) + ' and ' + fmtDate(todayIso())); route({ quiet: true }); }
+const localeSample = () => tr('{amount} · {date} · weeks start on {day}', { amount: money(1234.56), date: fmtDate(todayIso()), day: tr(DAYS[weekStart()]) });
+function setLocale(v: string) { LS.set('locale', v); PAGES.clear(); S.pageKey = ''; toast(tr('Amounts and dates now look like {amount} and {date}', { amount: money(1234.56), date: fmtDate(todayIso()) })); route({ quiet: true }); }
 function setWorkHours(v: string) { LS.set('workHours', num(v) || 40); PAGES.clear(); route({ quiet: true }); }
 function setWorkRate(v: string) { LS.set('workRate', Math.max(0, Math.round(num(v) * 100) / 100)); PAGES.clear(); route({ quiet: true }); }
-function setBudgetAlert(v: string) { LS.set('budgetAlert', num(v)); PAGES.clear(); toast('Budget warnings at ' + budgetAlert() + '%'); }
+function setBudgetAlert(v: string) { LS.set('budgetAlert', num(v)); PAGES.clear(); toast(tr('Budget warnings at {percent}%', { percent: budgetAlert() })); }
 
 // The methods markup handlers call (see events.ts), added to App and to its type
 const methods = {

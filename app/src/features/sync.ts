@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { AuthError, PAGES, api, type ApiError } from '../core/api';
 import { showLogin } from '../core/auth';
 import { App, S } from '../core/base';
@@ -31,7 +32,7 @@ async function pushPrefs() {
     try { await api('/preferences/' + PREF, { method: 'PUT', body: { data }, keepCache: true }); }
     catch (e) { if (e instanceof AuthError || (e as ApiError).status === 401) throw e; await api('/preferences', { method: 'POST', body: { name: PREF, data }, keepCache: true }); }
     LS.set('syncAt', t); LS.set('syncDirty', 0); S.syncError = '';
-  } catch (e) { if (e instanceof AuthError) return void showLogin(e.message); S.syncError = (e as Error).message || 'Firefly didn’t accept the settings.'; }
+  } catch (e) { if (e instanceof AuthError) return void showLogin(e.message); S.syncError = (e as Error).message || tr('Firefly didn’t accept the settings.'); }
 }
 // Fetch the saved settings: newer than this device's → use them; this device has unsaved changes → send those
 async function syncPrefs() {

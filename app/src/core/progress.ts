@@ -1,3 +1,5 @@
+import { tr } from './i18n';
+
 /* ================= What a loading page is doing right now =================
    Real numbers only: every request the app sends reports here (core/api.ts netFetch), and a page load counts the
    requests it has sent, how many have finished, which list is being paged through (page 3 of 12), and whether
@@ -61,18 +63,18 @@ export function loadView(): LoadView {
   // finished ÷ known, never going backwards and never reaching 100 before the page is drawn
   L.shown = Math.max(L.shown, L.total ? Math.min(99, Math.floor(L.done / L.total * 100)) : 0);
   const reqs = [...L.reqs], retry = reqs.find(r => r.stage === 'retrying');
-  let text = 'Starting';
-  if (retry) text = 'Firefly is slow, retrying (' + Math.min(RETRIES, retry.retry) + ' of ' + RETRIES + ')';
-  else if (!L.total) text = 'Starting';
-  else if (!reqs.length) text = 'Processing';
+  let text = tr('Starting');
+  if (retry) text = tr('Firefly is slow, retrying ({count} of {total})', { count: Math.min(RETRIES, retry.retry), total: RETRIES });
+  else if (!L.total) text = tr('Starting');
+  else if (!reqs.length) text = tr('Processing');
   else {
     // a list being paged through says which page; otherwise the furthest-along request says what it's doing
     let page: [string, Pages] | null = null;
     for (const [k, p] of L.pages) if (p.done < p.of && reqs.some(r => r.label === k) && (!page || p.of - p.done > page[1].of - page[1].done)) page = [k, p];
     const front = reqs.find(r => r.stage === 'receiving') || reqs.find(r => r.stage === 'sending') || reqs[0];
-    if (page) text = 'Fetching ' + page[0] + ' (page ' + Math.min(page[1].of, page[1].done + 1) + ' of ' + page[1].of + ')';
-    else if (front.stage === 'receiving') text = 'Receiving ' + front.label + ' from Firefly';
-    else text = 'Sending request to Firefly';
+    if (page) text = tr('Fetching {name} (page {page} of {total})', { name: tr(page[0]), page: Math.min(page[1].of, page[1].done + 1), total: page[1].of });
+    else if (front.stage === 'receiving') text = tr('Receiving {name} from Firefly', { name: tr(front.label) });
+    else text = tr('Sending request to Firefly');
   }
-  return { on: true, pct: L.shown, text, detail: L.total ? Math.min(L.done, L.total) + ' of ' + L.total + ' requests' : '', retrying: !!retry };
+  return { on: true, pct: L.shown, text, detail: L.total ? tr('{count} of {total} requests', { count: Math.min(L.done, L.total), total: L.total }) : '', retrying: !!retry };
 }

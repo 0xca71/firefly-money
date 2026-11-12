@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import type { Html } from './html';
 import type { Group, TxMeta } from './feed';
 import type { Lists } from './lists';
@@ -76,7 +77,7 @@ export function monthRange(y: number, m: number) {
 }
 // The period the month selector shows: one month, or everything up to today when "All time" is picked.
 export const ALL_START = '1970-01-01';
-export const period = (): Period => S.all ? { start: ALL_START, end: todayIso(), label: 'all time', short: 'all time', all: true } : monthRange(S.y, S.m);
+export const period = (): Period => S.all ? { start: ALL_START, end: todayIso(), label: tr('all time'), short: tr('all time'), all: true } : monthRange(S.y, S.m);
 // The month a page loads. Usually the one picked at the top; `at` asks for another month (the one before or after),
 // which the router loads ahead of time so stepping to it is instant. A view given `at` only fetches, it draws nothing.
 export const viewYM = (r: { at?: [number, number] }): [number, number] => r.at || [S.y, S.m];
@@ -89,7 +90,7 @@ export const absDiff = (x: ApiData) => Math.abs(num(x.difference_float ?? x.diff
 export const sumDiff = (r: ApiData): number => arr(r).reduce((s, x) => s + absDiff(x), 0);
 /* ---------- Regional formats ----------
    Every amount and date goes through these, in the locale picked in Settings → Appearance → Number & date format
-   ("Automatic" follows the browser). Interface text stays English; only how numbers and dates are written changes. */
+   ("Automatic" follows the browser). Interface language is a separate setting. */
 export const LOCALE_KEY = 'money.locale';
 let locCache: [string | null, string] | null = null;
 // Read on every format call (a setting synced from another device can change it), so the parsed value is kept

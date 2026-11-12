@@ -104,17 +104,18 @@ export function openDrawer(title: string, bodyHtml: Html | string, footHtml?: Ht
   const d = el('drawer'), wasOpen = d.classList.contains('open');
   S.drawerTok = (S.drawerTok || 0) + 1;
   let h = S.drawerHero;
-  if (h && !(title === 'Loading…' || title === 'Transaction' || (S.form && S.form.id === h.id))) h = S.drawerHero = null;
+  const loading = title === 'Loading…' || title === tr('Loading…');
+  if (h && !(loading || title === 'Transaction' || title === tr('Transaction') || (S.form && S.form.id === h.id))) h = S.drawerHero = null;
   const keep = h && wasOpen && d.querySelector('.dhero[data-id="' + h.id + '"]');
   if (keep) {       // same transaction: keep the header node (it may be mid-animation) and swap the rest
-    if (title !== 'Loading…') keep.querySelector('.eyebrow')!.textContent = title;
+    if (!loading) keep.querySelector('.eyebrow')!.textContent = title;
     d.querySelectorAll(':scope > .body, :scope > footer').forEach(n => n.remove());
     d.insertAdjacentHTML('beforeend', String(html`<div class="body" id="drawerBody">${bodyHtml}</div>${footHtml ? html`<footer>${footHtml}</footer>` : ''}`));
     return;
   }
-  d.innerHTML = String(html`<div class="grab" aria-hidden="true"></div><header>${h ? drawerHeroHtml({ ...h, kicker: title === 'Loading…' ? h.kicker : title }) : html`<h2>${title}</h2>`}<button class="round" type="button" data-onclick="App.closeDrawer()" aria-label="Close">${ICON_X}</button></header><div class="body" id="drawerBody">${bodyHtml}</div>${footHtml ? html`<footer>${footHtml}</footer>` : ''}`);
+  d.innerHTML = String(html`<div class="grab" aria-hidden="true"></div><header>${h ? drawerHeroHtml({ ...h, kicker: loading ? h.kicker : title }) : html`<h2>${title}</h2>`}<button class="round" type="button" data-onclick="App.closeDrawer()" aria-label="Close">${ICON_X}</button></header><div class="body" id="drawerBody">${bodyHtml}</div>${footHtml ? html`<footer>${footHtml}</footer>` : ''}`);
   if (!wasOpen) S.drawerReturn = document.activeElement as HTMLElement | null;
-  d.setAttribute('aria-label', String(title === 'Loading…' && h ? h.name : title));
+  d.setAttribute('aria-label', String(loading && h ? h.name : title));
   d.classList.add('open'); d.setAttribute('aria-hidden', 'false'); d.inert = false; el('scrim').classList.add('open');
   if (!wasOpen) setTimeout(() => { const f = d.querySelector<HTMLElement>('input:not([type=hidden]):not([type=checkbox]):not([type=date]), select'); if (f && innerWidth > 900) f.focus(); }, 280);
 }
@@ -143,7 +144,7 @@ export function formError(msg: string) {
   const b = el('drawerBody'); if (!b) return toast(msg);
   let e = b.querySelector('.form-err');
   if (!e) { e = document.createElement('div'); e.className = 'form-err'; b.prepend(e); }
-  e.textContent = msg; b.scrollTop = 0;
+  e.textContent = tr(msg); b.scrollTop = 0;
 }
 // Icons for small round buttons: drawn, not text glyphs (× ‹ › sit on the font's baseline, so they land a pixel or two
 // low, by an amount that depends on the system font)
@@ -176,7 +177,7 @@ export function emptyState(kind: keyof typeof EMPTY_ICONS | string, title: strin
   const d = EMPTY_ICONS[kind] || EMPTY_ICONS.list;
   return html`<div class="empty-state"><div class="es-ic" aria-hidden="true">${raw(`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`)}</div><h3>${tr(title)}</h3><p>${tr(text)}</p>${actions ? html`<div class="es-act">${actions}</div>` : ''}</div>`;
 }
-export const opt = (v: string | number, label: string | number, sel: unknown) => html`<option value="${v}"${String(v) === String(sel) ? ' selected' : ''}>${tr(String(label))}</option>`;
+export const opt = (v: string | number, label: string | number, sel: unknown) => html`<option value="${v}"${String(v) === String(sel) ? ' selected' : ''}>${label}</option>`;
 
 // The methods markup handlers call (see events.ts), added to App and to its type
 const methods = {

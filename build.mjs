@@ -9,7 +9,7 @@ import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 
 const demo = process.argv.includes('--demo');
 const options = {
-  entryPoints: { boot: 'app/src/boot.ts', app: 'app/src/main.ts', leaflet: 'app/src/vendor/leaflet.ts', ...(demo ? { demo: 'app/src/demo/demo.ts' } : {}) },
+  entryPoints: { boot: 'app/src/boot.ts', app: 'app/src/main.ts', static: 'app/src/static.ts', leaflet: 'app/src/vendor/leaflet.ts', ...(demo ? { demo: 'app/src/demo/demo.ts' } : {}) },
   outdir: demo ? 'site/assets/js' : 'app/assets/js',
   bundle: true,
   minify: true,
@@ -32,8 +32,8 @@ if (demo) {
   const blurb = 'Live demo of Money, a fast, private dashboard for Firefly III, with made-up data. Try the budgets, forecasts and 12 themes.';
   writeFileSync('site/robots.txt', `User-agent: *\nAllow: /\nSitemap: ${home}sitemap.xml\n`);
   writeFileSync('site/sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n<url><loc>${home}</loc></url>\n<url><loc>${home}privacy.html</loc></url>\n</urlset>\n`);
-  writeFileSync('site/404.html', readFileSync('app/404.html', 'utf8').replace('href="/icon.svg"', 'href="/firefly-money/icon.svg"').replace('<a href="/">', '<a href="/firefly-money/">'));
-  writeFileSync('site/privacy.html', readFileSync('app/privacy.html', 'utf8').replace('href="/icon.svg"', 'href="icon.svg"').replace('href="/"', 'href="./"')
+  writeFileSync('site/404.html', readFileSync('app/404.html', 'utf8').replace('href="/icon.svg"', 'href="/firefly-money/icon.svg"').replace('<a href="/">', '<a href="/firefly-money/">').replace('src="/assets/', 'src="/firefly-money/assets/'));
+  writeFileSync('site/privacy.html', readFileSync('app/privacy.html', 'utf8').replace('href="/icon.svg"', 'href="icon.svg"').replace('href="/"', 'href="./"').replace('src="/assets/', 'src="assets/')
     .replace('<!--DEMO-->', '<p>This demo runs entirely in your browser with made-up data. Nothing you do here is sent anywhere' + (process.env.GOATCOUNTER ? ', apart from a cookie-free page-view count (GoatCounter: no personal data, no cookies).' : '.') + '</p>'));
   // The page's Content-Security-Policy, taken from the nginx config so the demo runs under the same rules
   // (frame-ancestors only works as a header, so it's left out of the <meta> version)

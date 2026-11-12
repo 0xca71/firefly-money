@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import { html, htmlList } from './html';
 
 /* ================= The theme list and its picker (grouped chips with a swatch) ================= */
@@ -31,7 +32,7 @@ export const THEME_GROUPS: [string, [string, string][]][] = [
 // border-box origin: otherwise the gradient tiles under the 2px border and a sliver of the opposite colour shows at the edge
 export function themeButtons() {
   const cur = currentTheme(), sw = new Map(THEMES.map(t => [t[0], t[2]])), full = new Map(THEMES.map(t => [t[0], t[1]]));
-  return html`<div class="tpick" role="radiogroup" aria-label="Theme">${htmlList(THEME_GROUPS.map(([g, items]) => html`<div class="tp-group" role="group" aria-label="${g}"><div class="tp-head" aria-hidden="true">${g}</div><div class="tp-grid">${htmlList(items.map(([k, name]) => html`<button type="button" role="radio" class="tp${k === cur ? ' on' : ''}" aria-checked="${k === cur ? 'true' : 'false'}" tabindex="${k === cur ? '0' : '-1'}" aria-label="${full.get(k) || name}" data-onclick="App.setTheme('${k}')"><span class="tp-sw" style="background:${sw.get(k) || ''};background-origin:border-box"></span><span class="tp-name">${name}</span></button>`))}</div></div>`))}</div>`;
+  return html`<div class="tpick" role="radiogroup" aria-label="Theme">${htmlList(THEME_GROUPS.map(([g, items]) => html`<div class="tp-group" role="group" aria-label="${tr(g)}"><div class="tp-head" aria-hidden="true">${tr(g)}</div><div class="tp-grid">${htmlList(items.map(([k, name]) => html`<button type="button" role="radio" class="tp${k === cur ? ' on' : ''}" aria-checked="${k === cur ? 'true' : 'false'}" tabindex="${k === cur ? '0' : '-1'}" aria-label="${tr(full.get(k) || name)}" data-onclick="App.setTheme('${k}')"><span class="tp-sw" style="background:${sw.get(k) || ''};background-origin:border-box"></span><span class="tp-name">${tr(name)}</span></button>`))}</div></div>`))}</div>`;
 }
 // Arrow keys move through the themes as one radio group (and pick the one you land on); Tab leaves the group
 document.addEventListener('keydown', e => {

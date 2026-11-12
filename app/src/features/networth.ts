@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { html, htmlList } from '../core/html';
 import { getAll, PAGES } from '../core/api';
 import { App, el, fmtD, money0, monthOf, monthRange, S, todayIso } from '../core/base';
@@ -26,7 +27,7 @@ export const nwMonths = () => {
   const saved = LS.get('nwMonths', 0) || LS.get('nwYears', 1) * 12, opts = nwOptions(firstOpened());
   return opts.includes(saved) ? saved : opts.filter(m => m <= saved).pop() || opts[0];
 };
-export const nwWords = () => RANGES.find(r => r[0] === nwMonths())![2];
+export const nwWords = () => tr(RANGES.find(r => r[0] === nwMonths())![2]);
 async function netWorthHistory(): Promise<NetWorthPoint[]> {
   return netWorthOn(monthEnds(todayIso(), POINTS, nwMonths() / (POINTS - 1)));
 }
@@ -49,7 +50,7 @@ export async function netWorthOn(days: string[]): Promise<NetWorthPoint[]> {
       .then(([as, ls]) => ({ date, ...total([...as, ...ls].map(normAccount)) }))));
 }
 // The range switch for the Overview's net worth tile
-export const nwSeg = () => { const cur = nwMonths(); return html`<div class="seg mini">${htmlList(nwOptions(firstOpened()).map(m => html`<button type="button" class="${cur === m ? 'on' : ''}" data-onclick="App.nwRange(${m})">${RANGES.find(r => r[0] === m)![1]}</button>`))}</div>`; };
+export const nwSeg = () => { const cur = nwMonths(); return html`<div class="seg mini">${htmlList(nwOptions(firstOpened()).map(m => html`<button type="button" class="${cur === m ? 'on' : ''}" data-onclick="App.nwRange(${m})">${tr(RANGES.find(r => r[0] === m)![1])}</button>`))}</div>`; };
 
 /* ---------- Time scrubber: drag along the tile's line and it goes back to that month ----------
    The big number and the line under it show that point, and a tip names the accounts that moved most since.
@@ -60,7 +61,7 @@ const label = (d: string) => fmtD(d, { month: 'short', year: 'numeric' });
 // The tile's line, with a guide and a knob on top that follow your finger
 export function nwLine(pts: NetWorthPoint[], color: string) {
   SCRUB = pts;
-  return html`<div class="nw-scrub" title="Drag to go back in time">${miniLine(pts.map(p => p.net), color, 'Net worth over time')}<i class="nw-guide"></i><i class="nw-knob" style="background:${color}"></i></div>`;
+  return html`<div class="nw-scrub" title="Drag to go back in time">${miniLine(pts.map(p => p.net), color, tr("Net worth over time"))}<i class="nw-guide"></i><i class="nw-knob" style="background:${color}"></i></div>`;
 }
 export const scrubIndex = (fx: number, xs: number[]) => xs.reduce((best, v, i) => Math.abs(v - fx) < Math.abs(xs[best] - fx) ? i : best, 0);
 // The accounts whose balance changed most between a point and today: [name, change]
@@ -85,12 +86,12 @@ function show(box: HTMLElement, i: number) {
   box.style.setProperty('--x', (fx * 100).toFixed(2) + '%'); box.style.setProperty('--ky', ky.toFixed(1) + 'px');
   const big = part(card, 'big'), sub = part(card, 'sub'), today = i === pts.length - 1, d = last.net - p.net;
   if (big) { big.textContent = money0(p.net); big.classList.toggle('negative', p.net < 0); }
-  if (sub) sub.innerHTML = String(today ? html`<strong>Today</strong>` : html`<strong>${label(p.date)}</strong> · <span class="${d >= 0 ? 'down' : 'up'}">${money0(Math.abs(d))} ${d >= 0 ? 'less' : 'more'} than now</span>`);
+  if (sub) sub.innerHTML = String(today ? html`<strong>Today</strong>` : html`<strong>${label(p.date)}</strong> · <span class="${d >= 0 ? 'down' : 'up'}">${tr(d >= 0 ? "{amount} less than now" : "{amount} more than now", { amount: money0(Math.abs(d)) })}</span>`);
   // Which accounts moved since then, in the tip above the line
   const names = Object.fromEntries((S.lists ? S.lists.accounts : []).map(a => [a.id, a.name]));
   const mv = today ? [] : movers(p.by || {}, last.by || {}, names), tip = el('tip');
   if (!mv.length) { tip.hidden = true; return; }
-  tip.textContent = 'Since then\n' + mv.map(([nm, x]) => nm + ' ' + (x >= 0 ? '+' : '−') + money0(Math.abs(x))).join('\n');
+  tip.textContent = tr('Since then') + '\n' + mv.map(([nm, x]) => nm + ' ' + (x >= 0 ? '+' : '−') + money0(Math.abs(x))).join('\n');
   tip.dataset.src = 'nw'; tip.hidden = false;
   // Above the tile, so it never covers the number you're reading (below it when the tile is at the top of the screen)
   const r = box.getBoundingClientRect(), c = card.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, at = r.left + r.width * fx;
@@ -101,7 +102,7 @@ function settle(box: HTMLElement) {
   const card = box.closest<HTMLElement>('.nw'), p = SCRUB[cur]; if (!card) return;
   if (!p || cur === SCRUB.length - 1) return reset(card);
   const [y, m] = monthOf(new Date(p.date + 'T12:00:00')), sub = part(card, 'sub');
-  if (sub) sub.insertAdjacentHTML('beforeend', String(html` <button type="button" class="link nw-open" data-onclick="App.nwOpen(${y},${m})">See ${monthRange(y, m).short} →</button>`));
+  if (sub) sub.insertAdjacentHTML('beforeend', String(html` <button type="button" class="link nw-open" data-onclick="App.nwOpen(${y},${m})">${tr("See {month} →", { month: monthRange(y, m).short })}</button>`));
   // Hold that month while a mouse heads for the link, rather than scrubbing on the way there
   held = true;
   resetT = setTimeout(() => reset(card), 8000);

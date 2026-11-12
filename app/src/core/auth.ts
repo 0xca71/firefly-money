@@ -16,7 +16,7 @@ export async function signIn(password: string, remember: boolean) {
   const r = await fetch(SESSION, { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json', 'X-Money': '1' }, body: JSON.stringify({ password, remember: !!remember }) });
   if (r.status === 401) throw new AuthError('That password isn’t right.');
   if (r.status === 429) throw new Error('Too many sign-in attempts. Wait a minute, then try again.');
-  if (!r.ok) throw new Error('Couldn’t sign in (' + r.status + ').');
+  if (!r.ok) throw new Error(tr('Couldn’t sign in ({status}).', { status: r.status }));
   S.signedIn = true; setRemembered(!!remember);
 }
 // Ends the session on the server. Resolves false when that didn't happen (offline, server down): the cookie is

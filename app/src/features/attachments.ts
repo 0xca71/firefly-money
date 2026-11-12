@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { html, htmlList } from '../core/html';
 import { api, getAll } from '../core/api';
 import { withAuth } from '../core/auth';
@@ -29,7 +30,7 @@ async function loadTxExtras(gid: string, jids: string[]) {
     }))}</div>` : html`<p class="empty" style="padding-top:0">No files attached.</p>`;
     const linkHtml = others.length ? html`<div class="list">${htmlList(others.map(({ l, mine, g }) => {
       const t = typeById[String(l.attributes.link_type_id)] || {}, phrase = mine ? t.outward : t.inward;
-      return html`<div class="row"><span class="name"><span class="sub-s">${phrase || 'linked to'}</span><br>${g ? html`<button class="link" data-onclick="App.editTx('${g.id}')">${g.title || g.splits[0].description}</button> <span class="sub-s">${fmtDay(g.date)} · ${money(g.total)}</span>` : 'Transaction #' + (mine ? l.attributes.inward_id : l.attributes.outward_id)}</span><button class="link" data-onclick="App.deleteLink('${l.id}')">Unlink</button></div>`;
+      return html`<div class="row"><span class="name"><span class="sub-s">${phrase || tr('linked to')}</span><br>${g ? html`<button class="link" data-onclick="App.editTx('${g.id}')">${g.title || g.splits[0].description}</button> <span class="sub-s">${fmtDay(g.date)} · ${money(g.total)}</span>` : tr('Transaction #{id}', { id: mine ? l.attributes.inward_id : l.attributes.outward_id })}</span><button class="link" data-onclick="App.deleteLink('${l.id}')">Unlink</button></div>`;
     }))}</div>` : html`<p class="empty" style="padding-top:0">Not linked to anything.</p>`;
     const dirOpts = htmlList(types.flatMap(t => { const a = t.attributes; return a.inward === a.outward ? [opt(t.id + ':out', a.outward, '')] : [opt(t.id + ':out', a.outward, ''), opt(t.id + ':in', a.inward, '')]; }));
     box.innerHTML =
@@ -42,11 +43,11 @@ async function uploadAtt(jid: string, input: HTMLInputElement) {
   const files = [...input.files!]; if (!files.length) return;
   await withAuth(async () => {
     for (const f of files) {
-      toast('Uploading ' + f.name + '…');
+      toast(tr('Uploading {name}…', { name: f.name }));
       const res = await api('/attachments', { method: 'POST', body: { filename: f.name, title: f.name, attachable_type: 'TransactionJournal', attachable_id: jid } });
       await api('/attachments/' + res.data.id + '/upload', { method: 'POST', raw: f, contentType: 'application/octet-stream' });
     }
-    toast(files.length === 1 ? 'File attached' : files.length + ' files attached'); refreshExtras();
+    toast(files.length === 1 ? tr('File attached') : tr('{count} files attached', { count: files.length })); refreshExtras();
   });
 }
 async function downloadAtt(id: string, name: string) { await withAuth(async () => saveBlob(await api('/attachments/' + id + '/download', { as: 'blob' }), name)); }

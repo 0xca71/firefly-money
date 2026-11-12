@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { html, htmlList } from '../core/html';
 import { App, S } from '../core/base';
 import { LS } from '../core/helpers';
@@ -28,9 +29,9 @@ export function gettingStarted() {
   const list = steps(), n = list.filter(isDone).length;
   if (n === list.length) return '';
   const check = html`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>`;
-  return html`<section class="panel started" id="started"><div class="panel-head"><div><h2>Get started with Money</h2><p class="lead">${n} of ${list.length} done</p></div><button type="button" class="round" aria-label="Hide getting started" data-onclick="App.startedHide()">${ICON_X}</button></div>
+  return html`<section class="panel started" id="started"><div class="panel-head"><div><h2>Get started with Money</h2><p class="lead">${tr('{count} of {total} done', { count: n, total: list.length })}</p></div><button type="button" class="round" aria-label="Hide getting started" data-onclick="App.startedHide()">${ICON_X}</button></div>
 <div class="track st-track" aria-hidden="true"><div class="fill good" style="width:${Math.round(n / list.length * 100)}%"></div></div>
-<ol class="st-list">${htmlList(list.map(st => { const d = isDone(st); return html`<li class="${d ? 'done' : ''}"><span class="st-ck" aria-hidden="true">${d ? check : ''}</span><div class="st-t"><strong>${st.title}</strong><span>${st.sub}</span></div>${d ? '' : st.href ? html`<a class="btn small" href="${st.href}" data-onclick="App.startedDone('${st.id}')">${st.act}</a>` : st.btn === 'add' ? html`<button type="button" class="btn small" data-onclick="App.startedAdd()">${st.act}</button>` : html`<button type="button" class="btn small" data-onclick="App.startedDone('home')">${st.act}</button>`}</li>`; }))}</ol></section>`;
+<ol class="st-list">${htmlList(list.map(st => { const d = isDone(st); return html`<li class="${d ? 'done' : ''}"><span class="st-ck" aria-hidden="true">${d ? check : ''}</span><div class="st-t"><strong>${tr(st.title)}</strong><span>${tr(st.sub)}</span></div>${d ? '' : st.href ? html`<a class="btn small" href="${st.href}" data-onclick="App.startedDone('${st.id}')">${tr(st.act)}</a>` : st.btn === 'add' ? html`<button type="button" class="btn small" data-onclick="App.startedAdd()">${tr(st.act)}</button>` : html`<button type="button" class="btn small" data-onclick="App.startedDone('home')">${tr(st.act)}</button>`}</li>`; }))}</ol></section>`;
 }
 // Called once the app is on screen: a device with no earlier Money data is a new install
 function startedInit() {

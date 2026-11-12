@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { App, el, fmtD } from '../core/base';
 import { FF, type FfState, api, ffSeen, ffSeenResponse, sleep } from '../core/api';
 import { refreshAll } from '../core/router';
@@ -22,12 +23,12 @@ const LABEL: Record<FfState, [string, string]> = {      // [short, long]
 };
 let version = '', apiVersion = '', busy = false, wasDown = false, okTimer: ReturnType<typeof setTimeout> | undefined;
 const moneyDown = () => FF.state === 'down' && FF.why === 'money';
-const longLabel = () => moneyDown() ? 'Can’t reach the Money server' : LABEL[FF.state][1];
-const shortLabel = () => moneyDown() ? 'Money server down' : LABEL[FF.state][0];
+const longLabel = () => tr(moneyDown() ? 'Can’t reach the Money server' : LABEL[FF.state][1]);
+const shortLabel = () => tr(moneyDown() ? 'Money server down' : LABEL[FF.state][0]);
 function detail() {
   const ago = FF.at ? Math.round((Date.now() - FF.at) / 1000) : -1;
-  const when = ago < 0 ? '' : ago < 5 ? 'just now' : ago < 90 ? ago + 's ago' : Math.round(ago / 60) + ' min ago';
-  return longLabel() + (FF.state === 'ok' && version ? ' · version ' + version : '') + (when ? ' · checked ' + when : '') + ' · click for details';
+  const when = ago < 0 ? '' : ago < 5 ? tr('just now') : ago < 90 ? tr('{count}s ago', { count: ago }) : tr('{count} min ago', { count: Math.round(ago / 60) });
+  return longLabel() + (FF.state === 'ok' && version ? ' · ' + tr('version {version}', { version }) : '') + (when ? ' · ' + tr('checked {when}', { when }) : '') + ' · ' + tr('click for details');
 }
 const OUT_ICON = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M8.5 16.4a5 5 0 0 1 7 0"/><path d="M5.1 12.9a10 10 0 0 1 4.6-2.7M14.6 10.4a10 10 0 0 1 4.3 2.5"/><path d="M1.8 9.4a15 15 0 0 1 3.9-2.6M10.5 5.3a15 15 0 0 1 11.7 4.1"/><path d="M12 19.6h.01"/></svg>`;
 function outText(): [string, string] {
@@ -42,7 +43,7 @@ function paintOut() {
   if (!o) { o = document.createElement('section'); o.id = 'ffOut'; o.className = 'ff-out'; o.setAttribute('role', 'alert'); el('app').appendChild(o); }
   const [title, text] = outText();
   o.dataset.ff = FF.state;
-  o.innerHTML = String(html`<div class="ff-out-card"><span class="ff-out-ic">${OUT_ICON}</span><h2>${title}</h2><p>${text}</p>${chainHtml()}<button type="button" class="btn primary" data-onclick="App.ffCheck()">Try again</button><p class="ff-out-note">Checking again every few seconds</p></div>`);
+  o.innerHTML = String(html`<div class="ff-out-card"><span class="ff-out-ic">${OUT_ICON}</span><h2>${tr(title)}</h2><p>${tr(text)}</p>${chainHtml()}<button type="button" class="btn primary" data-onclick="App.ffCheck()">Try again</button><p class="ff-out-note">Checking again every few seconds</p></div>`);
 }
 /* ---------- Which part is down: this device → the Money server → Firefly III (and its token) ---------- */
 type Link = 'ok' | 'bad' | 'unknown';
@@ -56,11 +57,11 @@ function chain(): [string, Link, string][] {
     ['Firefly III', ff, st === 'auth' ? 'Token rejected' : ff === 'bad' ? 'Not answering' : ff === 'ok' ? 'Answering' : 'Unknown']];
 }
 const chainHtml = () => html`<ol class="ff-chain">${htmlList(chain().map(([name, k, what]) =>
-  html`<li data-k="${k}"><i aria-hidden="true"></i><b>${name}</b><span>${what}</span></li>`))}</ol>`;
+  html`<li data-k="${k}"><i aria-hidden="true"></i><b>${tr(name)}</b><span>${tr(what)}</span></li>`))}</ol>`;
 function ago(t: number) {
-  if (!t) return 'Not yet';
+  if (!t) return tr('Not yet');
   const s = Math.round((Date.now() - t) / 1000);
-  return s < 5 ? 'Just now' : s < 90 ? s + 's ago' : s < 5400 ? Math.round(s / 60) + ' min ago' : fmtD(new Date(t), { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return s < 5 ? tr('Just now') : s < 90 ? tr('{count}s ago', { count: s }) : s < 5400 ? tr('{count} min ago', { count: Math.round(s / 60) }) : fmtD(new Date(t), { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 function ffAddress() { const a = el('ffLink'), h = a.getAttribute('href') || ''; return !a.hidden && /^https?:\/\//.test(h) ? h : ''; }
 let popFor: HTMLElement | null = null;
@@ -68,15 +69,15 @@ const BADGE: Record<FfState, string> = { checking: 'Checking', ok: 'Connected', 
 function popHtml() {
   const st = FF.state, addr = ffAddress();
   const token = st === 'auth' ? 'Rejected' : st === 'ok' ? 'Valid' : 'Unknown';
-  return html`<div class="ff-pop-head"><b>Firefly III</b><span class="ff-badge" data-ff="${st}"><i aria-hidden="true"></i>${BADGE[st]}</span></div>
+  return html`<div class="ff-pop-head"><b>Firefly III</b><span class="ff-badge" data-ff="${st}"><i aria-hidden="true"></i>${tr(st === 'checking' ? 'Checking Firefly' : BADGE[st])}</span></div>
 ${chainHtml()}
 <dl class="ff-facts">
 ${addr ? html`<dt>Server</dt><dd><a href="${addr}" target="_blank" rel="noopener">${addr.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a></dd>` : ''}
-<dt>Version</dt><dd>${version ? version + (apiVersion ? ' · API ' + apiVersion : '') : 'Unknown'}</dd>
-<dt>Last answer</dt><dd>${ago(FF.okAt)}${FF.okAt && FF.ms && (st === 'ok' || st === 'auth') ? ' · ' + FF.ms + ' ms' : ''}</dd>
-<dt>Access token</dt><dd data-k="${token === 'Rejected' ? 'bad' : token === 'Valid' ? 'ok' : 'unknown'}">${token}</dd>
+<dt>Version</dt><dd>${version ? version + (apiVersion ? ' · API ' + apiVersion : '') : tr('Unknown')}</dd>
+<dt>Last answer</dt><dd>${ago(FF.okAt)}${FF.okAt && FF.ms && (st === 'ok' || st === 'auth') ? ' · ' + tr('{count} ms', { count: FF.ms }) : ''}</dd>
+<dt>Access token</dt><dd data-k="${token === 'Rejected' ? 'bad' : token === 'Valid' ? 'ok' : 'unknown'}">${tr(token)}</dd>
 </dl>
-<div class="ff-pop-foot"><button type="button" class="btn small" data-onclick="App.ffCheck()">Check now</button><span>Checks every ${st === 'ok' || st === 'checking' ? '5' : '3'} seconds</span></div>`;
+<div class="ff-pop-foot"><button type="button" class="btn small" data-onclick="App.ffCheck()">Check now</button><span>${tr('Checks every {count} seconds', { count: st === 'ok' || st === 'checking' ? 5 : 3 })}</span></div>`;
 }
 function placePop() {
   const p = document.getElementById('ffPop');
@@ -102,7 +103,7 @@ function closePop() {
 function openPop(anchor: HTMLElement) {
   if (popFor === anchor) { closePop(); return; }
   let p = document.getElementById('ffPop');
-  if (!p) { p = document.createElement('div'); p.id = 'ffPop'; p.className = 'ff-pop'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Firefly III connection'); document.body.appendChild(p); }
+  if (!p) { p = document.createElement('div'); p.id = 'ffPop'; p.className = 'ff-pop'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', tr('Firefly III connection')); document.body.appendChild(p); }
   popFor = anchor; anchor.setAttribute('aria-expanded', 'true');
   p.hidden = false; paintPop();
   if (!version) loadVersion().then(paintPop);

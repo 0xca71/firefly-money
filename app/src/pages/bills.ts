@@ -1,4 +1,5 @@
 import { Html, html, htmlList } from '../core/html';
+import { tr } from '../core/i18n';
 import { api, getAll } from '../core/api';
 import { busy } from '../core/auth';
 import { type ApiData, App, el, type Field, fmtDate, fmtDay, isoDate, leadDays, money, money0, monthOf, monthRange, nowMonth, num, type Period, S, todayIso, viewYM, weekOrder } from '../core/base';
@@ -55,16 +56,16 @@ VIEWS.bills = async (r, paint) => {
   const rows = htmlList(bills.sort((a, b) => grp(a).localeCompare(grp(b)) || String((a.attributes.pay_dates || [])[0] || '9').localeCompare(String((b.attributes.pay_dates || [])[0] || '9'))).map((b, i, all) => {
     const heading = grp(b) && (i === 0 || grp(all[i - 1]) !== grp(b)) ? html`<tr><td colspan="4" class="eyebrow" style="padding-top:18px">${grp(b)}</td></tr>` : '';
     const at = b.attributes, paid = (at.paid_dates || []).length, due = billDueDates(at, cur)[0];
-    const f = FREQ[at.repeat_freq] || [at.repeat_freq, 1], every = (at.skip ? 'Every ' + (at.skip + 1) + ' ' + f[0] + 's' : 'Every ' + f[0]);
+    const f = FREQ[at.repeat_freq] || [at.repeat_freq, 1], every = at.skip ? tr('Every {count} {unit}', { count: at.skip + 1, unit: tr(f[0] === '6 months' ? '6-month periods' : f[0] + 's') }) : tr('Every {unit}', { unit: tr(f[0]) });
     const status = at.active === false ? html`<span class="chip">Inactive</span>` : paid ? html`<span class="chip good">Paid this month</span>` :
-      due ? due < todayIso() ? html`<span class="chip bad">Overdue since ${fmtDay(due)}</span>` : html`<span class="chip warn">Due ${fmtDay(due)}</span>` : (next => html`<span class="chip">${next ? 'Next ' + fmtDate(next) : at.end_date && String(at.end_date).slice(0, 10) < todayIso() ? 'Ended' : 'Next —'}</span>`)(nextBillDate(at, cur.start > todayIso() ? cur.start : todayIso()));
+      due ? due < todayIso() ? html`<span class="chip bad">${tr('Overdue since {date}', { date: fmtDay(due) })}</span>` : html`<span class="chip warn">${tr('Due {date}', { date: fmtDay(due) })}</span>` : (next => html`<span class="chip">${next ? tr('Next {date}', { date: fmtDate(next) }) : tr(at.end_date && String(at.end_date).slice(0, 10) < todayIso() ? 'Ended' : 'Next —')}</span>`)(nextBillDate(at, cur.start > todayIso() ? cur.start : todayIso()));
     const amt = num(at.amount_min) === num(at.amount_max) ? money(num(at.amount_min)) : money0(num(at.amount_min)) + '–' + money0(num(at.amount_max));
     return html`${heading}<tr${at.active === false ? html` style="opacity:.5"` : ''}><td><a class="desc" href="#/transactions?bill=${b.id}" style="text-decoration:none">${at.name}</a><div class="sub-s">${every}${billEnds(at)}</div><div class="show-s">${status}</div></td><td class="hide-s">${status}</td><td class="amt">${amt}</td><td class="act">${at.active !== false && !paid ? html`<button class="btn small primary" data-onclick="App.billPay('${b.id}')">Pay now</button> ` : ''}<button class="btn small" data-onclick="App.billForm('${b.id}')">Edit</button></td></tr>`;
   }));
   S.billCache = Object.fromEntries(bills.map(b => [String(b.id), b.attributes]));
   const cal = (r.q.view || LS.get('billsView', 'list')) === 'calendar' && bills.length;
-  const viewBtn = (k: string, l: string) => html`<button type="button" class="${(cal ? 'calendar' : 'list') === k ? 'on' : ''}" data-onclick="App.billsView('${k}')">${l}</button>`;
-  paint(html`${head('Bills', 'About ' + money0(monthly) + ' a month across ' + active.length + ' active bill' + (active.length === 1 ? '' : 's'), html`${monthNav()}<button class="btn primary" data-onclick="App.billForm()">+ New bill</button>`)}${bills.length ? html`<div class="seg" style="margin:-8px 0 20px">${viewBtn('list', 'List')}${viewBtn('calendar', 'Calendar')}</div>` : ''}${cal ? billCalendar(bills, cur) : html`<section class="panel flush">${rows ? html`<table class="tbl bills-tbl"><thead><tr><th>Bill</th><th class="hide-s">${cur.label}</th><th class="r">Amount</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+  const viewBtn = (k: string, l: string) => html`<button type="button" class="${(cal ? 'calendar' : 'list') === k ? 'on' : ''}" data-onclick="App.billsView('${k}')">${tr(l)}</button>`;
+  paint(html`${head('Bills', tr(active.length === 1 ? 'About {amount} a month across {count} active bill' : 'About {amount} a month across {count} active bills', { amount: money0(monthly), count: active.length }), html`${monthNav()}<button class="btn primary" data-onclick="App.billForm()">+ New bill</button>`)}${bills.length ? html`<div class="seg" style="margin:-8px 0 20px">${viewBtn('list', 'List')}${viewBtn('calendar', 'Calendar')}</div>` : ''}${cal ? billCalendar(bills, cur) : html`<section class="panel flush">${rows ? html`<table class="tbl bills-tbl"><thead><tr><th>Bill</th><th class="hide-s">${cur.label}</th><th class="r">Amount</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
       : emptyState('bills', 'No bills yet', 'Add rent, subscriptions or insurance and Money shows what is due next and keeps your safe-to-spend honest.', html`<button class="btn primary" data-onclick="App.billForm()">+ New bill</button>`)}</section>`}<div id="subsBox"></div><p class="sub-s" style="margin-top:14px">Firefly marks a bill paid when a transaction is linked to it — pick the bill in the transaction form, or let your rules do it.</p>`);
   const tok = S.tok;
   // The page may still be animating in when the answer arrives, so wait a moment for the box to exist
@@ -98,11 +99,11 @@ function billCalendar(bills: ApiData[], cur: Period) {
   const t = todayIso(), { days, sum } = billDays(bills, t, cur);
   // A paid bill opens the charge that paid it; one still due opens the bill
   const pill = (x: BillDay) => {
-    const cls = 'bpill ' + CAL_STATE[x.state][0], tip = x.name + ' · ' + CAL_STATE[x.state][1] + ' · ' + money(x.amt), inner = html`<span class="nm">${x.name}</span><span class="num">${money0(x.amt)}</span>`;
+    const cls = 'bpill ' + CAL_STATE[x.state][0], tip = x.name + ' · ' + tr(CAL_STATE[x.state][1]) + ' · ' + money(x.amt), inner = html`<span class="nm">${x.name}</span><span class="num">${money0(x.amt)}</span>`;
     return x.gid ? html`<button type="button" class="${cls}" title="${tip}" data-onclick="App.editTx('${x.gid}')">${inner}</button>` : html`<button type="button" class="${cls}" title="${tip}" data-onclick="App.billForm('${x.id}')">${inner}</button>`;
   };
   const row = (x: BillDay) => {
-    const inner = html`<span class="name">${x.name} <span class="chip ${CAL_STATE[x.state][0]}">${CAL_STATE[x.state][1]}</span></span><span class="num">${money(x.amt)}</span>`;
+    const inner = html`<span class="name">${x.name} <span class="chip ${CAL_STATE[x.state][0]}">${tr(CAL_STATE[x.state][1])}</span></span><span class="num">${money(x.amt)}</span>`;
     return x.gid ? html`<button type="button" class="row" data-onclick="App.editTx('${x.gid}')">${inner}</button>` : html`<button type="button" class="row" data-onclick="App.billForm('${x.id}')">${inner}</button>`;
   };
   // The month's own days, from where it starts (a month can start on any day, see cycleDay) to where it ends
@@ -114,9 +115,9 @@ function billCalendar(bills: ApiData[], cur: Period) {
     cells.push(html`<div class="bcal-day${iso === t ? ' today' : ''}${iso < t ? ' past' : ''}"><span class="d">${d}</span>${htmlList(list.map(pill))}</div>`);
   }
   // On a phone the grid is too narrow for names, so the same month shows as a list of days
-  const agenda = htmlList(Object.keys(days).sort().map(d => html`<div class="bcal-agenda-day"><div class="eyebrow">${fmtDay(d)}${d === t ? ' · today' : ''}</div>${htmlList(days[d].map(row))}</div>`));
-  const kpi = (label: string, v: number, cls = '') => html`<div class="kpi"><div class="eyebrow">${label}</div><div class="val num ${cls}">${money0(v)}</div></div>`;
-  return html`<div class="kpis">${kpi('Paid', sum.paid, 'pos')}${kpi('Still due', sum.due)}${sum.late ? kpi('Overdue', sum.late, 'neg') : ''}</div><section class="panel bcal"><div class="bcal-dow">${htmlList(weekOrder(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map(d => html`<span>${d}</span>`))}</div><div class="bcal-grid">${htmlList(cells)}</div></section><section class="panel bcal-agenda">${agenda ? html`<div class="list">${agenda}</div>` : html`<p class="empty">Nothing due in ${cur.label}.</p>`}</section><p class="sub-s" style="margin-top:10px">Amounts are each bill’s expected amount. Tap a paid bill to open the charge that paid it.</p>`;
+  const agenda = htmlList(Object.keys(days).sort().map(d => html`<div class="bcal-agenda-day"><div class="eyebrow">${fmtDay(d)}${d === t ? ' · ' + tr('today') : ''}</div>${htmlList(days[d].map(row))}</div>`));
+  const kpi = (label: string, v: number, cls = '') => html`<div class="kpi"><div class="eyebrow">${tr(label)}</div><div class="val num ${cls}">${money0(v)}</div></div>`;
+  return html`<div class="kpis">${kpi('Paid', sum.paid, 'pos')}${kpi('Still due', sum.due)}${sum.late ? kpi('Overdue', sum.late, 'neg') : ''}</div><section class="panel bcal"><div class="bcal-dow">${htmlList(weekOrder(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map(d => html`<span>${tr(d)}</span>`))}</div><div class="bcal-grid">${htmlList(cells)}</div></section><section class="panel bcal-agenda">${agenda ? html`<div class="list">${agenda}</div>` : html`<p class="empty">${tr('Nothing due in {period}.', { period: cur.label })}</p>`}</section><p class="sub-s" style="margin-top:10px">Amounts are each bill’s expected amount. Tap a paid bill to open the charge that paid it.</p>`;
 }
 function billsView(v: string) { LS.set('billsView', v); location.hash = hashWith({ view: v }); }
 
@@ -142,9 +143,9 @@ async function subsPanel(bills: ApiData[]) {
   S.subs = found; S.billRises = rises;
   const riseRows = htmlList(Object.entries(rises).map(([id, r]) => {
     const at = (S.billCache || {})[id] || {};
-    return html`<div class="row"><span class="name">${at.name}<br><span class="sub-s">Last charge ${money(r.last)} on ${fmtDay(r.date)}, above the bill’s ${money(num(at.amount_max))}</span></span><button class="btn small" data-onclick="App.billRaise('${id}')">Update to ${money(r.last)}</button></div>`;
+    return html`<div class="row"><span class="name">${at.name}<br><span class="sub-s">${tr('Last charge {amount} on {date}, above the bill’s {maximum}', { amount: money(r.last), date: fmtDay(r.date), maximum: money(num(at.amount_max)) })}</span></span><button class="btn small" data-onclick="App.billRaise('${id}')">${tr('Update to {amount}', { amount: money(r.last) })}</button></div>`;
   }));
-  const subRows = htmlList(found.map((r, i) => html`<div class="row"><span class="name">${r.payee}${r.rose ? html` <span class="chip warn">Up from ${money(r.rose.from)}</span>` : ''}<br><span class="sub-s">${r.min === r.max ? money(r.amount) : 'About ' + money(r.amount)} every ${r.every} · ${r.count} charges · last ${fmtDay(r.last)}, next around ${fmtDay(r.next)}</span></span><span style="display:flex;gap:6px;flex:none"><button class="btn small" data-onclick="App.subIgnore(${i})">Not a bill</button><button class="btn small primary" data-onclick="App.subAdd(${i})">Add as bill</button></span></div>`));
+  const subRows = htmlList(found.map((r, i) => html`<div class="row"><span class="name">${r.payee}${r.rose ? html` <span class="chip warn">${tr('Up from {amount}', { amount: money(r.rose.from) })}</span>` : ''}<br><span class="sub-s">${tr('{amount} every {period} · {count} charges · last {last}, next around {next}', { amount: r.min === r.max ? money(r.amount) : tr('About {amount}', { amount: money(r.amount) }), period: tr(r.every), count: r.count, last: fmtDay(r.last), next: fmtDay(r.next) })}</span></span><span style="display:flex;gap:6px;flex:none"><button class="btn small" data-onclick="App.subIgnore(${i})">Not a bill</button><button class="btn small primary" data-onclick="App.subAdd(${i})">Add as bill</button></span></div>`));
   return html`${subAuditPanel(auditSubs(charges, todayIso()))}${riseRows ? html`<section class="panel" style="margin-top:20px"><h2>Prices that went up</h2><p class="lead">These bills were charged more than their highest amount</p><div class="list">${riseRows}</div></section>` : ''}${subRows ? html`<section class="panel" style="margin-top:20px"><h2>Looks like a bill</h2><p class="lead">Charges that repeat on a schedule but aren’t bills yet. As bills they show up in Coming up and in the safe-to-spend forecast.</p><div class="list">${subRows}</div></section>` : ''}`;
 }
 function subAdd(i: number) {
@@ -154,14 +155,14 @@ function subAdd(i: number) {
 function subIgnore(i: number) {
   const r = S.subs && S.subs[i]; if (!r) return;
   LS.set('subsHidden', [...new Set([...LS.get('subsHidden', []), r.payeeId])]);
-  toast(r.payee + ' won’t be suggested again'); route();
+  toast(tr('{name} won’t be suggested again', { name: r.payee })); route();
 }
 async function billRaise(id: string) {
   const at = (S.billCache || {})[id], r = (S.billRises || {})[id]; if (!at || !r) return;
   const fixed = num(at.amount_min) === num(at.amount_max);
   try {
     await api('/bills/' + id, { method: 'PUT', body: { amount_max: String(r.last), ...(fixed ? { amount_min: String(r.last) } : {}) } });
-    invalidate(); toast(at.name + ' updated to ' + money(r.last)); route();
+    invalidate(); toast(tr('{name} updated to {amount}', { name: at.name, amount: money(r.last) })); route();
   } catch (e) { toast((e as Error).message); }
 }
 // A rule that links the payee's future charges (and, run once now, the past year's) to the new bill
@@ -178,14 +179,14 @@ async function billRule(name: string, payee: string) {
 // "Ends Mar 1" / "Ended Mar 1", and the date to renew or cancel by, for a bill with a contract
 export function billEnds(at: ApiData) {
   const e = at.end_date ? String(at.end_date).slice(0, 10) : '', x = at.extension_date ? String(at.extension_date).slice(0, 10) : '', t = todayIso();
-  return (e ? ' · ' + (e < t ? 'Ended ' : 'Ends ') + fmtDate(e) : '') + (x && (!e || e >= t) && x >= t ? ' · Renew or cancel by ' + fmtDate(x) : '');
+  return (e ? ' · ' + tr(e < t ? 'Ended {date}' : 'Ends {date}', { date: fmtDate(e) }) : '') + (x && (!e || e >= t) && x >= t ? ' · ' + tr('Renew or cancel by {date}', { date: fmtDate(x) }) : '');
 }
 function billForm(id?: string, pre?: ApiData) {
   const at = id ? (S.billCache || {})[id] : pre || null;
   S.form = { id, payee: !id && pre ? pre.payee : '' };
-  openDrawer(id ? 'Edit bill' : 'New bill',
-    html`<form id="billForm" data-onsubmit="event.preventDefault();App.saveBill()"><label>Name<input type="text" id="bl-name" value="${at ? at.name : ''}" required></label><div class="grid2"><label>Lowest amount<input type="number" step="0.01" min="0" id="bl-min" value="${at ? num(at.amount_min) : ''}" required></label><label>Highest amount<input type="number" step="0.01" min="0" id="bl-max" value="${at ? num(at.amount_max) : ''}" required></label></div><p class="hint">Use the same number twice for a fixed amount.</p><label>${id ? 'First due date' : 'Next due date'}<input type="date" id="bl-date" value="${at ? String(at.date).slice(0, 10) : todayIso()}" required></label><div class="grid2"><label>Repeats<select id="bl-freq">${htmlList(Object.keys(FREQ).map(k => opt(k, k === 'half-year' ? 'every 6 months' : k, at ? at.repeat_freq : 'monthly')))}</select></label><label>Skip<input type="number" min="0" step="1" id="bl-skip" value="${at ? at.skip || 0 : 0}"></label></div><p class="hint">Skip 1 with “monthly” means every other month.</p><div class="grid2"><label>Ends on (optional)<input type="date" id="bl-end" value="${at && at.end_date ? String(at.end_date).slice(0, 10) : ''}"></label><label>Renew or cancel by (optional)<input type="date" id="bl-ext" value="${at && at.extension_date ? String(at.extension_date).slice(0, 10) : ''}"></label></div><p class="hint">For a contract or trial: after the end date Firefly stops expecting the bill. The second date is a reminder to renew or cancel.</p><label>Group (optional)<input type="text" id="bl-group" list="dl-groups" value="${at ? at.object_group_title || '' : ''}" placeholder="e.g. Housing, Subscriptions"></label><datalist id="dl-groups">${htmlList([...new Set(Object.values<any>(S.billCache || {}).map(x => x.object_group_title).filter(Boolean))].map(g => html`<option value="${g}">`))}</datalist><label>Notes<textarea id="bl-notes" rows="3">${at ? at.notes || '' : ''}</textarea></label><label class="check"><input type="checkbox" id="bl-active"${!at || at.active !== false ? ' checked' : ''}> Active</label>${S.form.payee ? html`<label class="check"><input type="checkbox" id="bl-rule" checked> Link charges from ${S.form.payee} to this bill, past and future (creates a rule)</label>` : ''}<button type="submit" hidden></button></form>`,
-    html`${id ? html`<button class="btn danger" data-onclick="App.deleteThing('bills','${id}','bill')">Delete</button>` : ''}<span class="grow"></span><button class="btn" data-onclick="App.closeDrawer()">Cancel</button><button class="btn primary" id="billSave" data-onclick="App.submit('billForm')">${id ? 'Save' : 'Create bill'}</button>`);
+  openDrawer(tr(id ? 'Edit bill' : 'New bill'),
+    html`<form id="billForm" data-onsubmit="event.preventDefault();App.saveBill()"><label>Name<input type="text" id="bl-name" value="${at ? at.name : ''}" required></label><div class="grid2"><label>Lowest amount<input type="number" step="0.01" min="0" id="bl-min" value="${at ? num(at.amount_min) : ''}" required></label><label>Highest amount<input type="number" step="0.01" min="0" id="bl-max" value="${at ? num(at.amount_max) : ''}" required></label></div><p class="hint">Use the same number twice for a fixed amount.</p><label>${tr(id ? 'First due date' : 'Next due date')}<input type="date" id="bl-date" value="${at ? String(at.date).slice(0, 10) : todayIso()}" required></label><div class="grid2"><label>Repeats<select id="bl-freq">${htmlList(Object.keys(FREQ).map(k => opt(k, tr(k === 'half-year' ? 'every 6 months' : k), at ? at.repeat_freq : 'monthly')))}</select></label><label>Skip<input type="number" min="0" step="1" id="bl-skip" value="${at ? at.skip || 0 : 0}"></label></div><p class="hint">Skip 1 with “monthly” means every other month.</p><div class="grid2"><label>Ends on (optional)<input type="date" id="bl-end" value="${at && at.end_date ? String(at.end_date).slice(0, 10) : ''}"></label><label>Renew or cancel by (optional)<input type="date" id="bl-ext" value="${at && at.extension_date ? String(at.extension_date).slice(0, 10) : ''}"></label></div><p class="hint">For a contract or trial: after the end date Firefly stops expecting the bill. The second date is a reminder to renew or cancel.</p><label>Group (optional)<input type="text" id="bl-group" list="dl-groups" value="${at ? at.object_group_title || '' : ''}" placeholder="e.g. Housing, Subscriptions"></label><datalist id="dl-groups">${htmlList([...new Set(Object.values<any>(S.billCache || {}).map(x => x.object_group_title).filter(Boolean))].map(g => html`<option value="${g}">`))}</datalist><label>Notes<textarea id="bl-notes" rows="3">${at ? at.notes || '' : ''}</textarea></label><label class="check"><input type="checkbox" id="bl-active"${!at || at.active !== false ? ' checked' : ''}> Active</label>${S.form.payee ? html`<label class="check"><input type="checkbox" id="bl-rule" checked> ${tr('Link charges from {name} to this bill, past and future (creates a rule)', { name: S.form.payee })}</label>` : ''}<button type="submit" hidden></button></form>`,
+    html`${id ? html`<button class="btn danger" data-onclick="App.deleteThing('bills','${id}','bill')">Delete</button>` : ''}<span class="grow"></span><button class="btn" data-onclick="App.closeDrawer()">Cancel</button><button class="btn primary" id="billSave" data-onclick="App.submit('billForm')">${tr(id ? 'Save' : 'Create bill')}</button>`);
 }
 async function saveBill() {
   const id = S.form.id, v = (x: string) => el<Field>(x).value.trim();

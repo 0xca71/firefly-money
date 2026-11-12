@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import { type Html, html, htmlList } from './html';
 import { type ApiError, AuthError, CACHE, CAP, capNote, INFLIGHT, PAGES, dropSavedCopies, netBusy, sleep } from './api';
 import { showLogin } from './auth';
@@ -74,13 +75,13 @@ let stepped: { s: HTMLElement, html: string, title: string, next: HTMLButtonElem
 function stepLabel(v: HTMLElement, dir: string) {
   const s = v.querySelector<HTMLElement>('.month > span'), was = monthLabel(v);
   if (!s || was == null) return;
-  const next = v.querySelector<HTMLButtonElement>('.month button[aria-label="Next month"]');
+  const next = v.querySelector<HTMLButtonElement>('.month button[data-onclick="App.shiftMonth(1)"]');
   if (!stepped || stepped.s !== s) stepped = { s, html: was, title: s.title, next, off: !!next && next.disabled };
   const tpl = document.createElement('template'); tpl.innerHTML = String(monthNav());
   const now = tpl.content.querySelector('.month > span'); if (!now) return;
   s.querySelectorAll('.mghost').forEach(g => g.remove());
   s.innerHTML = now.innerHTML; s.title = now.getAttribute('title') || '';
-  const nb = tpl.content.querySelector('button[aria-label="Next month"]');
+  const nb = tpl.content.querySelector('button[data-onclick="App.shiftMonth(1)"]');
   if (next && nb) next.disabled = nb.hasAttribute('disabled');
   // Today shows up (or steps aside) with it
   const today = v.querySelector('.month > .btn.small'), tb = tpl.content.querySelector('.month > .btn.small');
@@ -235,7 +236,7 @@ export async function route(opts: { nav?: boolean, quiet?: boolean, instant?: bo
   } catch (e) {
     if (e instanceof AuthError) return showLogin(e.message);
     const onError = !!v.querySelector(':scope > .pg > .error');
-    if (opts.quiet && S.pageLive && !onError) { toast('Couldn’t refresh: ' + (e as Error).message); return; }
+    if (opts.quiet && S.pageLive && !onError) { toast(tr('Couldn’t refresh: {error}', { error: (e as Error).message })); return; }
     if ((e as ApiError).network) {
       paint(html`<div class="error"><strong>Couldn’t load this page.</strong><br>${(e as Error).message}<br>Trying again by itself…<br><br><button class="btn small" data-onclick="App.reload()">Try again now</button></div>`);
       if (tok === S.tok) retryWhenBack(tok);
@@ -300,7 +301,7 @@ async function recalcAll(btn?: HTMLButtonElement) {
   if (S.recalcing) return;
   S.recalcing = true;
   const endLoad = loadBegin();
-  const label = btn ? btn.textContent : null; if (btn) { btn.disabled = true; btn.textContent = 'Recalculating…'; }
+  const label = btn ? btn.textContent : null; if (btn) { btn.disabled = true; btn.textContent = tr('Recalculating…'); }
   try {
     CACHE.clear(); INFLIGHT.clear(); PAGES.clear();
     S.lists = null; S.listsAt = 0; S.inboxHist = null; S.linkTypes = null; S.dirtyAt = 0; S.freshAfter = Date.now(); S.lastRefresh = Date.now();
@@ -310,7 +311,7 @@ async function recalcAll(btn?: HTMLButtonElement) {
     toast('Recalculated everything from Firefly III');
   } catch (e) {
     if (e instanceof AuthError) return showLogin(e.message);
-    toast('Couldn’t recalculate: ' + (e as Error).message);
+    toast(tr('Couldn’t recalculate: {error}', { error: (e as Error).message }));
   } finally {
     S.recalcing = false; endLoad();
     if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = label; }

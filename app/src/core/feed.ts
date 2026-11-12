@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import { Html, html, htmlList } from './html';
 import { type ApiData, fmtD, money, num, S, todayIso } from './base';
 import { daysBetween } from './helpers';
@@ -73,7 +74,7 @@ export function xferLabel(g: Group, accountId?: string) {
     if (out && dst) return '→ ' + dst;
     if (inn && src) return '← ' + src;
   }
-  return src && dst ? src + ' → ' + dst : 'Transfer';
+  return src && dst ? src + ' → ' + dst : tr('Transfer');
 }
 
 /* ---------- Merchant avatars ---------- */
@@ -124,9 +125,9 @@ export function catColor(name: string) {
 /* ---------- Day labels for the grouped feed ---------- */
 export function dayLabel(iso: string) {
   const d = String(iso).slice(0, 10), t = todayIso(), diff = daysBetween(d, t);
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
-  if (diff === -1) return 'Tomorrow';
+  if (diff === 0) return tr('Today');
+  if (diff === 1) return tr('Yesterday');
+  if (diff === -1) return tr('Tomorrow');
   const dt = new Date(d + 'T12:00:00');
   if (diff > 1 && diff < 7) return fmtD(dt, { weekday: 'long' });
   return fmtD(dt, { weekday: 'short', month: 'short', day: 'numeric', ...(dt.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
@@ -143,7 +144,7 @@ export type TxMeta = { g: Group, accountId: string, opts: { select: boolean, acc
 export type TxRowsOpts = { select?: boolean, accountId?: string, empty?: string };
 export function txRows(groups: Group[], opts: TxRowsOpts = {}) {
   if (S.pendingDel && S.pendingDel.size) groups = groups.filter(g => !S.pendingDel.has(g.id));
-  if (!groups.length) return html`<div class="center-empty">${opts.empty || 'No transactions.'}</div>`;
+  if (!groups.length) return html`<div class="center-empty">${opts.empty || tr('No transactions.')}</div>`;
   const cols = (opts.select ? 1 : 0) + 4;
   // Net per day (relative to the account when one is in view; transfers count as zero otherwise)
   const byDay: Record<string, number> = {};
@@ -153,13 +154,13 @@ export function txRows(groups: Group[], opts: TxRowsOpts = {}) {
     const f = g.splits[0], multi = g.splits.length > 1, day = String(g.date).slice(0, 10);
     const desc = multi ? (g.title || f.description) : f.description;
     const dests = [...new Set(g.splits.map(s => s.destination_name))], srcs = [...new Set(g.splits.map(s => s.source_name))];
-    const flow = (srcs.length > 1 ? srcs.length + ' sources' : srcs[0]) + ' → ' + (dests.length > 1 ? dests.length + ' payees' : dests[0]);
+    const flow = (srcs.length > 1 ? tr('{count} sources', { count: srcs.length }) : srcs[0]) + ' → ' + (dests.length > 1 ? tr('{count} payees', { count: dests.length }) : dests[0]);
     const cats = [...new Set(g.splits.map(s => s.category).filter(Boolean))];
     const buds = [...new Set(g.splits.map(s => s.budget_name).filter(Boolean))];
     const tags = [...new Set<string>(g.splits.flatMap(s => s.tags))].filter(t => !t.startsWith('Data Import on'));
     const fx = htmlList(g.splits.filter(s => s.fa && s.fc).map(s => html`<span class="chip">${s.fc} ${num(s.fa).toFixed(2)}</span>`));
-    const inl = (k: string) => multi ? '' : html` inl" data-k="${k}" data-onclick="event.stopPropagation();App.pick(this)" title="Change ${k}`;
-    const chips = html`<span class="cat-s${inl('category')}">${cats.length ? cats.join(', ') : g.type === 'withdrawal' ? 'Uncategorized' : g.type === 'deposit' ? 'Income' : xferLabel(g, opts.accountId)}</span>${fx}${multi ? html`<span class="chip">${g.splits.length} splits</span>` : ''}${htmlList(buds.map(b => html`<span class="bud-s${inl('budget')}">${b} budget</span>`))}${!buds.length && !multi && g.type === 'withdrawal' ? html`<span class="chip ghost${inl('budget')}">+ Budget</span>` : ''}${htmlList(tags.map(t => html`<span class="tag-s">#${t}</span>`))}`;
+    const inl = (k: string) => multi ? '' : html` inl" data-k="${k}" data-onclick="event.stopPropagation();App.pick(this)" title="${tr(k === 'category' ? 'Change category' : 'Change budget')}`;
+    const chips = html`<span class="cat-s${inl('category')}">${cats.length ? cats.join(', ') : g.type === 'withdrawal' ? tr('Uncategorized') : g.type === 'deposit' ? tr('Income') : xferLabel(g, opts.accountId)}</span>${fx}${multi ? html`<span class="chip">${tr('{count} splits', { count: g.splits.length })}</span>` : ''}${htmlList(buds.map(b => html`<span class="bud-s${inl('budget')}">${tr('{name} budget', { name: b })}</span>`))}${!buds.length && !multi && g.type === 'withdrawal' ? html`<span class="chip ghost${inl('budget')}">+ Budget</span>` : ''}${htmlList(tags.map(t => html`<span class="tag-s">#${t}</span>`))}`;
     S.txMeta[g.id] = { g, accountId: opts.accountId || '', opts: { select: !!opts.select, accountId: opts.accountId || '' } };
     let dh: Html | '' = '';
     if (day !== lastDay) {

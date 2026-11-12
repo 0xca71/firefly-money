@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import { type ApiData, S, arr, todayIso } from './base';
 import { progPages, progReq } from './progress';
 
@@ -105,7 +106,7 @@ export const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 function unreachable(e: unknown): unknown {
   if (!(e instanceof TypeError)) return e;
   if (navigator.onLine) ffSuspect(); else ffSeen('offline');
-  const err: ApiError = new Error('Couldn’t reach Money. The connection dropped or the app is restarting.'); err.network = true; return err;
+  const err: ApiError = new Error(tr('Couldn’t reach Money. The connection dropped or the app is restarting.')); err.network = true; return err;
 }
 // Returns { r, body }: the slot is held until the whole response has arrived, not just its headers.
 async function netFetch(u: URL, init: RequestInit, blob: boolean): Promise<{ r: Response, body: string | Blob }> {
@@ -153,11 +154,11 @@ async function apiRaw(u: URL, opt: ApiOpts): Promise<ApiData> {
   if (opt.as === 'text' && r.ok) return txt;
   let j: ApiData = null; try { j = txt ? JSON.parse(txt) : null; } catch (e) { /* not JSON */ }
   if (!r.ok) {
-    let msg = (j && j.errors && typeof j.errors === 'object') ? Object.values(j.errors as Record<string, string[]>).flat().join(' ') : (j && j.message) || ('Request failed (' + r.status + ')');
-    if (r.status === 401) msg = 'Firefly III rejected the access token. Check FIREFLY_TOKEN in the app settings.';
-    if (r.status === 404 && !j) msg = 'Not found';
-    if (r.status === 409 && (!j || !j.message)) msg = 'Firefly refused because this is still in use.';
-    if (NET_BUSY.has(r.status) && !(j && j.message)) msg = 'Firefly III didn’t respond (' + r.status + '). It may be busy or restarting. Try again in a moment.';
+    let msg = (j && j.errors && typeof j.errors === 'object') ? Object.values(j.errors as Record<string, string[]>).flat().join(' ') : (j && j.message) || tr('Request failed ({status})', { status: r.status });
+    if (r.status === 401) msg = tr('Firefly III rejected the access token. Check FIREFLY_TOKEN in the app settings.');
+    if (r.status === 404 && !j) msg = tr('Not found');
+    if (r.status === 409 && (!j || !j.message)) msg = tr('Firefly refused because this is still in use.');
+    if (NET_BUSY.has(r.status) && !(j && j.message)) msg = tr('Firefly III didn’t respond ({status}). It may be busy or restarting. Try again in a moment.', { status: r.status });
     const err: ApiError = new Error(msg); err.status = r.status; throw err;
   }
   return j;
@@ -170,7 +171,7 @@ export async function eachLimited<T>(items: T[], n: number, fn: (item: T, i: num
 // getAll stops after this many pages (100 rows each). When a list is longer, CAP.at is set so the page that
 // asked can say it shows only the latest ones (Firefly lists newest first).
 export const MAX_PAGES = 60, CAP = { at: 0 };
-export const capNote = (n = MAX_PAGES * 100) => 'Showing the latest ' + n.toLocaleString('en-US') + '.';
+export const capNote = (n = MAX_PAGES * 100) => tr('Showing the latest {count}.', { count: n.toLocaleString() });
 export async function getAll(path: string, params: ApiOpts['params'] = {}): Promise<ApiData[]> {
   const first = await api(path, { params: { ...params, page: 1, limit: 100 } });
   const total = (first && first.meta && first.meta.pagination && first.meta.pagination.total_pages) || 1, pages = Math.min(MAX_PAGES, total);

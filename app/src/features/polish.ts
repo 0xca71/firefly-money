@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { html } from '../core/html';
 import { api, eachLimited } from '../core/api';
 import { App, S, arr, el, money0, sameName } from '../core/base';
@@ -67,7 +68,7 @@ function bindChart() {
       const hit = (e.target as HTMLElement).closest && (e.target as HTMLElement).closest<HTMLElement>('[data-i]'); const tip = el('tip');
       if (!hit) { tip.hidden = true; return; }
       const d = (S.chartData || [])[Number(hit.dataset.i)]; if (!d) return;
-      tip.innerHTML = String(html`<strong>${d.label}</strong><br>Earned ${money0(d.income)}<br>Spent ${money0(d.spend)}<br>Kept ${money0(d.income - d.spend)}`);
+      tip.innerHTML = String(html`<strong>${d.label}</strong><br>${tr('Earned {amount}', { amount: money0(d.income) })}<br>${tr('Spent {amount}', { amount: money0(d.spend) })}<br>${tr('Kept {amount}', { amount: money0(d.income - d.spend) })}`);
       tip.hidden = false;
       // Pin the tip centred above the hovered month rather than at the cursor, so it never covers a neighbour's bars
       const col = (hit.closest('.col')?.querySelector('.band') || hit).getBoundingClientRect(), w = tip.offsetWidth, hgt = tip.offsetHeight;
@@ -145,7 +146,7 @@ document.addEventListener('click', e => {
   if (lastPointer !== 'mouse' && t.hasAttribute('data-tip')) {
     if (!goArm || goArm.node !== t || Date.now() - goArm.at > 2500) {
       goArm = { node: t, at: Date.now() };
-      const tip = el('tip'); if (!tip.hidden && !/Tap again/.test(tip.textContent || '')) tip.textContent += '\nTap again to open';
+      const tip = el('tip'), hint = tr('Tap again to open'); if (!tip.hidden && !(tip.textContent || '').endsWith('\n' + hint)) tip.textContent += '\n' + hint;
       return;
     }
   }
@@ -197,12 +198,12 @@ function softDeleteTx(ids: string[]) {
     if (undone) return;
     let failed = 0;
     await eachLimited(ids, 4, async id => { try { await api('/transactions/' + id, { method: 'DELETE', keepalive: leaving }); } catch (e) { failed++; } S.pendingDel.delete(id); });
-    if (failed) toast(failed + ' couldn’t be deleted');
+    if (failed) toast(tr('{count} couldn’t be deleted', { count: failed }));
     if (['', 'transactions', 'account'].includes(parseHash().name)) route();
   };
   if (S.undoCommit) S.undoCommit();              // finish any earlier pending delete first
   S.undoCommit = (leaving?: boolean) => { clearTimeout(S.undoT); S.undoCommit = null; commit(leaving === true); };
-  box.innerHTML = String(html`<span>${ids.length === 1 ? 'Transaction deleted' : ids.length + ' transactions deleted'}</span><button type="button">Undo</button><span class="bar"></span>`);
+  box.innerHTML = String(html`<span>${ids.length === 1 ? tr('Transaction deleted') : tr('{count} transactions deleted', { count: ids.length })}</span><button type="button">Undo</button><span class="bar"></span>`);
   box.hidden = false;
   box.querySelector('button')!.onclick = () => {
     undone = true; clearTimeout(S.undoT); S.undoCommit = null; box.hidden = true;

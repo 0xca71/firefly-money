@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { type Html, html, htmlList } from '../core/html';
 import { api } from '../core/api';
 import { absDiff, App, arr, fmtD, money0, monthRange, nowMonth, S, sumDiff, todayIso } from '../core/base';
@@ -22,17 +23,17 @@ let startAcc: Account | undefined, shown = BATCH, floor = '', loading = false, d
 const MARKS = [1e3, 5e3, 1e4, 2.5e4, 5e4, 7.5e4, 1e5, 1.5e5, 2e5, 2.5e5, 5e5, 7.5e5, 1e6, 1.5e6, 2e6, 2.5e6, 5e6, 1e7];
 const short$ = (v: number) => v >= 1e6 ? '$' + +(v / 1e6).toFixed(2) + 'm' : '$' + +(v / 1e3).toFixed(1) + 'k';
 export function crossed(before: number, now: number) {
-  if (before < 0 && now >= 0) return 'Net worth turned positive';
+  if (before < 0 && now >= 0) return tr('Net worth turned positive');
   const up = MARKS.filter(t => before < t && now >= t).pop(), down = MARKS.filter(t => before >= t && now < t)[0];
-  return up ? 'Net worth passed ' + short$(up) : down ? 'Dipped below ' + short$(down) : '';
+  return up ? tr("Net worth passed {amount}", { amount: short$(up) }) : down ? tr("Dipped below {amount}", { amount: short$(down) }) : '';
 }
 // What made the month stand out, best news first
 function momentsOf(o: { start: string, end: string, earned: number, spent: number, nw: NetWorthPoint, before: NetWorthPoint, accounts: Account[] }) {
   const out: Html[] = [], chip = (cls: string, text: string) => html`<li class="${cls}">${text}</li>`;
-  const c = crossed(o.before.net, o.nw.net); if (c) out.push(chip(c.startsWith('Dipped') ? 'neg' : 'pos', c));
-  o.accounts.filter(a => isLiab(a) && (o.before.by?.[a.id] ?? 0) <= -1 && (o.nw.by?.[a.id] ?? -1) > -1).forEach(a => out.push(chip('pos', 'Paid off ' + a.name)));
-  o.accounts.filter(a => a.openingDate && a.openingDate.slice(0, 10) >= o.start && a.openingDate.slice(0, 10) <= o.end).forEach(a => out.push(chip('', 'Opened ' + a.name)));
-  if (o.earned > 0 && o.spent > o.earned) out.push(chip('neg', 'Spent ' + money0(o.spent - o.earned) + ' more than came in'));
+  const c = crossed(o.before.net, o.nw.net); if (c) out.push(chip(o.nw.net < o.before.net ? 'neg' : 'pos', c));
+  o.accounts.filter(a => isLiab(a) && (o.before.by?.[a.id] ?? 0) <= -1 && (o.nw.by?.[a.id] ?? -1) > -1).forEach(a => out.push(chip('pos', tr("Paid off {name}", { name: a.name }))));
+  o.accounts.filter(a => a.openingDate && a.openingDate.slice(0, 10) >= o.start && a.openingDate.slice(0, 10) <= o.end).forEach(a => out.push(chip('', tr("Opened {name}", { name: a.name }))));
+  if (o.earned > 0 && o.spent > o.earned) out.push(chip('neg', tr("Spent {amount} more than came in", { amount: money0(o.spent - o.earned) })));
   return out;
 }
 
@@ -52,7 +53,7 @@ async function load(k: number, n: number): Promise<Month[]> {
   ]);
   return ranges.map((r, i) => {
     const [inc, exp, cats] = flows[i], earned = sumDiff(inc), spent = sumDiff(exp), nw = pts[i], before = pts[i + 1];
-    const best = arr(cats).map(c => [String(c.name || 'Uncategorized'), absDiff(c)] as [string, number]).sort((a, b) => b[1] - a[1])[0] || null;
+    const best = arr(cats).map(c => [String(c.name || tr('Uncategorized')), absDiff(c)] as [string, number]).sort((a, b) => b[1] - a[1])[0] || null;
     return { k: k + i, y: r.y, m: r.m, label: r.label, soFar: r.end >= t, earned, spent, top: best && best[1] >= 1 ? best : null, nw, before,
       moments: momentsOf({ start: r.start, end: r.end, earned, spent, nw, before, accounts: own }) };
   });
@@ -74,7 +75,7 @@ function card(mo: Month, fresh: boolean) {
       <div><span class="eyebrow">Spent</span><span class="num">${money0(mo.spent)}</span><i style="--w:${(mo.spent / top * 100).toFixed(1)}%;background:var(--spend)"></i></div>
       <div><span class="eyebrow">Kept</span><span class="num ${kept < 0 ? 'neg' : ''}">${money0(kept)}</span>${mo.earned > 0 ? html`<span class="sub-s">${Math.round(kept / mo.earned * 100)}%<span class="tl-of"> of income</span></span>` : ''}</div>
     </div>
-    ${mo.top ? html`<p class="tl-top">Most went to <strong>${mo.top[0]}</strong> · <span class="num">${money0(mo.top[1])}</span></p>` : ''}
+    ${mo.top ? html`<p class="tl-top">${tr("Most went to {name} · {amount}", { name: mo.top[0], amount: money0(mo.top[1]) })}</p>` : ''}
     ${mo.moments.length ? html`<ul class="tl-moments">${htmlList(mo.moments)}</ul>` : ''}
     <div class="tl-links"><button type="button" class="tl-go" data-onclick="App.nwOpen(${mo.y},${mo.m})">Overview${chevron}</button><button type="button" class="tl-go" data-onclick="App.tlRecap(${mo.y},${mo.m})">Recap${chevron}</button></div>
   </article></li>`;
@@ -89,7 +90,7 @@ function items(ms: Month[], fresh: boolean, prevYear: number | null) {
 const more = () => html`<li class="tl-more" id="tlMore" aria-label="Loading older months"><span class="tl-dot" aria-hidden="true"></span><div class="tl-card panel"><div class="sk" style="width:40%;height:14px"></div><div style="height:14px"></div><div class="sk" style="width:70%;height:22px"></div><div style="height:14px"></div><div class="sk" style="width:100%;height:12px"></div></div></li>`;
 function endCap() {
   const when = (d: string) => fmtD(d, { month: 'long', year: 'numeric' });
-  const note = startAcc ? html`Where it starts: <strong>${startAcc.name}</strong> opened in ${when(floor)}.` : floor ? html`Where it starts: your first transaction, in ${when(floor)}.` : 'That’s as far back as your history goes.';
+  const note = startAcc ? tr("Where it starts: {name} opened in {date}.", { name: startAcc.name, date: when(floor) }) : floor ? tr("Where it starts: your first transaction, in {date}.", { date: when(floor) }) : tr('That’s as far back as your history goes.');
   return html`<li class="tl-end"><span class="tl-dot" aria-hidden="true"></span><p>${note}</p></li>`;
 }
 // The day of the oldest transaction: Firefly lists newest first, so it's the last one on the last page
@@ -109,7 +110,7 @@ VIEWS.timeline = async (r, paint) => {
   floor = [opened, tx].filter(Boolean).sort()[0] || ''; startAcc = opened && opened === floor ? first : undefined; loading = false; quiet = 0;
   const ms = await load(0, shown);
   done = ms.length < shown || ms.length === 0;
-  paint(html`${head('Timeline', 'Your money, month by month. The newest is on top; scroll down to go back in time.')}<ol class="tl" id="tl">${items(ms, false, null)}${done ? endCap() : more()}</ol>`);
+  paint(html`${head('Timeline', tr('Your money, month by month. The newest is on top; scroll down to go back in time.'))}<ol class="tl" id="tl">${items(ms, false, null)}${done ? endCap() : more()}</ol>`);
   requestAnimationFrame(check);
 };
 // Near the bottom: fetch the next six months and add them under the others
@@ -126,7 +127,7 @@ async function loadMore() {
     spot.insertAdjacentHTML('beforebegin', String(items(ms, true, lastY)));
     if (done) spot.outerHTML = String(endCap());
   } catch (e) {
-    spot.querySelector('.tl-card')!.innerHTML = String(html`<p class="sub-s">Couldn’t load older months: ${(e as Error).message}</p><button type="button" class="btn small" data-onclick="App.tlMore()">Try again</button>`);
+    spot.querySelector('.tl-card')!.innerHTML = String(html`<p class="sub-s">${tr("Couldn’t load older months: {error}", { error: (e as Error).message })}</p><button type="button" class="btn small" data-onclick="App.tlMore()">Try again</button>`);
     done = true; loading = false; return;
   } finally { if (loading) loading = false; }
   requestAnimationFrame(check);
