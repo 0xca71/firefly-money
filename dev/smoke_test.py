@@ -29,19 +29,23 @@ async def goto(page, route):
     await page.wait_for_function(PAINTED, timeout=15000)
 
 async def sidebar_spacing(page):
-    """Short desktop windows must not squeeze section labels into the first hovered link."""
+    """Check rendered heading clearance, mouse targets and scrollable touch targets instead of CSS spelling."""
     errors, viewport = [], page.viewport_size
     collapsed = await page.evaluate("document.documentElement.classList.contains('side-mini')")
     try:
         await page.evaluate("document.documentElement.classList.remove('side-mini')")
         for height in (600, 900):
             await page.set_viewport_size({'width': 1440, 'height': height})
+            row_heights = await page.locator('.side .nav a').evaluate_all('(rows) => rows.map(n => n.getBoundingClientRect().height)')
+            if not row_heights or min(row_heights) < 23.5:
+                errors.append(f'sidebar mouse targets are smaller than 24px at {height}px: {row_heights}')
             headings = page.locator('#nav .nav-h')
+            if not await headings.count(): errors.append(f'sidebar headings did not render at {height}px')
             for i in range(await headings.count()):
                 heading = headings.nth(i)
                 await heading.locator('xpath=following-sibling::a[1]').hover()
-                await page.wait_for_function("""() => [...document.querySelectorAll('#nav svg')].every(n =>
-                    n.getAnimations().every(a => a.playState !== 'running'))""")
+                await page.wait_for_function("""() => document.querySelector('#nav').getAnimations({subtree:true})
+                    .every(a => a.playState !== 'running')""")
                 gap = await heading.evaluate("""h => {
                     const text = document.createRange(); text.selectNodeContents(h);
                     const ink = text.getBoundingClientRect(), next = h.nextElementSibling;
@@ -50,6 +54,27 @@ async def sidebar_spacing(page):
                 }""")
                 if gap['textBottom'] > gap['headingBottom'] - 4 or gap['textBottom'] + 4 > min(gap['linkTop'], gap['iconTop']):
                     errors.append(f'sidebar heading overlaps its hovered first link at {height}px: {gap}')
+        touch_context = await page.context.browser.new_context(viewport={'width': 1440, 'height': 600}, has_touch=True)
+        try:
+            await touch_context.add_cookies(await page.context.cookies())
+            await touch_context.add_init_script("window.MONEY_NO_WHATSNEW = true; localStorage.setItem('money.syncOff', 'true')")
+            touch = await touch_context.new_page()
+            await touch.goto(page.url)
+            await touch.wait_for_selector('.side .nav a', timeout=15000)
+            touch_targets = await touch.evaluate("""() => {
+                const side = document.querySelector('.side'), rows = [...side.querySelectorAll('.nav a')];
+                side.scrollTop = side.scrollHeight;
+                const last = rows.at(-1)?.getBoundingClientRect(), rail = side.getBoundingClientRect();
+                return {coarse:matchMedia('(pointer: coarse)').matches, heights:rows.map(n => n.getBoundingClientRect().height),
+                    overflow:getComputedStyle(side).overflowY, scrollable:side.scrollHeight > side.clientHeight,
+                    scrolled:side.scrollTop > 0, lastVisible:!!last && last.top >= rail.top && last.bottom <= rail.bottom};
+            }""")
+            if not touch_targets['coarse'] or not touch_targets['heights'] or min(touch_targets['heights']) < 39.5:
+                errors.append(f'sidebar touch targets are smaller than 40px: {touch_targets}')
+            if touch_targets['overflow'] not in ('auto', 'scroll') or not all(touch_targets[k] for k in ('scrollable', 'scrolled', 'lastVisible')):
+                errors.append(f'sidebar touch targets cannot be reached by scrolling: {touch_targets}')
+        finally:
+            await touch_context.close()
     finally:
         await page.set_viewport_size(viewport)
         await page.evaluate('(collapsed) => document.documentElement.classList.toggle("side-mini", collapsed)', collapsed)

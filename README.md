@@ -259,7 +259,7 @@ The online demo is the same data ported to TypeScript (`app/src/demo/mockapi.ts`
 - Preferences are stored in `localStorage` under `money.*` / `moneyTheme`. The ones listed in `SYNCED` in `features/sync.ts` (dashboard layout, dismissed insights, forecast, loan plan…) are also saved to the Firefly user preference `money_settings` and pulled in at sign-in and when the app comes back to the foreground; the latest change wins. Theme, privacy and density stay on the device. Everything else lives in Firefly.
 - **Publishing a new version:** push to `main`, and GitHub Actions builds a new `latest` image in a few minutes (see the repo's **Actions** tab). For a numbered release, push a tag: `git tag v1.2.0 && git push --tags`.
 - **Unit tests** (`test/*.test.ts`) cover the logic that doesn't need a server: the `data-on*` handler parser, the `html` template tag, date helpers, quick-add date words, the Overview's snap grid, loan payment plans, payee names, subscription detection and savings-goal pace. Pure logic like that lives in modules without side effects (for example `features/grid.ts`, `features/nldate.ts`, `features/subs.ts`, `features/pace.ts`) so it can be tested on its own.
-- **Smoke test:** opens every page and every "new …" form on desktop and phone sizes against the demo server, and fails on any JavaScript error:
+- **Smoke test:** opens every page and every "new …" form on desktop and phone sizes against the demo server, and fails on any JavaScript error. Sidebar checks measure rendered heading clearance, mouse/touch target sizes and scroll reachability rather than matching CSS source text:
 
   ```bash
   pip install playwright && playwright install chromium
