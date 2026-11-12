@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 /* Projects recurring outflows that have no fixed amount (credit card payments, utilities) from what they were before:
    the month before and the same month last year (averaged when both exist). A month already in the history is real,
    so only the months after it are projected, each one building on the one before. Pure logic, tested in test/projections.test.ts. */
@@ -7,7 +8,7 @@ export type Projected = { date: string, key: string, name: string, amount: numbe
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const ym = (y: number, m: number) => { const d = new Date(Date.UTC(y, m, 1)); return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0'); };
-const monthName = (k: string, year: boolean) => MON[+k.slice(5, 7) - 1] + (year ? ' ' + k.slice(0, 4) : '');
+const monthName = (k: string, year: boolean) => tr(MON[+k.slice(5, 7) - 1]) + (year ? ' ' + k.slice(0, 4) : '');
 // The day of the month a series usually lands on: the middle of its last few dates
 export const usualDay = (hist: Hist[]) => {
   const ds = hist.map(h => +h.date.slice(8, 10)).slice(-3).sort((a, b) => a - b);
@@ -27,7 +28,7 @@ export function projectMonthly(s: Series, from: string, to: string): Projected[]
     if (!parts.length) break;
     const amount = Math.round(parts.reduce((t, x) => t + x, 0) / parts.length);
     tot[k] = amount;
-    const basis = (a > 0 ? monthName(lastK, false) : '') + (a > 0 && b > 0 ? ' & ' : '') + (b > 0 ? monthName(yearK, true) : '');
+    const basis = a > 0 && b > 0 ? tr("{previous} & {yearAgo}", { previous: monthName(lastK, false), yearAgo: monthName(yearK, true) }) : a > 0 ? monthName(lastK, false) : monthName(yearK, true);
     const last = new Date(Date.UTC(+k.slice(0, 4), +k.slice(5, 7), 0)).getUTCDate();
     const date = k + '-' + String(Math.min(s.day, last)).padStart(2, '0');
     if (date >= from && date <= to) out.push({ date, key: s.key, name: s.name, amount, basis });

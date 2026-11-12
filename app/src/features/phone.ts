@@ -61,7 +61,7 @@ export function moreSheet() {
   const link = (r: string) => { const [, label, ic] = navItem(r); return html`<a class="row" href="#/${r}" data-onclick="App.closeDrawer()"><span class="name"><span class="ic">${icon(ic)}</span>${tr(label)}</span><span class="neutral">›</span></a>`; };
   // the tab bar already has Home, Activity and Budgets
   const groups = NAV_GROUPS.concat([['', ['settings']]]).map(([t, rs]) => [t, rs.filter(r => !['', 'transactions', 'budgets'].includes(r))] as const).filter(g => g[1].length);
-  openDrawer('Menu', html`${App.ffPill ? App.ffPill(true) : ''}<button type="button" class="sheet-search" data-onclick="App.openPalette()">${icon('search')}<span>Search everything</span></button>${htmlList(groups.map(([t, rs]) => html`${t ? html`<div class="eyebrow menu-h">${tr(t)}</div>` : ''}<div class="list menu">${htmlList(rs.map(link))}</div>`))}<div class="toggles sheet"><button type="button" class="btn" data-tg="privacy" data-onclick="App.togglePrivacy()"></button></div><div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn" data-onclick="App.closeDrawer();App.recalcAll()">Recalculate everything</button>${el('ffLink').hidden ? '' : html`<a class="btn" href="${el('ffLink').getAttribute('href')}" target="_blank" rel="noopener">Open Firefly III ↗</a>`}${window.MONEY_NATIVE ? html`<button class="btn" data-onclick="App.nativeSettings()">App settings</button>` : ''}<button class="btn" data-onclick="App.signOut()">Sign out</button></div>`);
+  openDrawer(tr('Menu'), html`${App.ffPill ? App.ffPill(true) : ''}<button type="button" class="sheet-search" data-onclick="App.openPalette()">${icon('search')}<span>Search everything</span></button>${htmlList(groups.map(([t, rs]) => html`${t ? html`<div class="eyebrow menu-h">${tr(t)}</div>` : ''}<div class="list menu">${htmlList(rs.map(link))}</div>`))}<div class="toggles sheet"><button type="button" class="btn" data-tg="privacy" data-onclick="App.togglePrivacy()"></button></div><div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn" data-onclick="App.closeDrawer();App.recalcAll()">Recalculate everything</button>${el('ffLink').hidden ? '' : html`<a class="btn" href="${el('ffLink').getAttribute('href')}" target="_blank" rel="noopener">Open Firefly III ↗</a>`}${window.MONEY_NATIVE ? html`<button class="btn" data-onclick="App.nativeSettings()">App settings</button>` : ''}<button class="btn" data-onclick="App.signOut()">Sign out</button></div>`);
   if (App.drawToggles) App.drawToggles();
 }
 // Swipe a row left to show Categorize and Delete behind it, as in Mail; tap anywhere else to put it back
@@ -75,23 +75,23 @@ function closeRow(tr = openRow) {
 const TAG_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>';
 const BIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>';
 // The buttons behind a row, added the first time it's swiped
-function swipeActions(tr: HTMLElement) {
-  if (tr.querySelector('.swacts')) return;
-  const td = document.createElement('td'), gid = tr.dataset.gid!;
+function swipeActions(row: HTMLElement) {
+  if (row.querySelector('.swacts')) return;
+  const td = document.createElement('td'), gid = row.dataset.gid!;
   td.className = 'swacts';
   const btn = (cls: string, svg: string, label: string, go: () => void) => {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = cls; b.innerHTML = svg + '<span>' + label + '</span>';
+    b.type = 'button'; b.className = cls; b.innerHTML = svg + '<span>' + tr(label) + '</span>';
     b.addEventListener('click', e => { e.stopPropagation(); go(); });
     td.appendChild(b);
   };
   btn('sw-cat', TAG_SVG, 'Categorize', () => {
-    closeRow(tr);
-    const c = tr.querySelector<HTMLElement>('.cat-s.inl');      // a split transaction has no one category: open it instead
+    closeRow(row);
+    const c = row.querySelector<HTMLElement>('.cat-s.inl');      // a split transaction has no one category: open it instead
     if (c) App.pick(c); else App.editTx(gid);
   });
-  btn('sw-del', BIN_SVG, 'Delete', () => { buzz(BUZZ_DELETE); closeRow(tr); tr.removeAttribute('data-onclick'); App.softDeleteTx([gid]); });
-  tr.appendChild(td);
+  btn('sw-del', BIN_SVG, 'Delete', () => { buzz(BUZZ_DELETE); closeRow(row); row.removeAttribute('data-onclick'); App.softDeleteTx([gid]); });
+  row.appendChild(td);
 }
 export function bindSwipe() {
   if (!('ontouchstart' in window)) return;

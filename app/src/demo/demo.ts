@@ -2,6 +2,7 @@
    app's /api/v1 calls in the browser with made-up data from mockapi.ts, so the demo needs no server at all.
    It's signed in from the start (nothing checks the session) and adds a small "Demo" badge that links to the repo.
    When built with GOATCOUNTER set, it also counts visits to each page for GoatCounter (no cookies, no personal data). */
+import { tr } from '../core/i18n';
 import { DEMO_DASH } from './layout';
 import { NotFound, createMockApi } from './mockapi';
 
@@ -63,7 +64,7 @@ addEventListener('DOMContentLoaded', () => {
   a.href = 'https://github.com/Muffy0906/firefly-money';
   a.target = '_blank';
   a.rel = 'noopener';
-  a.textContent = 'Demo · made-up data · Get Money ↗';
+  a.textContent = tr('Demo · made-up data · Get Money ↗');
   document.body.append(a);
   // On a wide screen, centre it on the page, not on the window (the sidebar takes the left edge)
   const place = () => {

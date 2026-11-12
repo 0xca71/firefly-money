@@ -1,3 +1,4 @@
+import { tr, uiLanguage } from './i18n';
 import { clearCache, getAll } from './api';
 import { type ApiData, S, money, num, parseAmount } from './base';
 
@@ -31,8 +32,8 @@ export function withPlan(notes: string | null | undefined, p: PlanInput | null) 
   const line = 'Monthly payment: ' + (S.currency === 'USD' ? '$' : '') + p.amount.toFixed(2) + (p.day ? ' on day ' + p.day : '') + (p.from ? ' from ' + p.from : '');
   return (base ? base + '\n\n' : '') + line;
 }
-export const ordinal = (n: number) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
-export const planText = (p: PlanInput | null) => p && p.amount > 0 ? money(p.amount) + '/month' + (p.day ? ' on the ' + ordinal(p.day) : '') + (p.from ? ' from ' + p.from : '') : '';
+export const ordinal = (n: number) => uiLanguage() === 'zh-CN' ? String(n) : n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+export const planText = (p: PlanInput | null) => p && p.amount > 0 ? tr('{amount}/month', { amount: money(p.amount) }) + (p.day ? tr(' on the {day}', { day: ordinal(p.day) }) : '') + (p.from ? tr(' from {account}', { account: p.from }) : '') : '';
 export const isAsset = (a: Pick<Account, 'type'>) => a.type === 'asset';
 export const isCard = (a: Pick<Account, 'type' | 'role'>) => a.type === 'asset' && a.role === 'ccAsset';
 export const isLiab = (a: Pick<Account, 'type'>) => a.type.startsWith('liab') || ['loan', 'debt', 'mortgage'].includes(a.type);

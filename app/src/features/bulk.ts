@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { html, htmlList } from '../core/html';
 import { AuthError, api, eachLimited } from '../core/api';
 import { showLogin } from '../core/auth';
@@ -20,7 +21,7 @@ function renderBulk(progress?: string) {
   const L = S.lists!;
   bar.hidden = false;
   bar.innerHTML = String(progress ? html`<strong>${progress}</strong>` :
-    html`<strong>${n} selected</strong><input type="text" id="bk-cat" list="bk-dlcat" placeholder="Category" style="width:170px"><datalist id="bk-dlcat">${htmlList(L.categories.map(c => html`<option value="${c.name}">`))}</datalist><button class="btn small" data-onclick="App.bulk('category')">Set category</button><select id="bk-bud" style="width:170px">${opt('', 'Choose budget…', '')}${opt('0', 'No budget', '')}${htmlList(L.budgets.filter(b => b.active).map(b => opt(b.id, b.name, '')))}</select><button class="btn small" data-onclick="App.bulk('budget')">Set budget</button><input type="text" id="bk-tag" list="bk-dltag" placeholder="Tag" style="width:130px"><datalist id="bk-dltag">${htmlList(L.tags.map(t => html`<option value="${t.name}">`))}</datalist><button class="btn small" data-onclick="App.bulk('tag')">Add tag</button><button class="btn small danger" data-onclick="App.bulk('delete')">Delete</button><button class="link" data-onclick="App.selAll(false)">Clear</button>`);
+    html`<strong>${tr('{count} selected', { count: n })}</strong><input type="text" id="bk-cat" list="bk-dlcat" placeholder="Category" style="width:170px"><datalist id="bk-dlcat">${htmlList(L.categories.map(c => html`<option value="${c.name}">`))}</datalist><button class="btn small" data-onclick="App.bulk('category')">Set category</button><select id="bk-bud" style="width:170px">${opt('', tr('Choose budget…'), '')}${opt('0', tr('No budget'), '')}${htmlList(L.budgets.filter(b => b.active).map(b => opt(b.id, b.name, '')))}</select><button class="btn small" data-onclick="App.bulk('budget')">Set budget</button><input type="text" id="bk-tag" list="bk-dltag" placeholder="Tag" style="width:130px"><datalist id="bk-dltag">${htmlList(L.tags.map(t => html`<option value="${t.name}">`))}</datalist><button class="btn small" data-onclick="App.bulk('tag')">Add tag</button><button class="btn small danger" data-onclick="App.bulk('delete')">Delete</button><button class="link" data-onclick="App.selAll(false)">Clear</button>`);
 }
 async function bulk(kind: string) {
   const groups = [...(S.sel || [])].map(id => S.txMeta[id] && S.txMeta[id].g).filter(Boolean);
@@ -31,7 +32,7 @@ async function bulk(kind: string) {
   if (kind === 'tag') { val = el<HTMLInputElement>('bk-tag').value.trim(); if (!val) return toast('Type a tag first.'); }
   if (kind === 'delete') return App.softDeleteTx(groups.map(g => g.id));
   let done = 0, skipped = 0, failed = 0, authErr = null as AuthError | null;
-  renderBulk('Working… 0 of ' + groups.length);
+  renderBulk(tr('Working… {done} of {count}', { done: 0, count: groups.length }));
   await eachLimited(groups, 4, async g => {
     if (authErr) return;
     let changed = 0;
@@ -47,12 +48,12 @@ async function bulk(kind: string) {
       try { await api('/transactions/' + g.id, { method: 'PUT', body }); }
       catch (e) { if (e instanceof AuthError) authErr = e; else failed++; }
     }
-    renderBulk('Working… ' + (++done) + ' of ' + groups.length);
+    renderBulk(tr('Working… {done} of {count}', { done: ++done, count: groups.length }));
   });
   if (authErr) return showLogin(authErr.message);
   invalidate();
-  toast('Updated ' + (done - skipped - failed) + ' transaction' + (done - skipped - failed === 1 ? '' : 's') +
-    (skipped ? ' · ' + skipped + ' skipped (budgets only apply to expenses)' : '') + (failed ? ' · ' + failed + ' failed' : ''));
+  toast(tr(done - skipped - failed === 1 ? 'Updated {count} transaction' : 'Updated {count} transactions', { count: done - skipped - failed }) +
+    (skipped ? ' · ' + tr('{count} skipped (budgets only apply to expenses)', { count: skipped }) : '') + (failed ? ' · ' + tr('{count} failed', { count: failed }) : ''));
   route();
 }
 

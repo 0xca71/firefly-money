@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { type Html, html, htmlList } from '../core/html';
 import { App, S, el } from '../core/base';
 import { LS } from '../core/helpers';
@@ -78,8 +79,8 @@ function whatsNew(force?: boolean) {
     if (!d || d.open) return;
     if (!force && (el('drawer').classList.contains('open') || el<HTMLDialogElement>('confirm').open || document.hidden)) return;
     d.innerHTML = String(html`<header><div><div class="eyebrow">What’s new</div><h3 id="wnTitle">Money ${ver}</h3></div><button type="button" class="round wn-x" aria-label="Close" data-onclick="App.whatsNewClose()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></header>
-<p class="wn-lead">${notes ? notes.lead : 'This update brings fixes and smaller improvements. The release notes have the details.'}</p>
-${notes ? html`<ul class="wn-list">${htmlList(notes.items.map(([ic, t, s]) => html`<li><span class="wn-ic">${svg(ic)}</span><div><strong>${t}</strong><span>${s}</span></div></li>`))}</ul>` : ''}
+<p class="wn-lead">${tr(notes ? notes.lead : 'This update brings fixes and smaller improvements. The release notes have the details.')}</p>
+${notes ? html`<ul class="wn-list">${htmlList(notes.items.map(([ic, t, s]) => html`<li><span class="wn-ic">${svg(ic)}</span><div><strong>${tr(t)}</strong><span>${tr(s)}</span></div></li>`))}</ul>` : ''}
 <div class="btns"><a class="btn" href="https://github.com/Muffy0906/firefly-money/releases/tag/v${ver}" target="_blank" rel="noopener">All the changes</a><button type="button" class="btn primary" data-onclick="App.whatsNewClose()">Got it</button></div>`);
     d.setAttribute('aria-labelledby', 'wnTitle');
     d.onclose = () => LS.set('seenVersion', ver);

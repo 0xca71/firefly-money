@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { type Html, html, htmlList } from '../core/html';
 import { api, getAll } from '../core/api';
 import { App, S, arr, el, fmtDay, money, money0 } from '../core/base';
@@ -28,6 +29,7 @@ const SETTINGS: [string, string, string][] = [
   ['Month start day (payday)', 'cycle pay period month starts budget period', '#set-months'],
   ['Budget warning', 'alert warn threshold 80% percent budget full', '#set-months'],
   ['Appearance', 'theme dark light color look', '#set-look'],
+  ['Interface language', 'language chinese english 中文 简体中文 界面语言', '#set-look'],
   ['Number & date format', 'locale region language format currency decimal comma date week monday sunday euro', '#set-look'],
   ['Customize theme colors', 'theme color colour background accent liquid glass frosted blur tint frost glow light custom scene background wallpaper photo', 'theme-custom'],
   ['Payee and bank logos', 'logos icons images duckduckgo merchant', '#set-look'],
@@ -56,7 +58,7 @@ async function extras() {
   if (extra && Date.now() - extra.at < 300000) return extra.items;
   const [piggies, recs] = await Promise.all([getAll('/piggy-banks').catch(() => []), getAll('/recurrences').catch(() => [])]);
   const items: PalItem[] = [];
-  piggies.map(normPiggy).forEach(p => items.push({ label: p.name, kind: 'Piggy bank', sub: money0(p.current) + (p.target ? ' of ' + money0(p.target) : ' saved'), go: '#/piggy' }));
+  piggies.map(normPiggy).forEach(p => items.push({ label: p.name, kind: 'Piggy bank', sub: p.target ? tr('{amount} of {target}', { amount: money0(p.current), target: money0(p.target) }) : tr('{amount} saved', { amount: money0(p.current) }), go: '#/piggy' }));
   recs.forEach(x => items.push({ label: x.attributes.title, kind: 'Recurring', keys: x.attributes.description || '', go: '#/recurring', low: true }));
   extra = { at: Date.now(), items };
   return items;
@@ -73,7 +75,7 @@ function baseItems(): PalItem[] {
     { label: 'Hours of work: show what purchases cost in hours', kind: 'Setting', keys: 'settings lens wage hourly time', run: () => App.toggleWorkLens(!LS.get('workLens', false)) },
     { label: 'Compact view', kind: 'Setting', keys: 'settings density compact spacing', run: () => App.toggleDensity() },
     { label: 'Sign out', kind: 'Setting', keys: 'log out', run: () => App.signOut() });
-  THEMES.forEach(([k, label]) => items.push({ label: 'Theme: ' + label, kind: 'Setting', keys: 'settings appearance dark light color', run: () => setTheme(k) }));
+  THEMES.forEach(([k, label]) => items.push({ label: tr('Theme: {name}', { name: tr(label) }), kind: 'Setting', keys: 'settings appearance dark light color Theme: ' + label, run: () => setTheme(k) }));
   drafts().forEach(d => items.push({ label: draftLabel(d), kind: 'Draft', keys: 'draft unfinished', run: () => App.openDraft(d.id) }));
   if (S.rules) Object.entries<any>(S.rules).forEach(([id, r]) => items.push({ label: r.title, kind: 'Rule', run: () => { location.hash = '#/rules'; setTimeout(() => App.ruleForm(id), 500); }, low: true }));
   return items;
@@ -89,7 +91,7 @@ export async function openPalette() {
   if (el('palette').hidden) return;
   const items = baseItems();
   if (L) {
-    L.accounts.filter(a => a.active && (isAsset(a) || isLiab(a))).forEach(a => items.push({ label: a.name, kind: isCard(a) ? 'Credit card' : isLiab(a) ? 'Loan' : 'Account', sub: isLiab(a) ? money(a.debt) + ' owed' : money(a.balance), keys: a.number, go: '#/account/' + a.id }));
+    L.accounts.filter(a => a.active && (isAsset(a) || isLiab(a))).forEach(a => items.push({ label: a.name, kind: isCard(a) ? 'Credit card' : isLiab(a) ? 'Loan' : 'Account', sub: isLiab(a) ? tr('{amount} owed', { amount: money(a.debt) }) : money(a.balance), keys: a.number, go: '#/account/' + a.id }));
     L.budgets.filter(b => b.active).forEach(b => items.push({ label: b.name, kind: 'Budget', keys: b.notes, go: '#/transactions?budget=' + b.id }));
     L.categories.forEach(c => items.push({ label: c.name, kind: 'Category', keys: c.notes, go: '#/transactions?category=' + c.id }));
     L.tags.forEach(t => items.push({ label: t.name, kind: 'Tag', go: '#/transactions?tag=' + t.id }));
@@ -109,10 +111,18 @@ function score(label: string, q: string) {
   return j === q.length && q.length > 1 && !q.includes(' ') ? 20 : 0;
 }
 // Every word typed must match the label or the item's extra words; "export csv" → Export data
+function labelFor(it: PalItem): string {
+  if (it.kind === 'Page' || it.kind === 'Action' || it.kind === 'Setting') return tr(it.label);
+  if (it.kind === 'Ask' || it.kind === 'Search') {
+    const params = new URLSearchParams(it.go?.split('?')[1] || '');
+    return tr(it.kind === 'Ask' ? 'Ask: {query}' : 'Search all transactions for “{query}”', { query: params.get(it.kind === 'Ask' ? 'q' : 'search') || '' });
+  }
+  return it.label;
+}
 function itemScore(it: PalItem, q: string) {
   if (!q) return 1;
-  const whole = score(it.label, q); if (whole) return whole;
-  const hay = (it.label + ' ' + it.kind + ' ' + (it.keys || '')).toLowerCase(), words = q.split(/\s+/);
+  const whole = Math.max(score(it.label, q), score(labelFor(it), q)); if (whole) return whole;
+  const hay = (it.label + ' ' + labelFor(it) + ' ' + it.kind + ' ' + tr(it.kind) + ' ' + (it.keys || '')).toLowerCase(), words = q.split(/\s+/);
   return words.every(w => hay.includes(w)) ? 30 - words.length : 0;
 }
 
@@ -155,7 +165,7 @@ function palFilter(keepIdx?: boolean) {
   const prev = keepIdx === true ? palShown[palIdx] : null;
   let shown: PalItem[];
   if (!q) {
-    const rec: PalItem[] = recents().map(r => ({ ...r, sub: 'Recent' }));
+    const rec: PalItem[] = recents().map(r => ({ ...r, sub: tr('Recent') }));
     shown = rec.concat(palItems.filter(it => it.kind === 'Page' || it.kind === 'Action').filter(it => !rec.some(r => r.go === it.go && r.label === it.label)));
   } else {
     shown = palItems.map(it => ({ it, s: itemScore(it, q) - (it.low && q.length < 3 ? 50 : 0) })).filter(x => x.s > 0)
@@ -171,16 +181,16 @@ function palFilter(keepIdx?: boolean) {
   palIdx = at >= 0 ? at : 0; drawPal();
 }
 function itemHtml(it: PalItem, i: number): Html {
-  const right = it.tx ? html`<span class="num ${it.amt! < 0 ? 'neg' : it.amt! > 0 ? 'pos' : 'neutral'}">${it.amt! > 0 ? '+' : ''}${money(it.amt!)}</span>` : html`<span class="k">${it.kind}</span>`;
-  return html`<div class="pal-item${i === palIdx ? ' on' : ''}" role="option" data-i="${i}" data-onmousemove="App.palHover(${i})" data-onclick="App.palRun(${i})"><span class="pal-main"><span class="pal-l">${it.label}</span>${it.sub ? html`<span class="pal-sub">${it.sub}</span>` : ''}</span>${right}</div>`;
+  const right = it.tx ? html`<span class="num ${it.amt! < 0 ? 'neg' : it.amt! > 0 ? 'pos' : 'neutral'}">${it.amt! > 0 ? '+' : ''}${money(it.amt!)}</span>` : html`<span class="k">${tr(it.kind)}</span>`;
+  return html`<div class="pal-item${i === palIdx ? ' on' : ''}" role="option" data-i="${i}" data-onmousemove="App.palHover(${i})" data-onclick="App.palRun(${i})"><span class="pal-main"><span class="pal-l">${labelFor(it)}</span>${it.sub ? html`<span class="pal-sub">${it.sub}</span>` : ''}</span>${right}</div>`;
 }
 function drawPal() {
   const q = el<HTMLInputElement>('palQ').value.trim();
   const parts: Html[] = [];
   let lastGroup = '';
   palShown.forEach((it, i) => {
-    const group = !q ? (it.sub === 'Recent' ? 'Recent' : 'Go to') : it.tx ? 'Transactions' : it.kind === 'Search' ? '' : 'Top results';
-    if (group && group !== lastGroup) parts.push(html`<div class="pal-h">${group}</div>`);
+    const group = !q ? (it.sub === tr('Recent') ? 'Recent' : 'Go to') : it.tx ? 'Transactions' : it.kind === 'Search' ? '' : 'Top results';
+    if (group && group !== lastGroup) parts.push(html`<div class="pal-h">${tr(group)}</div>`);
     if (group) lastGroup = group;
     if (q && it.kind === 'Search' && txBusy) parts.push(html`<div class="pal-h">Transactions</div><div class="pal-item pal-wait"><span class="neutral"><span class="spin"></span>Searching transactions…</span></div>`);
     parts.push(itemHtml(it, i));

@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import { App, fmtNum, monthRange, nowMonth, sumDiff } from './base';
 import { LS } from './helpers';
 import { api } from './api';
@@ -18,9 +19,9 @@ export function hoursText(amount: number, short = false, rate = hourlyRate()) {
   if (!rate || !amount) return '';
   const h = Math.abs(amount) / rate, day = workHours() / 5;
   const n = (x: number) => x < 10 ? fmtNum(x, 1) : fmtNum(x);
-  if (Math.round(h * 60) < 60) return Math.max(1, Math.round(h * 60)) + ' min';
-  if (h >= day * 2) { const d = n(h / day); return short ? d + ' d' : d + ' workdays'; }
-  return short ? n(h) + ' h' : n(h) + (n(h) === '1' ? ' hour' : ' hours');
+  if (Math.round(h * 60) < 60) return tr('{count} min', { count: Math.max(1, Math.round(h * 60)) });
+  if (h >= day * 2) { const d = n(h / day); return tr(short ? '{count} d' : '{count} workdays', { count: d }); }
+  return tr(short ? '{count} h' : n(h) === '1' ? '{count} hour' : '{count} hours', { count: n(h) });
 }
 let learning: Promise<number> | null = null;
 // Work out the hourly rate from income, once a week (or when the hours change). Redraws the page the first time.

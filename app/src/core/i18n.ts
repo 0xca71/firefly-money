@@ -1,9 +1,94 @@
+import { financeZhCN } from './i18n-finance';
+import { analyticsZhCN } from './i18n-analytics';
+import { transactionsZhCN } from './i18n-transactions';
+import { chartsZhCN } from './i18n-charts';
+import { shellZhCN } from './i18n-shell';
+
 /* UI translations. Keep separate from money.locale (which controls regional number/date formats).
    English source labels are stable keys. Only static template fragments are translated:
    interpolated API/user data are never passed through the template translator. */
 export type UiLanguage = 'en' | 'zh-CN';
 export const UI_LANGUAGE_KEY = 'money.uiLang';
 export const zhCN: Readonly<Record<string, string>> = {
+  'A JavaScript library for interactive maps': '用于交互式地图的 JavaScript 库',
+  'all time': '全部时间',
+  'No transactions.': '暂无交易记录。',
+  'Select': '选择',
+  '+ Budget': '+ 预算',
+  'Change category': '更改分类',
+  'Change budget': '更改预算',
+  '{count} sources': '{count} 个收入来源',
+  '{count} payees': '{count} 个收款方',
+  '{count} splits': '{count} 笔拆分',
+  '{name} budget': '{name} 预算',
+  '{count} min': '{count} 分钟',
+  '{count} d': '{count} 天',
+  '{count} h': '{count} 小时',
+  '{count} workdays': '{count} 个工作日',
+  '{count} hour': '{count} 小时',
+  '{count} hours': '{count} 小时',
+  'Calm (follows your system)': '简约（跟随系统）',
+  'Calm light': '简约浅色',
+  'Calm dark': '简约深色',
+  'Carbon neon': '炭黑霓虹',
+  'Midnight': '午夜',
+  'Neon': '霓虹',
+  'Liquid glass neon': '液态玻璃霓虹',
+  'Liquid glass': '液态玻璃',
+  'Frosted glass': '磨砂玻璃',
+  'Spatial glass': '空间玻璃',
+  'Ocean': '海洋',
+  'Sunrise': '日出',
+  'Forest': '森林',
+  'Nord': '北欧',
+  'Rosé': '玫瑰',
+  'Sakura Milk': '樱花奶白',
+  'Mint Cream': '薄荷奶油',
+  'Lavender Haze': '薰衣草薄雾',
+  'Peach Fizz': '蜜桃汽水',
+  'Sky Powder': '晴空粉蓝',
+  'Butter & Sage': '奶油鼠尾草',
+  'Calm': '简约',
+  'Pastel': '柔和',
+  'Bold': '鲜明',
+  'Glass': '玻璃',
+  'Light': '浅色',
+  'Dark': '深色',
+  'Couldn’t load this page.': '无法加载此页面。',
+  'Trying again by itself…': '正在自动重试…',
+  'Try again now': '立即重试',
+  'Couldn’t refresh: {error}': '无法刷新：{error}',
+  'Recalculating…': '正在重新计算…',
+  'Recalculated everything from Firefly III': '已从 Firefly III 重新计算所有数据',
+  'Couldn’t recalculate: {error}': '无法重新计算：{error}',
+  'Couldn’t reach Money. The connection dropped or the app is restarting.': '无法连接 Money，连接已断开或应用正在重启。',
+  'Request failed ({status})': '请求失败（{status}）',
+  'Firefly III rejected the access token. Check FIREFLY_TOKEN in the app settings.': 'Firefly III 拒绝了访问令牌，请检查应用配置中的 FIREFLY_TOKEN。',
+  'Not found': '未找到',
+  'Firefly refused because this is still in use.': '此项目仍在使用中，Firefly 拒绝了该操作。',
+  'Firefly III didn’t respond ({status}). It may be busy or restarting. Try again in a moment.': 'Firefly III 未响应（{status}），可能正在忙碌或重启，请稍后重试。',
+  'Showing the latest {count}.': '显示最近 {count} 条记录。',
+  'Couldn’t sign in ({status}).': '无法登录（{status}）。',
+  'Starting': '正在开始',
+  'Processing': '正在处理',
+  'Firefly is slow, retrying ({count} of {total})': 'Firefly 响应缓慢，正在重试（{count}/{total}）',
+  'Fetching {name} (page {page} of {total})': '正在获取{name}（第 {page}/{total} 页）',
+  'Receiving {name} from Firefly': '正在从 Firefly 接收{name}',
+  'Sending request to Firefly': '正在向 Firefly 发送请求',
+  '{count} of {total} requests': '已完成 {count}/{total} 个请求',
+  'transactions': '交易记录',
+  'accounts': '账户',
+  'budgets': '预算',
+  'categories': '分类',
+  'bills': '账单',
+  'piggy banks': '储蓄目标',
+  'totals': '汇总数据',
+  'rules': '规则',
+  'recurring': '周期交易',
+  'budget limits': '预算额度',
+  'tags': '标签',
+  'currencies': '货币',
+  'data': '数据',
   "Overview": "概览",
   "Forecast": "预测",
   "Transactions": "交易记录",
@@ -548,10 +633,41 @@ export const zhCN: Readonly<Record<string, string>> = {
   "No data yet.": "暂无数据。",
   "Nothing found.": "未找到内容。",
   "No activity": "暂无活动",
-  "No results found.": "未找到结果。"
+  "No results found.": "未找到结果。",
+  'Privacy · Money': '隐私 · Money',
+  'Page not found · Money': '页面未找到 · Money',
+  '← Back to Money': '← 返回 Money',
+  'Back to Money': '返回 Money',
+  'Page not found': '页面未找到',
+  "There's nothing at this address.": '此地址没有内容。',
+  'Money is a self-hosted dashboard for your own Firefly III. There is no Money company server, no account with us and no tracking.': 'Money 是供你自己的 Firefly III 使用的自托管面板。Money 不设公司服务器，无需注册我们的账户，也不进行跟踪。',
+  'What stays on your server': '保留在你服务器上的内容',
+  'Your transactions, accounts and budgets live in your Firefly III. Money only passes them to your browser.': '你的交易、账户和预算保存在自己的 Firefly III 中，Money 只负责将这些数据传递给你的浏览器。',
+  'Your Firefly token stays on the server and is never sent to the browser.': '你的 Firefly 令牌始终保留在服务器上，不会发送到浏览器。',
+  'What is stored in your browser': '保存在浏览器中的内容',
+  'One sign-in cookie (HttpOnly, signed by the server), only so you stay signed in. It is not used for tracking.': '一个由服务器签名的 HttpOnly 登录 Cookie，仅用于保持登录状态，不用于跟踪。',
+  'Preferences such as theme and layout, in local storage on your device. Some are also saved to your own Firefly.': '主题、布局等偏好保存在设备的本地存储中，其中部分也会保存到你自己的 Firefly。',
+  'What leaves your server': '服务器会向外部请求什么',
+  "Payee logos are fetched by your server from DuckDuckGo's icon service. They are cached, and your browser never contacts it.": '服务器从 DuckDuckGo 图标服务获取收款方图标并缓存，浏览器不会直接连接该服务。',
+  'Map pictures come from OpenStreetMap, and optional store lookups from Overpass, also through your server.': '地图图片来自 OpenStreetMap，可选的门店查询使用 Overpass，均通过你的服务器访问。',
+  'No analytics, advertising or third-party scripts run in the app.': '应用内不运行分析、广告或第三方脚本。',
+  'Contact': '联系',
+  'Questions or problems:': '问题反馈：',
+  '. Money is open source under the MIT License.': '。Money 以 MIT 许可证开源。',
+  'This demo runs entirely in your browser with made-up data. Nothing you do here is sent anywhere.': '此演示完全在浏览器中运行，使用虚构数据，你在这里的操作不会发送到任何地方。',
+  'This demo runs entirely in your browser with made-up data. Nothing you do here is sent anywhere, apart from a cookie-free page-view count (GoatCounter: no personal data, no cookies).': '此演示完全在浏览器中运行，使用虚构数据。除不使用 Cookie 的页面访问计数外，你的操作不会发送到任何地方（GoatCounter：不收集个人数据，不使用 Cookie）。',
+  '↑↓ to move': '↑↓ 移动',
+  'Enter to open': 'Enter 打开',
+  'Esc to close': 'Esc 关闭',
+  '{amount}/month': '{amount}/月',
+  ' on the {day}': '，每月 {day} 日',
+  ' from {account}': '，付款账户：{account}',
+  ...financeZhCN,
+  ...analyticsZhCN,
+  ...transactionsZhCN,
+  ...chartsZhCN,
+  ...shellZhCN,
 };
-export const en: Readonly<Record<string, string>> = Object.fromEntries(Object.keys(zhCN).map(key => [key, key]));
-export const catalogs = { en, 'zh-CN': zhCN } as const;
 
 export function browserUiLanguage(tag?: string): UiLanguage {
   const candidate = tag ?? (typeof navigator === 'undefined' ? 'en' : navigator.language || navigator.languages?.[0] || 'en');
@@ -564,36 +680,54 @@ export function uiLanguage(): UiLanguage {
   } catch { /* private mode / blocked storage */ }
   return browserUiLanguage();
 }
-export function tr(label: string): string {
-  return uiLanguage() === 'zh-CN' ? (zhCN[label] || label) : label;
+export function tr(label: string, values?: Readonly<Record<string, string | number>>): string {
+  const text = uiLanguage() === 'zh-CN' ? (Object.hasOwn(zhCN, label) ? zhCN[label] : label) : label;
+  return values ? text.replace(/\{(\w+)\}/g, (token, key: string) => Object.hasOwn(values, key) ? String(values[key]) : token) : text;
 }
 export function setDocumentLanguage() { if (typeof document !== 'undefined') document.documentElement.lang = uiLanguage(); }
 export function persistUiLanguage(language: UiLanguage) {
   try { localStorage.setItem(UI_LANGUAGE_KEY, language); } catch { /* private mode */ }
   setDocumentLanguage();
 }
-/* Only replace text originating in developer-authored html template STATIC segments.
-   Never translate strings interpolated into a template; those may be user/API data.
-   Escape remains the responsibility of the existing html template helper. */
+// Translate only authored text and presentation attributes. Values are inserted later by html(),
+// so a payee called "Income" and markup inside notes can never become translation input.
+function staticText(text: string): string {
+  const trimmed = text.trim();
+  const key = Object.hasOwn(zhCN, trimmed) ? trimmed : trimmed.replace(/\s+/g, ' ').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ');
+  return Object.hasOwn(zhCN, key) ? text.replace(/\S[\s\S]*\S|\S/, () => zhCN[key].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')) : text;
+}
+function translateMarkup(fragment: string, marker?: string): string {
+  return fragment.replace(/<!--[\s\S]*?-->|<(script|style|code|textarea)\b[^>]*>[\s\S]*?<\/\1\s*>|<(?:[^<>"']|"[^"]*"|'[^']*')*>|[^<]+/gi, (token, protectedTag: string | undefined) => {
+    if (protectedTag || token.startsWith('<!--')) return token;
+    if (token.startsWith('<') || /^\s+(?:[\w:-]+\s+)*[\w:-]+\s*=/.test(token)) return token.replace(/(\s(?:aria-label|placeholder|title|alt|label)\s*=\s*)(["'])([\s\S]*?)\2/gi,
+      (all, prefix: string, quote: string, label: string) => {
+        const translated = staticText(label);
+        return translated === label ? all : prefix + quote + translated.replace(/'/g, '&#39;') + quote;
+      });
+    return marker ? token.split(marker).map(staticText).join(marker) : staticText(token);
+  });
+}
 export function translateStatic(fragment: string): string {
-  if (uiLanguage() !== 'zh-CN') return fragment;
-  return fragment
-    .replace(/\b(aria-label|placeholder|title|alt)="([^"]*)"/g, (all, attr: string, label: string) =>
-      zhCN[label] ? attr + '="' + zhCN[label] + '"' : all)
-    .replace(/>([^<>]*)(?=<|$)/g, (all, label: string) => {
-      const trimmed = label.trim();
-      if (!trimmed || !zhCN[trimmed]) return all;
-      const left = label.match(/^\s*/)?.[0] || '';
-      const right = label.match(/\s*$/)?.[0] || '';
-      return '>' + left + zhCN[trimmed] + right;
-    });
+  return uiLanguage() === 'zh-CN' ? translateMarkup(fragment) : fragment;
+}
+const templateCache = new WeakMap<TemplateStringsArray, readonly string[]>();
+export function translateTemplate(strings: TemplateStringsArray): readonly string[] {
+  if (uiLanguage() !== 'zh-CN') return strings;
+  let translated = templateCache.get(strings);
+  if (!translated) {
+    let marker = '\u0000';
+    while (strings.some(part => part.includes(marker))) marker += '\u0000';
+    translated = translateMarkup(strings.join(marker), marker).split(marker);
+    templateCache.set(strings, translated);
+  }
+  return translated;
 }
 /* Initial document markup isn't built via html tagged templates. Limit this helper
    to known static UI shells; don't walk #view or data-driven content. */
 export function translateInitialShell() {
   setDocumentLanguage();
   if (uiLanguage() === 'en') return;
-  for (const selector of ['#login', '.side', '#palette', '#fab', '#searchBtn', '#drawer']) {
+  for (const selector of ['#login', '.side', '#palette', '#fab', '#searchBtn', '#drawer', '[data-static-page]']) {
     const root = document.querySelector(selector);
     if (!root) continue;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);

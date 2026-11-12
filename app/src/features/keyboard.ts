@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { html, htmlList } from '../core/html';
 import { App, S, el } from '../core/base';
 import type { RouteInfo } from '../core/router';
@@ -45,7 +46,7 @@ document.addEventListener('keydown', e => {
 function shortcutsSheet() {
   const rows = [['N', 'New transaction'], ['⌘/Ctrl K', 'Search everything'], ['/', 'Search transactions'], ['J / K', 'Next / previous transaction'], ['Enter', 'Open the selected transaction'],
     ['C', 'Change its category'], ['B', 'Change its budget'], ['X', 'Select it for bulk edit'], ['P', 'Hide or show amounts'], ['[', 'Collapse or expand the sidebar'], ['Esc', 'Close / clear']];
-  openDrawer('Keyboard shortcuts', html`<div class="list">${htmlList(rows.map(([a, b]) => html`<div class="row"><span class="name">${b}</span><kbd>${a}</kbd></div>`))}</div>`);
+  openDrawer(tr('Keyboard shortcuts'), html`<div class="list">${htmlList(rows.map(([a, b]) => html`<div class="row"><span class="name">${tr(b)}</span><kbd>${a}</kbd></div>`))}</div>`);
 }
 
 /* ---------- After each page paint ---------- */

@@ -1,3 +1,4 @@
+import { tr, uiLanguage } from '../core/i18n';
 import { anomaly, quantile } from './predict';
 import { getAll } from '../core/api';
 import { S, monthRange, nowMonth, todayIso, type ApiData } from '../core/base';
@@ -43,7 +44,7 @@ export function findUnusual(charges: Charge[], today: string): Unusual {
   by(recent, c => c.key + '|' + cents(c.amount)).forEach(xs => {
     if (xs.length < 2 || twice((oldByKey.get(xs[0].key) || []).filter(o => cents(o.amount) === cents(xs[0].amount)))) return;
     const s = [...xs].sort((a, b) => a.date.localeCompare(b.date));
-    for (let i = 1; i < s.length; i++) if (Math.abs(daysBetween(s[i - 1].date, s[i].date)) <= 1) add('duplicate', s[i], s[i].amount, 'Charged twice: ' + usd(s[i].amount) + ' again within a day');
+    for (let i = 1; i < s.length; i++) if (Math.abs(daysBetween(s[i - 1].date, s[i].date)) <= 1) add('duplicate', s[i], s[i].amount, tr("Charged twice: {amount} again within a day", { amount: usd(s[i].amount) }));
   });
 
   // Far above the merchant's usual; a merchant with under four past charges is judged against its category instead
@@ -53,13 +54,13 @@ export function findUnusual(charges: Charge[], today: string): Unusual {
     const mine = (oldByKey.get(c.key) || []).map(o => o.amount);
     if (mine.length >= 4) {
       const a = anomaly(mine, c.amount);
-      if (a.flag === 'high' && c.amount >= a.median * SPIKE_RATIO && c.amount - a.median >= SPIKE_MIN_GAP) add('spike', c, a.median, usd(c.amount) + ' at ' + c.payee + ', usually about ' + usd(a.median));
+      if (a.flag === 'high' && c.amount >= a.median * SPIKE_RATIO && c.amount - a.median >= SPIKE_MIN_GAP) add('spike', c, a.median, tr("{amount} at {payee}, usually about {usual}", { amount: usd(c.amount), payee: c.payee, usual: usd(a.median) }));
     } else if (!mine.length) {
-      if (hasHistory && c.amount >= NEW_LARGE && c.amount >= p95) add('new-large', c, 0, usd(c.amount) + ' at a merchant you haven’t used before');
+      if (hasHistory && c.amount >= NEW_LARGE && c.amount >= p95) add('new-large', c, 0, tr("{amount} at a merchant you haven’t used before", { amount: usd(c.amount) }));
     }
     if (mine.length < 4 && c.cat) {
       const cat = (oldByCat.get(c.cat) || []).map(o => o.amount), a = anomaly(cat, c.amount, { min: 8 });
-      if (a.flag === 'high' && c.amount >= a.median * CAT_RATIO && c.amount - a.median >= CAT_MIN_GAP) add('spike', c, a.median, usd(c.amount) + ' in ' + c.cat + ', usually about ' + usd(a.median) + ' each');
+      if (a.flag === 'high' && c.amount >= a.median * CAT_RATIO && c.amount - a.median >= CAT_MIN_GAP) add('spike', c, a.median, tr("{amount} in {category}, usually about {usual} each", { amount: usd(c.amount), category: c.cat, usual: usd(a.median) }));
     }
   });
   flags.sort((a, b) => (b.charge.amount - b.typical) - (a.charge.amount - a.typical));
@@ -91,7 +92,7 @@ export function trends(charges: Charge[], today: string) {
 // Six months of spending, up to today. One request shared by the Overview row and the page; dropped on any failure.
 let memo: { key: string, p: Promise<Unusual> } | null = null;
 export function loadUnusual(): Promise<Unusual> {
-  const today = todayIso(), key = today + ':' + S.dirtyAt;
+  const today = todayIso(), key = today + ':' + S.dirtyAt + ':' + uiLanguage();
   if (memo && memo.key === key) return memo.p;
   const [y, m] = nowMonth(), start = monthRange(y, m - 5).start;
   const p = getAll('/transactions', { type: 'withdrawal', start, end: today }).then((raw: ApiData[]) => findUnusual(chargesOf(raw.map(normGroup)), today));

@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { type Html, html, htmlList } from '../core/html';
 import { type ApiData, App, type Period, absDiff, arr, el, fmtDay, isoDate, money, money0, monthRange, nowMonth, num, sumDiff, todayIso } from '../core/base';
 import { ICON_X, vt, vtName } from '../core/dom';
@@ -44,22 +45,22 @@ async function insightCards({ cur: period, future, budgets, limits, cards, trend
   if (!used.length) return '';
   // Compare against last month at the same point; fall back to the 3-month average when last month has no data.
   const prevM = monthRange(cur.y, cur.m - 1), last = hist[0], useLast = last.total > 0;
-  const lastBy = isCur ? (cur.start.endsWith('-01') ? 'by the ' + ordinal(Math.min(N, new Date(prevM.y, prevM.m + 1, 0).getDate())) + ' of ' + prevM.short : 'by ' + fmtDay(past[0].end)) : 'in ' + prevM.short;
-  const byLabel = isCur ? (cur.start.endsWith('-01') ? 'by the ' + ordinal(N) : 'by day ' + N) : 'in ' + cur.short;
-  const vsWord = useLast ? (isCur ? 'last month' : prevM.short) : 'usual';
-  const vsText = (amt: number) => useLast ? money0(amt) + ' ' + lastBy : 'about ' + money0(amt) + ' ' + byLabel + ' in a typical month';
+  const lastBy = isCur ? (cur.start.endsWith('-01') ? tr("by the {day} of {month}", { day: ordinal(Math.min(N, new Date(prevM.y, prevM.m + 1, 0).getDate())), month: prevM.short }) : tr("by {date}", { date: fmtDay(past[0].end) })) : tr("in {month}", { month: prevM.short });
+  const byLabel = isCur ? (cur.start.endsWith('-01') ? tr("by the {day}", { day: ordinal(N) }) : tr("by day {day}", { day: N })) : tr('in {month}', { month: cur.short });
+  const vsWord = useLast ? (isCur ? tr('last month') : prevM.short) : tr('usual');
+  const vsText = (amt: number) => useLast ? money0(amt) + ' ' + lastBy : tr("about {amount} {when} in a typical month", { amount: money0(amt), when: byLabel });
   const out: { id: string, tone: string, ic: string, title: string, detail: string, href: string, score: number }[] = [];
   const add = (id: string, tone: string, ic: string, title: string, detail: string, href: string, score: number) => out.push({ id: cur.y + '-' + (cur.m + 1) + ':' + id, tone, ic, title, detail, href, score });
   const avgOf = (name: string | null) => used.reduce((s, h) => s + (name == null ? h.total : (h.cats.get(name) || { amt: 0 }).amt || 0), 0) / used.length;
-  const usualNote = (amt: number, base: number) => useLast && used.length > 1 && Math.abs(amt - base) >= 1 ? ' · usually about ' + money0(amt) : '';
-  const meWhen = isCur ? 'so far' : 'in ' + cur.short;
+  const usualNote = (amt: number, base: number) => useLast && used.length > 1 && Math.abs(amt - base) >= 1 ? ' · ' + tr("usually about {amount}", { amount: money0(amt) }) : '';
+  const meWhen = isCur ? tr('so far') : tr('in {month}', { month: cur.short });
 
   // 1. Overall pace
   const avg = avgOf(null), base = useLast ? last.total : avg, pct = base ? (me.total - base) / base : 0;
   if (Math.abs(pct) >= .1) add('pace', pct > 0 ? 'up' : 'down', pct > 0 ? 'up' : 'down',
-    'Spending is ' + Math.round(Math.abs(pct) * 100) + '% ' + (pct > 0 ? 'higher' : 'lower') + ' than ' + vsWord,
-    money0(me.total) + ' ' + meWhen + ' vs. ' + vsText(base) + usualNote(avg, base), '#/transactions?type=withdrawal', 30 + Math.min(40, Math.abs(pct) * 60));
-  else add('pace', 'down', 'check', 'Spending is in line with ' + vsWord, money0(me.total) + ' ' + meWhen + ' vs. ' + vsText(base) + usualNote(avg, base), '#/reports', 8);
+    tr(pct > 0 ? 'Spending is {percent}% higher than {before}' : 'Spending is {percent}% lower than {before}', { percent: Math.round(Math.abs(pct) * 100), before: vsWord }),
+    tr("{amount} {when} vs. {before}", { amount: money0(me.total), when: meWhen, before: vsText(base) }) + usualNote(avg, base), '#/transactions?type=withdrawal', 30 + Math.min(40, Math.abs(pct) * 60));
+  else add('pace', 'down', 'check', tr("Spending is in line with {before}", { before: vsWord }), tr('{amount} {when} vs. {before}', { amount: money0(me.total), when: meWhen, before: vsText(base) }) + usualNote(avg, base), '#/reports', 8);
 
   // 2. Categories that moved the most
   const ref = useLast ? [last] : used;
@@ -75,10 +76,10 @@ async function insightCards({ cur: period, future, budgets, limits, cards, trend
   const ups = moves.filter(m => m.d > 0).sort((x, y) => y.score - x.score).slice(0, 2), downs = moves.filter(m => m.d < 0).sort((x, y) => y.score - x.score).slice(0, 1);
   [...ups, ...downs].forEach(m => {
     const href = m.id ? '#/transactions?category=' + m.id : '#/transactions';
-    if (m.p === Infinity) add('cat:' + m.name, 'up', 'spark', money0(m.amt) + ' on ' + m.name,
-      useLast ? 'Nothing spent here ' + lastBy + usualNote(avgOf(m.name), 0) : 'Nothing spent here ' + byLabel + ' in the last 3 months', href, m.score);
-    else add('cat:' + m.name, m.d > 0 ? 'up' : 'down', m.d > 0 ? 'up' : 'down', m.name + ' is ' + Math.round(Math.abs(m.p) * 100) + '% ' + (m.d > 0 ? 'above' : 'below') + ' ' + vsWord,
-      money0(m.amt) + ' vs. ' + vsText(m.a) + usualNote(avgOf(m.name), m.a), href, m.score);
+    if (m.p === Infinity) add('cat:' + m.name, 'up', 'spark', tr("{amount} on {name}", { amount: money0(m.amt), name: m.name }),
+      useLast ? tr("Nothing spent here {when}", { when: lastBy }) + usualNote(avgOf(m.name), 0) : tr("Nothing spent here {when} in the last 3 months", { when: byLabel }), href, m.score);
+    else add('cat:' + m.name, m.d > 0 ? 'up' : 'down', m.d > 0 ? 'up' : 'down', tr(m.d > 0 ? '{name} is {percent}% above {before}' : '{name} is {percent}% below {before}', { name: m.name, percent: Math.round(Math.abs(m.p) * 100), before: vsWord }),
+      tr("{amount} vs. {before}", { amount: money0(m.amt), before: vsText(m.a) }) + usualNote(avgOf(m.name), m.a), href, m.score);
   });
 
   if (isCur) {
@@ -88,8 +89,8 @@ async function insightCards({ cur: period, future, budgets, limits, cards, trend
       if (!lim || !lim.amount || spent >= lim.amount * budgetAlert() / 100 || N < 5) return;
       const perDay = spent / N, runDay = perDay > 0 ? Math.ceil(lim.amount / perDay) : Infinity;
       if (runDay >= dim) return;
-      add('bud:' + b.id, 'warn', 'budget', b.attributes.name + ' may run out around ' + fmtDay(addDays(cur.start, runDay - 1)),
-        money0(spent) + ' of ' + money0(lim.amount) + ' used · about ' + money0(perDay) + '/day so far', '#/transactions?budget=' + b.id, 38 + (dim - runDay));
+      add('bud:' + b.id, 'warn', 'budget', tr("{name} may run out around {date}", { name: b.attributes.name, date: fmtDay(addDays(cur.start, runDay - 1)) }),
+        tr("{spent} of {budget} used · about {daily}/day so far", { spent: money0(spent), budget: money0(lim.amount), daily: money0(perDay) }), '#/transactions?budget=' + b.id, 38 + (dim - runDay));
     });
     // 4. Credit card payments coming up
     cards.forEach(a => {
@@ -98,23 +99,23 @@ async function insightCards({ cur: period, future, budgets, limits, cards, trend
       const due = cardDue(now, day);
       const days = Math.round((+due - +new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12)) / 864e5);
       if (days > 7) return;
-      add('card:' + a.id, 'warn', 'card', a.name + ' payment due ' + (days === 0 ? 'today' : days === 1 ? 'tomorrow' : 'in ' + days + ' days'),
-        money(owed) + ' owed · due ' + fmtDay(isoDate(due)), '#/account/' + a.id, 55 - days);
+      add('card:' + a.id, 'warn', 'card', tr("{name} payment due {when}", { name: a.name, when: days === 0 ? tr('today') : days === 1 ? tr('tomorrow') : tr('in {count} days', { count: days }) }),
+        tr("{amount} owed · due {date}", { amount: money(owed), date: fmtDay(isoDate(due)) }), '#/account/' + a.id, 55 - days);
     });
   } else if (trend && trend.length >= 2) {
     // 5. Savings rate for a finished month
     const a = trend[trend.length - 1], b = trend[trend.length - 2];
     if (a.income > 0) {
       const r = (a.income - a.spend) / a.income, rb = b.income > 0 ? (b.income - b.spend) / b.income : null;
-      add('kept', r >= (rb ?? r) ? 'down' : 'up', 'check', 'You kept ' + Math.round(r * 100) + '% of your income',
-        rb === null ? money0(a.income - a.spend) + ' of ' + money0(a.income) : (r >= rb ? 'Up' : 'Down') + ' from ' + Math.round(rb * 100) + '% in ' + b.label, '#/reports', 20);
+      add('kept', r >= (rb ?? r) ? 'down' : 'up', 'check', tr("You kept {percent}% of your income", { percent: Math.round(r * 100) }),
+        rb === null ? tr("{kept} of {income}", { kept: money0(a.income - a.spend), income: money0(a.income) }) : tr(r >= rb ? 'Up from {percent}% in {month}' : 'Down from {percent}% in {month}', { percent: Math.round(rb * 100), month: b.label }), '#/reports', 20);
     }
   }
 
   // December and early January: the year's story is ready (pages/year.ts)
   if (isCur && (nm === 11 || (nm === 0 && now.getDate() <= 20))) {
     const yr = nm === 11 ? ny : ny - 1;
-    add('year:' + yr, 'down', 'spark', 'Your ' + yr + ' in Money', 'A few cards on your year: your places, your biggest month, days you spent nothing', '#/year?y=' + yr, 90);
+    add('year:' + yr, 'down', 'spark', tr("Your {year} in Money", { year: yr }), tr('A few cards on your year: your places, your biggest month, days you spent nothing'), '#/year?y=' + yr, 90);
   }
   const hidden = LS.get('insightsHidden', {});
   const shown = out.filter(x => !hidden[x.id]).sort((a, b) => b.score - a.score).slice(0, max || 4);

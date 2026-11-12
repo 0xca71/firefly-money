@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { html } from '../core/html';
 import { App } from '../core/base';
 import { icon, toast, vt } from '../core/dom';
@@ -13,8 +14,8 @@ function applyPrefs() {
 }
 export function drawToggles() {
   const p = !!LS.get('privacy', false), c = !!LS.get('compact', false);
-  document.querySelectorAll<HTMLElement>('[data-tg=privacy]').forEach(b => { b.classList.toggle('on', p); b.innerHTML = String(html`${icon(p ? 'eyeoff' : 'eye')}<span>${p ? 'Show amounts' : 'Hide amounts'}</span>`); b.title = 'Hide or show amounts (P)'; });
-  document.querySelectorAll<HTMLElement>('[data-tg=compact]').forEach(b => { b.classList.toggle('on', c); b.innerHTML = String(html`${icon('density')}<span>${c ? 'Comfortable view' : 'Compact view'}</span>`); });
+  document.querySelectorAll<HTMLElement>('[data-tg=privacy]').forEach(b => { b.classList.toggle('on', p); b.innerHTML = String(html`${icon(p ? 'eyeoff' : 'eye')}<span>${tr(p ? 'Show amounts' : 'Hide amounts')}</span>`); b.title = tr('Hide or show amounts (P)'); });
+  document.querySelectorAll<HTMLElement>('[data-tg=compact]').forEach(b => { b.classList.toggle('on', c); b.innerHTML = String(html`${icon('density')}<span>${tr(c ? 'Comfortable view' : 'Compact view')}</span>`); });
   // the switches on the Settings page
   document.querySelectorAll<HTMLInputElement>('input[data-pref]').forEach(i => { i.checked = i.dataset.pref === 'privacy' ? p : c; });
 }
@@ -41,7 +42,7 @@ addEventListener('blur', () => { if (matchMedia('(hover: none)').matches) snapPr
 addEventListener('focus', () => snapPrivacy(false));
 function togglePrivacyBg(on: boolean) { LS.set('privacyBg', !!on); buzz(8); toast(on ? 'Amounts hide when you leave the app' : 'Amounts stay as they are when you leave'); }
 // Fold the sidebar down to its icons for more room, or open it again. Kept per device: a laptop and a big screen differ.
-const sideLabels = (on: boolean) => document.querySelectorAll<HTMLElement>('.side-tg').forEach(b => { b.title = (on ? 'Expand' : 'Collapse') + ' the sidebar ([)'; b.setAttribute('aria-label', (on ? 'Expand' : 'Collapse') + ' the sidebar'); });
+const sideLabels = (on: boolean) => document.querySelectorAll<HTMLElement>('.side-tg').forEach(b => { b.title = tr(on ? 'Expand the sidebar ([)' : 'Collapse the sidebar ([)'); b.setAttribute('aria-label', tr(on ? 'Expand the sidebar' : 'Collapse the sidebar')); });
 sideLabels(!!LS.get('sideMini', false));
 // The page beside it glides with the rail's edge instead of being laid out again on every frame of the fold: for
 // the length of the slide it keeps one width, the wider of before and after (so it never leaves a gap; what doesn't

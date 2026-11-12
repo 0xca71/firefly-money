@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { html, htmlList, raw } from '../core/html';
 import { App } from '../core/base';
 import { openDrawer } from '../core/dom';
@@ -81,11 +82,11 @@ export const customizeButton = (page: string) => html`<button class="btn dash-ed
 const SWITCH = raw('type="checkbox" class="switch" role="switch"');
 function sheet(page: string) {
   const P = PAGE_OPTS[page]; if (!P) return '';
-  const row = (o: PageOpt, ctl: unknown) => html`<div class="set-row"><div class="set-label"><div>${o.label}</div>${o.hint ? html`<div class="sub-s">${o.hint}</div>` : ''}</div><div class="set-ctl">${ctl}</div></div>`;
+  const row = (o: PageOpt, ctl: unknown) => html`<div class="set-row"><div class="set-label"><div>${tr(o.label)}</div>${o.hint ? html`<div class="sub-s">${tr(o.hint)}</div>` : ''}</div><div class="set-ctl">${ctl}</div></div>`;
   const ctl = (o: PageOpt) => {
-    if (o.card) return html`<input ${SWITCH}${pageCard(page, o.id) ? ' checked' : ''} aria-label="${o.label}" data-onchange="App.pageSet('${page}','show.${o.id}',this.checked)">`;
+    if (o.card) return html`<input ${SWITCH}${pageCard(page, o.id) ? ' checked' : ''} aria-label="${tr(o.label)}" data-onchange="App.pageSet('${page}','show.${o.id}',this.checked)">`;
     const v = pageOpt(page, o.id);
-    return html`<select aria-label="${o.label}" data-onchange="App.pageSet('${page}','${o.id}',this.value)">${htmlList(o.choices!.map(([x, l]) => html`<option value="${String(x)}"${x === v ? ' selected' : ''}>${l}</option>`))}</select>`;
+    return html`<select aria-label="${tr(o.label)}" data-onchange="App.pageSet('${page}','${o.id}',this.value)">${htmlList(o.choices!.map(([x, l]) => html`<option value="${String(x)}"${x === v ? ' selected' : ''}>${tr(l)}</option>`))}</select>`;
   };
   const charts = P.opts.filter(o => !o.card), cards = P.opts.filter(o => o.card);
   return html`<div class="page-opts">${charts.length ? html`<h3 class="set-h">Charts</h3><div class="panel set-panel">${htmlList(charts.map(o => row(o, ctl(o))))}</div>` : ''}${cards.length ? html`<h3 class="set-h">Cards to show</h3><div class="panel set-panel">${htmlList(cards.map(o => row(o, ctl(o))))}</div>` : ''}<p class="sub-s">Changes show on the page straight away and are saved with your other settings.</p></div>`;
@@ -94,7 +95,7 @@ let before: { page: string, v: Record<string, Val> | undefined } | null = null; 
 function pageCustomize(page: string) {
   const P = PAGE_OPTS[page]; if (!P) return;
   if (!before || before.page !== page || !document.getElementById('drawer')?.classList.contains('open')) { const o = saved()[page]; before = { page, v: o && { ...o } }; }
-  openDrawer('Customize ' + P.title, sheet(page), html`<button class="btn" type="button" data-onclick="App.pageReset('${page}')">Reset</button><span class="grow"></span><button class="btn" type="button" data-onclick="App.pageCancel('${page}')">Cancel</button><button class="btn primary" type="button" data-onclick="App.closeDrawer()">Done</button>`);
+  openDrawer(tr('Customize {page}', { page: tr(P.title) }), sheet(page), html`<button class="btn" type="button" data-onclick="App.pageReset('${page}')">Reset</button><span class="grow"></span><button class="btn" type="button" data-onclick="App.pageCancel('${page}')">Cancel</button><button class="btn primary" type="button" data-onclick="App.closeDrawer()">Done</button>`);
 }
 // Save one option (a select's value comes as text: matched back to its choice) and redraw the page behind the sheet
 function pageSet(page: string, key: string, raw: string | boolean) {

@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { el } from '../core/base';
 import { loadView } from '../core/progress';
 
@@ -47,7 +48,7 @@ function draw() {
   const step = Math.floor(v.pct / 25);
   if (bar!.classList.contains('show') && (v.text !== said.text || step !== said.step) && Date.now() - said.at >= SAY_EVERY) {
     said = { text: v.text, step, at: Date.now() };
-    sr!.textContent = 'Loading, ' + v.pct + ' percent. ' + v.text;
+    sr!.textContent = tr('Loading, {percent} percent. {status}', { percent: v.pct, status: v.text });
   }
 }
 addEventListener('money-load', () => { if (!raf) raf = requestAnimationFrame(draw); });
