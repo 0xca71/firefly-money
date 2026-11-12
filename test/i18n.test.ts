@@ -49,16 +49,16 @@ describe('UI language (independent of regional formats)', () => {
     expect(tr('{name} budget', { name: '{count}' })).toBe('{count} 预算');
   });
 
-  it('translates text after an interpolation without treating attributes or code as text', () => {
+  it.each([false, true])('translates text after interpolation and preserves checked=%s', checked => {
     persistUiLanguage('zh-CN');
     const icon = html`<span aria-hidden="true">+</span>`;
-    document.body.innerHTML = String(html`<button data-name="Save"${html` disabled title="Save"`}>${icon} Save</button><label><input type="checkbox"${true ? ' checked' : ''}> Active</label><code>Save</code><textarea>Income</textarea>`);
+    document.body.innerHTML = String(html`<button data-name="Save"${html` disabled title="Save"`}>${icon} Save</button><label><input type="checkbox"${checked ? ' checked' : ''}> Active</label><code>Save</code><textarea>Income</textarea>`);
     expect(document.querySelector('button')?.textContent).toBe('+ 保存');
     expect(document.querySelector('button')?.dataset.name).toBe('Save');
     expect(document.querySelector('button')?.title).toBe('保存');
     expect(document.querySelector('button')?.disabled).toBe(true);
     expect(document.querySelector('label')?.textContent?.trim()).toBe('启用');
-    expect(document.querySelector('input')?.checked).toBe(true);
+    expect(document.querySelector('input')?.checked).toBe(checked);
     expect(document.querySelector('code')?.textContent).toBe('Save');
     expect(document.querySelector('textarea')?.value).toBe('Income');
   });
